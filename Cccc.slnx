@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Cccc.Domain/Cccc.Domain.csproj" />
+    <Project Path="src/Cccc.Legacy/Cccc.Legacy.csproj" />
+    <Project Path="src/Cccc.Store/Cccc.Store.csproj" />
+    <Project Path="src/Cccc.Web/Cccc.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Cccc.Domain.Tests/Cccc.Domain.Tests.csproj" />
+    <Project Path="tests/Cccc.Legacy.Tests/Cccc.Legacy.Tests.csproj" />
+    <Project Path="tests/Cccc.Store.Tests/Cccc.Store.Tests.csproj" />
+  </Folder>
+</Solution>
