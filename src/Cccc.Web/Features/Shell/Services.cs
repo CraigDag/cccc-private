@@ -107,21 +107,12 @@ public sealed class Workspace(Access access, LiveProject? project, SchoolClock c
         }
     }
 
-    private static readonly HashSet<string> EditorsCollections = ["sessions", "registers", "events"];
-
-    /// <summary>
-    /// The server's own check of who may change what, whatever the screen offered: a viewer files
-    /// registers only (and <see cref="Edits.FileRegister"/> narrows that to their own); an editor changes
-    /// the week and its events; everything else is an administrator's.
-    /// </summary>
+    /// <summary>Every operation of a change is checked by <see cref="Access.MayChange"/> before it is applied.</summary>
     private Batch Permitted(Batch b)
     {
         foreach (var op in b.Ops)
         {
-            bool ok = Access.MayUseAdminTools
-                      || (Access.MayEdit && EditorsCollections.Contains(op.Collection))
-                      || op.Collection == "registers";
-            if (!ok) throw new EditRefused(Access.MayEdit
+            if (!Access.MayChange(op.Collection)) throw new EditRefused(Access.MayEdit
                 ? "Only an administrator can change that."
                 : "Your account can look at the timetable and take your own registers, but not change the week.");
         }

@@ -88,7 +88,8 @@ app.MapStaticAssets().AllowAnonymous();
 app.MapSignInEndpoints();
 app.MapDownloads();
 app.MapProjectDownload();
-app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+// Our own Content-Security-Policy already says frame-ancestors 'none'; Blazor would add a second header.
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode(o => o.ContentSecurityFrameAncestorsPolicy = null);
 
 app.Run();
 

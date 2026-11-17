@@ -9,5 +9,6 @@
     <Project Path="tests/Cccc.Domain.Tests/Cccc.Domain.Tests.csproj" />
     <Project Path="tests/Cccc.Legacy.Tests/Cccc.Legacy.Tests.csproj" />
     <Project Path="tests/Cccc.Store.Tests/Cccc.Store.Tests.csproj" />
+    <Project Path="tests/Cccc.Web.Tests/Cccc.Web.Tests.csproj" />
   </Folder>
 </Solution>

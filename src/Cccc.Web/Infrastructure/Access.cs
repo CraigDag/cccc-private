@@ -47,6 +47,18 @@ public sealed record Access(Account? Account)
         Account!.Tags.HasFlag(AccountTags.Student), FacilitatorId is not null,
         Account.Tags.HasFlag(AccountTags.Staff));
 
+    private static readonly HashSet<string> EditorsCollections = ["sessions", "registers", "events"];
+
+    /// <summary>
+    /// The server's own check of who may change which collection, whatever the screen offered: a
+    /// viewer files registers only (and <c>Edits.FileRegister</c> narrows that to their own); an editor
+    /// changes the week and its events; everything else is an administrator's; nobody signed in, nothing.
+    /// </summary>
+    public bool MayChange(string collection) =>
+        MayUseAdminTools
+        || (MayEdit && EditorsCollections.Contains(collection))
+        || (SignedIn && collection == "registers");
+
     /// <summary>Who may print whose week: an administrator anybody's, everybody else their own.</summary>
     public bool MayHaveTheWeekOf(Guid facilitatorId) =>
         MayUseAdminTools || (SignedIn && FacilitatorId == facilitatorId);
