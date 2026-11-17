@@ -18,7 +18,7 @@
        every register, so a coach's own list is where they start, not all they may see. *@
     @if (W.Access.FacilitatorId is not null)
     {
-        <label class="check"><input type="checkbox" @bind="_mine" data-testid="registers-mine" /> Only the ones I can take</label>
+        <label class="check"><input type="checkbox" @bind="_mine" data-testid="registers-mine" /> @(W.Access.Following ? "Only my classes" : "Only the ones I can take")</label>
     }
 </WeekNav>
 <FollowingNotice />
@@ -29,7 +29,8 @@
         @foreach (var o in today)
         {
             var r = t.Registers[o.Session.Id];
-            bool mine = Registers.MayChange(W.Access.Registers, o.Session);
+            // Following the current app, a register is taken there: the card says how it stands, never "Take".
+            bool mine = !W.Access.Following && Registers.MayChange(W.Access.Registers, o.Session);
             string state = r is not null ? "taken" : o.Start <= now && now < o.End ? "now" : o.End <= now ? "due" : "later";
             <button type="button" class="reg-card @state" style="--c:@(Looks.ColourOf(t, o.Session) ?? "var(--rule)")" @onclick="() => Open(o.Session.Id)" data-testid="register-card">
                 <span class="reg-time">@Looks.When(o.Session)</span>

@@ -75,6 +75,9 @@ async function signIn(browser, who, viewport) {
   await step('a register is read here and taken in the current app', async () => {
     await page.goto(B + '/registers');
     await page.waitForSelector('[data-testid=registers-page] [data-testid=following], main [data-testid=following]');
+    await page.waitForSelector('[data-testid=register-card]');
+    const offers = await page.locator('[data-testid=register-card] .reg-go').allTextContents();
+    if (offers.length) throw new Error('today\'s cards offer "' + offers[0].trim() + '"');
     const card = page.locator('[data-testid=register-card], [data-testid=register-line]').first();
     await card.click();
     await page.waitForSelector('[data-testid=dialog] [data-testid=following]');
