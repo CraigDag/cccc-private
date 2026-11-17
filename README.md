@@ -22,7 +22,7 @@ person at the school would notice.
 ## Look at it on made-up data
 
 ```bash
-scripts/preview.sh          # http://127.0.0.1:5299
+scripts/preview.sh          # http://127.0.0.1:5299 (on Windows: scripts\preview.ps1)
 ```
 
 It opens a fictional school (Northlight) with three made-up accounts: `admin`, `editor` and `coach`,
