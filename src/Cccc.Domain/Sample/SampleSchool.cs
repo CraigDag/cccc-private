@@ -156,7 +156,7 @@ public static class SampleSchool
         // Registers for most of what has run, leaving a few missing on purpose.
         var t = new Timetable
         {
-            Settings = new Settings { Name = "Sample school year", SchoolName = "Northlight Circus School" },
+            Settings = new Settings { Name = "Sample school year", SchoolName = "Northlight Circus School", WeeklyScheduledTarget = TimeSpan.FromHours(15) },
             Semesters = EntitySet<Semester>.Of([autumn, spring]),
             Closures = EntitySet<Closure>.Of(
             [

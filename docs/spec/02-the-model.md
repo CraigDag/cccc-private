@@ -71,7 +71,8 @@ Administrators), `RoomId?`, `Place`, `FacilitatorIds`, `StudentIds`, `Note`.
 
 ## The project's own settings
 
-`Name`, `SchoolName`, `WeeklyScheduledTarget?`. Nothing about which week a tab is looking at is stored
+`Name`, `SchoolName`, `WeeklyScheduledTarget?` (each student's week is measured against it,
+[`03`](03-the-rules.md)). Nothing about which week a tab is looking at is stored
 in the project: the week box belongs to the tab.
 
 ## What is not in the project

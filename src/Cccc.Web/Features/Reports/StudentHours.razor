@@ -1,0 +1,75 @@
+@* Reports ▸ Student hours: each student's counted hours week by week, under their group, against the
+   school's weekly target (People & places ▸ Settings), which nothing read until this page. Hours.ForStudent
+   says which weeks are measured and which are short: never a week outside the semesters, a visiting
+   programme's, or a week in which nothing of theirs counted, because a page that turns every holiday week
+   amber is a page nobody reads. Short is advice, and every figure opens the lines that say why. *@
+@using DomainWeek = Cccc.Domain.Week
+@using Cccc.Web.Features.Week
+@inject Dialogs D
+@{
+    var t = W.T;
+    var byWeek = Weeks.ToDictionary(m => m, m => Occurrences.ForWeek(t, m));
+    var target = t.Settings.WeeklyScheduledTarget;
+    bool anyShort = false;
+    var sections = t.Groups.OrderBy(g => g.Name, NameOrder.Comparer)
+        .Select(g => (Heading: g.Name, Colour: (string?)g.Colour, People: t.Students.Where(s => s.GroupId == g.Id).OrderBy(s => s.Name, NameOrder.Comparer).ToList()))
+        .Append(("In no group", null, t.Students.Where(s => s.GroupId is null || t.Groups[s.GroupId.Value] is null).OrderBy(s => s.Name, NameOrder.Comparer).ToList()))
+        .Where(x => x.People.Count > 0).ToList();
+}
+@if (t.Students.Count == 0)
+{
+    <p class="muted">No students yet. People &amp; places ▸ Students adds them, or takes rows pasted from a spreadsheet.</p>
+}
+else
+{
+    <div class="table-wrap">
+        <table class="grid-table static" data-testid="student-hours">
+            <thead>
+                <tr><th>Student</th>@foreach (var m in Weeks) { <th class="num">Wk @DomainWeek.IsoNumber(m)</th> }<th class="num">Total</th><th class="num">A week</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var (heading, colour, people) in sections)
+                {
+                    <tr class="group-head"><th colspan="@(Weeks.Count + 3)"><span class="spine" style="@(colour is null ? "" : $"--c:{colour}")"></span>@heading</th></tr>
+                    @foreach (var st in people)
+                    {
+                        var loads = Weeks.Select(m => Hours.ForStudent(t, m, byWeek[m], st.Id)).ToList();
+                        var total = loads.Aggregate(TimeSpan.Zero, (a, w) => a + w.Counted);
+                        int weeksOn = loads.Count(w => w.Counted > TimeSpan.Zero);
+                        <tr data-testid="student-hours-row" data-name="@st.Name">
+                            <td>@st.Name</td>
+                            @foreach (var w in loads)
+                            {
+                                anyShort |= w.Short;
+                                <td class="num @(w.Short ? "short" : "")" data-short="@(w.Short ? "1" : "0")" title="@(w.Short ? $"{DomainWeek.Duration(w.ShortBy)} short of the {DomainWeek.Duration(w.Target!.Value)} target" + (w.NotCounted > 0 ? $"; {Looks.Count(w.NotCounted, "class", "classes")} of theirs did not count" : "") : "")">
+                                    @if (w.Lines.Count == 0)
+                                    {
+                                        <span>–</span>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="link" @onclick="() => Explain(st.Id, [w.Monday])" data-testid="student-hours-cell">@DomainWeek.Duration(w.Counted)</button>
+                                        @if (w.NotCounted > 0)
+                                        {
+                                            <small class="off-count" data-testid="student-hours-off" title="@(Looks.Count(w.NotCounted, "class", "classes") + " of theirs did not count")">−@w.NotCounted</small>
+                                        }
+                                    }
+                                </td>
+                            }
+                            <td class="num"><button type="button" class="link" @onclick="() => Explain(st.Id, Weeks)" data-testid="student-hours-total"><b>@DomainWeek.Duration(total)</b></button></td>
+                            <td class="num">@(weeksOn == 0 ? "–" : DomainWeek.Duration(TimeSpan.FromMinutes(Math.Round(total.TotalMinutes / weeksOn))))</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="hint">The hours that count: the classes each student is on that happen and are counted on the timetable. A small −2 beside a figure is two of their classes that did not count that week (closed, cancelled, an open session or not counted); press the figure for which. @(target is { } goal ? $"A week short of the {DomainWeek.Duration(goal)} target is marked{(anyShort ? "" : " (none here is)")}: never a week outside the semesters, a visiting programme's, or one in which nothing of theirs counted." : "People & places ▸ Settings can set a weekly target to measure these against.") <i>A week</i> is the average over the weeks something of theirs counted in.</p>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<DateOnly> Weeks { get; set; } = [];
+
+    private void Explain(Guid studentId, IReadOnlyList<DateOnly> weeks) =>
+        D.Show<StudentLines>(new Dictionary<string, object?> { [nameof(StudentLines.StudentId)] = studentId, [nameof(StudentLines.Weeks)] = weeks });
+}

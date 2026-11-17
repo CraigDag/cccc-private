@@ -1,0 +1,121 @@
+@* A student's hours, one line for every class they are on: the ones that count adding up to their load,
+   and the ones that do not saying why (closed, cancelled, an open session, not counted), because a week
+   short of the target is usually a short week, and the reason belongs beside the number. Hours.StudentLines
+   is the one rule; Hours.StudentLoad is its sum. A student's load is a welfare and curriculum number, so it
+   is an administrator's, as the current app's students pane is. *@
+@using DomainWeek = Cccc.Domain.Week
+@using Cccc.Web.Features.Week
+@{
+    var t = W.T;
+    var student = t.Students[StudentId];
+}
+@if (student is null)
+{
+    <DialogFrame Title="This student has gone"><p>Somebody removed them while this was open.</p></DialogFrame>
+}
+else if (!W.Access.MayUseAdminTools)
+{
+    <DialogFrame Title="Hours"><p>A student's hours are for administrators.</p></DialogFrame>
+}
+else
+{
+    var weeks = Weeks.Distinct().Order().Select(m => Hours.ForStudent(t, m, Occurrences.ForWeek(t, m), StudentId)).ToList();
+    var all = weeks.SelectMany(w => w.Lines).ToList();
+    var counted = Sum(all.Where(l => l.Counted));
+    int off = all.Count(l => !l.Counted);
+    var measured = weeks.Where(w => w.Measured).ToList();
+    int shortWeeks = measured.Count(w => w.Short);
+    <DialogFrame Title="@(student.Name + "’s hours")" Class="wide">
+        <p class="hl-head">
+            <span class="muted" data-testid="student-lines-span">@HoursLines.Span(weeks.Select(w => w.Monday).ToList())</span>
+            <b class="hl-total" data-testid="student-lines-total">@DomainWeek.Duration(counted)</b>
+            @if (t.Settings.WeeklyScheduledTarget is { } target)
+            {
+                <span class="@(shortWeeks > 0 ? "hl-over" : "muted")" data-testid="student-lines-target" data-short="@shortWeeks">@TargetLine(target, weeks, measured, shortWeeks)</span>
+            }
+        </p>
+        @if (all.Count > 0)
+        {
+            <div class="seg" role="group" aria-label="Which lines" data-testid="student-lines-show">
+                <button type="button" class="@(_show == Show.All ? "on" : "")" @onclick="() => _show = Show.All">Everything</button>
+                <button type="button" class="@(_show == Show.Counted ? "on" : "")" @onclick="() => _show = Show.Counted">Counted</button>
+                <button type="button" class="@(_show == Show.NotCounted ? "on" : "")" @onclick="() => _show = Show.NotCounted">Not counted · @off</button>
+            </div>
+        }
+        else
+        {
+            <p class="muted" data-testid="student-lines-none">No classes @(weeks.Count == 1 ? "this week" : "in these weeks"): @student.Name is on the roster of none.@(student.GroupId is null ? " They are in no group, so only a class they are put on by hand would be theirs." : "")</p>
+        }
+        @if (all.Count > 0 && !all.Any(Shown))
+        {
+            <p class="muted">Nothing of that kind @(weeks.Count == 1 ? "this week" : "in these weeks").</p>
+        }
+        <div class="hl-weeks" data-testid="student-lines">
+            @foreach (var w in weeks)
+            {
+                var lines = w.Lines.Where(Shown).ToList();
+                if (lines.Count == 0) continue;
+                @if (weeks.Count > 1)
+                {
+                    <h3 class="hl-week"><span>Week @DomainWeek.IsoNumber(w.Monday) <small class="muted">@DomainWeek.Range(w.Monday)</small></span><span class="hl-len">@DomainWeek.Duration(Sum(w.Lines.Where(l => l.Counted)))</span></h3>
+                }
+                @foreach (var day in lines.GroupBy(l => l.Occurrence.Date))
+                {
+                    <div class="hl-day">@day.Key.ToString("dddd d MMMM", System.Globalization.CultureInfo.InvariantCulture)</div>
+                    <ul class="hl-lines">
+                        @foreach (var l in day)
+                        {
+                            var s = l.Occurrence.Session;
+                            <li class="hl-row @(l.Counted ? "" : "off")" data-testid="student-line" data-counted="@(l.Counted ? "1" : "0")">
+                                <span class="hl-time">@Looks.When(s)</span>
+                                <span class="hl-what"><b>@Looks.Title(t, s)</b> <small>@Looks.Audience(t, s)@(s.AddedStudentIds.Contains(StudentId) ? ", put on by hand" : "")@(l.Occurrence.NeedsCover ? ", waiting for cover: still counts" : "")</small>
+                                    @if (!l.Counted)
+                                    {
+                                        <span class="badge" data-testid="student-line-why">@l.NotCounted</span>
+                                    }
+                                </span>
+                                <span class="hl-len">@(l.Counted ? DomainWeek.Duration(l.Time) : "(" + DomainWeek.Duration(l.Time) + ")")</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+        </div>
+        <p class="hint">A student's hours count the classes they are on that happen and are counted (People &amp; places ▸ Classes says which). A class still waiting for cover counts: they are still timetabled to be in that room. A whole-building class is on nobody's roster, so it is on nobody's hours. The target is in People &amp; places ▸ Settings.</p>
+    </DialogFrame>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid StudentId { get; set; }
+    /// <summary>The Mondays of the weeks to explain.</summary>
+    [Parameter] public IReadOnlyList<DateOnly> Weeks { get; set; } = [];
+
+    private enum Show { All, Counted, NotCounted }
+    private Show _show;
+
+    private bool Shown(StudentLine l) => _show switch
+    {
+        Show.Counted => l.Counted,
+        Show.NotCounted => !l.Counted,
+        _ => true,
+    };
+
+    private static TimeSpan Sum(IEnumerable<StudentLine> lines) => lines.Aggregate(TimeSpan.Zero, (a, l) => a + l.Time);
+
+    /// <summary>What the target says of these weeks, counted only over the weeks it measures (Hours.ForStudent), as the report marks them.</summary>
+    private string TargetLine(TimeSpan target, IReadOnlyList<StudentWeek> weeks, IReadOnlyList<StudentWeek> measured, int shortWeeks)
+    {
+        var goal = DomainWeek.Duration(target);
+        if (measured.Count == 0)
+            return weeks.All(w => w.Target is null)
+                ? (W.T.Students[StudentId]?.GroupId is { } gid && W.T.Programmes.Find(W.T.Groups[gid]?.ProgrammeId) is { IsGuest: true }
+                    ? "no target for a visiting programme"
+                    : "no target outside the semesters")
+                : "";
+        if (weeks.Count == 1)
+            return measured[0].Short ? $"{DomainWeek.Duration(measured[0].ShortBy)} short of the {goal} target" : $"meets the {goal} target";
+        return shortWeeks == 0
+            ? $"meets the {goal} target in {(measured.Count == 1 ? "the one week" : $"all {measured.Count} weeks")} it measures"
+            : $"short of the {goal} target in {shortWeeks} of the {Looks.Count(measured.Count, "week")} it measures";
+    }
+}

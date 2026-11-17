@@ -105,7 +105,7 @@ else
 
     private static TimeSpan Sum(IEnumerable<HoursLine> lines) => lines.Aggregate(TimeSpan.Zero, (a, l) => a + l.Time);
 
-    private static string Span(IReadOnlyList<DateOnly> mondays) => mondays.Count switch
+    internal static string Span(IReadOnlyList<DateOnly> mondays) => mondays.Count switch
     {
         0 => "No weeks",
         1 => DomainWeek.ForDocuments(mondays[0]),

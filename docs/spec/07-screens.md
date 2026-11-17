@@ -155,6 +155,18 @@ the plan is narrowed to them, and *How it adds up* on My week. The drawer lists 
 rule a day at a time (a week heading each when several weeks were asked for), with the total and their
 limit at the top; *Classes*, *Cover* and *Time rules* narrow it and say how much of the total that is.
 
+**A student's hours are Reports ▸ Student hours** (`Reports/StudentHours`): every student under their
+group (and *In no group*), the hours that count week by week, a total, and *A week*, the average over
+the weeks something of theirs counted in. A week short of the target is amber, with how many of their
+classes did not count beside it (*−1*). Every figure opens `Reports/StudentLines`, every class of theirs
+a day at a time, the ones that did not count muted with the reason on them; *Counted* and *Not counted
+· N* narrow it, and the line beside the total says how the weeks measure up (*6h 30m short of the 15h
+target*, *meets the 15h target in all 3 weeks it measures*). The plan narrowed to a student says
+*16h this week, meets the 15h target* and opens the same drawer, and the Reports overview counts the
+students short this week (a plain card, not amber: a part-time programme can be short of the school's
+one target every week). Administrators only (`Access.MayUseAdminTools`): a student's load is a welfare
+and curriculum number.
+
 
 ## Following the current app
 

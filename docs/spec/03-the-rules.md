@@ -112,7 +112,18 @@ old app has a class that carries the reasoning, it is named in brackets so the h
 - **Student load counts `Counted` classes only** — plus a session whose class no longer exists — and
   **a session awaiting cover still counts** for a student (welfare and curriculum, not contract; Craig,
   2026-08-22). Do not "fix" it to match the facilitator rule. A line the total does not count says so,
-  in the same words the class form offers.
+  in the same words the class form offers. **The load is the sum of `Hours.StudentLines`**: one line per
+  class on their roster, closed and cancelled ones included, each saying why it does not count when it
+  does not (the closure by name, a cancellation, or the class's workload), so a figure and the lines
+  behind it cannot disagree; a test holds the load to what it was before the lines, for every student
+  in every week of the made-up school.
+- **A student's week is measured against `Settings.WeeklyScheduledTarget`** (`Hours.StudentTarget`,
+  `Hours.ForStudent`) only where the current app's week tally measures one: **inside a semester** (a
+  school with no semesters is never outside one), and **never for a visiting programme's student**,
+  whose week is not the school's curriculum. **A week in which nothing of theirs counted is not called
+  short** (the school closed, every class cancelled, nothing on): it is not a timetable falling short,
+  a report that turns every holiday week amber is one nobody reads, and its lines say what happened.
+  Short is advice.
 - **Whole-building hours are their own last row** in utilisation, never credited to every cohort; every
   cohort is seeded at zero.
 - **Both facilitator limits warn and never block.** Weekly total (teaching + rules) over

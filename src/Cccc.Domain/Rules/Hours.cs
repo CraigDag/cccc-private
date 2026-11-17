@@ -48,6 +48,39 @@ public sealed record HoursLine(Occurrence Occurrence, HoursLineKind Kind, TimeOn
 }
 
 /// <summary>
+/// One class on a student's week (<see cref="Hours.StudentLines"/>), and why it does not count towards
+/// their load when it does not.
+/// </summary>
+public sealed record StudentLine(Occurrence Occurrence, string? NotCounted)
+{
+    public bool Counted => NotCounted is null;
+    public TimeSpan Time => Occurrence.Session.Length;
+}
+
+/// <summary>
+/// A student's week as Reports, the plan and the lines drawer measure it (<see cref="Hours.ForStudent"/>):
+/// every class of theirs, and the school's weekly target when there is one to measure it against.
+/// </summary>
+public sealed record StudentWeek(DateOnly Monday, IReadOnlyList<StudentLine> Lines, TimeSpan? Target)
+{
+    public TimeSpan Counted => Lines.Where(l => l.Counted).Aggregate(TimeSpan.Zero, (a, l) => a + l.Time);
+
+    public int NotCounted => Lines.Count(l => !l.Counted);
+
+    /// <summary>
+    /// Measured against the target: there is one (<see cref="Hours.StudentTarget"/>), and something of
+    /// theirs counted. A week in which nothing counted (the school closed, every class cancelled, nothing
+    /// on) is not called short: it is not a timetable falling short, and a report that turns every
+    /// holiday week amber is one nobody reads. Its lines say what happened instead.
+    /// </summary>
+    public bool Measured => Target is not null && Counted > TimeSpan.Zero;
+
+    public bool Short => Measured && Counted < Target!.Value;
+
+    public TimeSpan ShortBy => Short ? Target!.Value - Counted : TimeSpan.Zero;
+}
+
+/// <summary>
 /// Hours. Facilitator hours go to whoever is actually in the room; a session awaiting cover counts for
 /// no facilitator. Student load counts Counted classes only, and DOES count a session awaiting cover
 /// (Craig, 2026-08-22: welfare and curriculum, not contract — do not make it match).
@@ -183,10 +216,49 @@ public static class Hours
     /// <summary>
     /// A student's load: Counted classes they are on the roster of, plus sessions whose class no longer
     /// exists (rather than understate a week over a defect they cannot see). Needs-cover still counts.
+    /// The sum of <see cref="StudentLines"/> that count, so a total and its lines cannot disagree.
     /// </summary>
     public static TimeSpan StudentLoad(Timetable t, IEnumerable<Occurrence> week, Guid studentId) =>
-        week.Where(o => o.Happens && IsRequired(t, o.Session) && Roster.Includes(t, o.Session, studentId))
-            .Aggregate(TimeSpan.Zero, (a, o) => a + o.Session.Length);
+        StudentLines(t, week, studentId).Where(l => l.Counted).Aggregate(TimeSpan.Zero, (a, l) => a + l.Time);
+
+    /// <summary>
+    /// Every class a student is on in these occurrences (closed and cancelled ones too, when given), in
+    /// day and time order, each saying why it does not count when it does not: the closure, a
+    /// cancellation, or the class's workload in the words the class form offers. A class still waiting
+    /// for cover counts (Craig, 2026-08-22: a student is still timetabled to be in that room). A
+    /// whole-building class is on nobody's roster, so it is on no student's lines.
+    /// </summary>
+    public static IReadOnlyList<StudentLine> StudentLines(Timetable t, IEnumerable<Occurrence> occurrences, Guid studentId) =>
+        [.. occurrences.Where(o => Roster.Includes(t, o.Session, studentId))
+                       .OrderBy(o => o.Date).ThenBy(o => o.Start).ThenBy(o => o.Session.Id)
+                       .Select(o => new StudentLine(o, o.State switch
+                       {
+                           OccurrenceState.Closed => o.ClosedBy is { Name: var n } && !string.IsNullOrWhiteSpace(n) ? "Closed: " + n.Trim() : "Closed",
+                           OccurrenceState.Cancelled => "Cancelled",
+                           _ => WhyUncounted(t, o.Session),
+                       }))];
+
+    /// <summary>
+    /// The weekly target a student's week is measured against, or null when there is nothing to measure:
+    /// the school set none (People &amp; places ▸ Settings); the week is outside every semester, as the
+    /// current app's week tally reads it, so that the summer is not short of a target nobody meant for it
+    /// (a school with no semesters at all is never outside one); or the student is in a visiting
+    /// programme, whose week is not the school's own curriculum.
+    /// </summary>
+    public static TimeSpan? StudentTarget(Timetable t, DateOnly anyDateInWeek, Guid studentId)
+    {
+        if (t.Settings.WeeklyScheduledTarget is not { } target) return null;
+        if (t.Semesters.Count > 0 && t.SemesterFor(anyDateInWeek) is null) return null;
+        if (t.Students[studentId]?.GroupId is { } gid && t.Groups[gid] is { } g && t.Programmes.Find(g.ProgrammeId) is { IsGuest: true }) return null;
+        return target;
+    }
+
+    /// <summary>
+    /// A student's week, from that week's occurrences with the closed and cancelled ones in them
+    /// (<see cref="Occurrences.ForWeek"/>), so that what did not count is there to say why.
+    /// </summary>
+    public static StudentWeek ForStudent(Timetable t, DateOnly anyDateInWeek, IEnumerable<Occurrence> week, Guid studentId) =>
+        new(Week.MondayOf(anyDateInWeek), StudentLines(t, week, studentId), StudentTarget(t, anyDateInWeek, studentId));
 
     public static bool IsRequired(Timetable t, Session s) => WorkloadOf(t, s) == Workload.Counted;
 

@@ -118,6 +118,15 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   part of a class, a class they covered (saying who they covered), and each time rule's credit, adding
   up to the figure pressed. *Classes*, *Cover* and *Time rules* show one kind and how much of the total
   it is. A coach sees their own; an administrator anybody's.
+- **A student's hours, against the weekly target**: Reports ▸ Student hours lists every student under
+  their group with the hours that count week by week, a total and their average week. The weekly target
+  in People & places ▸ Settings (kept in the current app for its week tally) now measures each
+  student's week, and a week short of it is marked, but never a week outside the semesters, a visiting
+  company's, or a week in which nothing of theirs counted because the school was closed. Press any
+  figure, or *16h this week* under a student's name when the plan is narrowed to them, for every class
+  of theirs a day at a time: one that did not count says why (closed, cancelled, an open session, not
+  counted), and a class still waiting for cover counts, as it does today. The Reports overview says how
+  many students are short this week. Administrators only.
 - **Copying a week again no longer takes a class out of another week**: if a copied class had since been
   moved to a different week, copying the first week a second time pulled it back out of there.
 

@@ -41,6 +41,11 @@
                 {
                     <text> · </text><button type="button" class="link" @onclick="() => ExplainHours(who.Id)" data-testid="focus-hours">@Cccc.Domain.Week.Duration(Hours.For(t, Occurrences.HappeningInWeek(t, V.Monday), who.Id).Total) this week</button>
                 }
+                else if (V.Focus is { Kind: "student" } student && W.Access.MayUseAdminTools)
+                {
+                    var sw = Hours.ForStudent(t, V.Monday, Occurrences.ForWeek(t, V.Monday), student.Id);
+                    <text> · </text><button type="button" class="link @(sw.Short ? "short" : "")" @onclick="() => ExplainStudent(student.Id)" data-testid="focus-hours" data-short="@(sw.Short ? "1" : "0")">@Cccc.Domain.Week.Duration(sw.Counted) this week@(!sw.Measured ? "" : (sw.Short ? ", short of the " : ", meets the ") + Cccc.Domain.Week.Duration(sw.Target!.Value) + " target")</button>
+                }
                 @if (m.Locked)
                 {
                     <span class="badge" title="A week that has ended does not change, except its registers" data-testid="locked">Ended · read only</span>
@@ -253,6 +258,12 @@
     private PlanGestures _gestures = default!;
     private DotNetObjectReference<PlanGestures>? _keys;
     private bool _moreOpen;
+
+    private void ExplainStudent(Guid id) => D.Show<Cccc.Web.Features.Reports.StudentLines>(new Dictionary<string, object?>
+    {
+        [nameof(Cccc.Web.Features.Reports.StudentLines.StudentId)] = id,
+        [nameof(Cccc.Web.Features.Reports.StudentLines.Weeks)] = new[] { V.Monday },
+    });
 
     private void ExplainHours(Guid id) => D.Show<Cccc.Web.Features.Reports.HoursLines>(new Dictionary<string, object?>
     {

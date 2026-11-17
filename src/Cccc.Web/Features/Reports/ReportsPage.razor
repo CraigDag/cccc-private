@@ -66,6 +66,9 @@ else
         case "facilitators":
             <FacilitatorHours Weeks="weeks" />
             break;
+        case "students":
+            <StudentHours Weeks="weeks" />
+            break;
         case "registers":
             var missing = Registers.MissingBetween(t, DomainWeek.MondayOf(_from), Min(DomainWeek.MondayOf(_to).AddDays(6), W.Today.AddDays(-1)), W.Today);
             <div class="section">
@@ -109,6 +112,12 @@ else
                 <div class="card @(cover.Count > 0 ? "warn" : "")"><small>Needing cover this week</small><b>@cover.Count</b></div>
                 <div class="card @(allMissing.Count > 0 ? "warn" : "")"><small>Registers missing</small><b>@allMissing.Count</b><small>In the weeks chosen</small></div>
                 <div class="card"><small>Hours in these weeks</small><b>@DomainWeek.Duration(occ.Aggregate(TimeSpan.Zero, (a, o) => a + o.Session.Length))</b><small>@Looks.Count(occ.Count, "class", "classes")</small></div>
+                @if (t.Settings.WeeklyScheduledTarget is { } goal)
+                {
+                    // Advice, so not amber: a part-time programme can be short of the school's one target every week.
+                    var shortNow = t.Students.Count(s => Hours.ForStudent(t, W.Today, thisWeek, s.Id).Short);
+                    <div class="card"><small>Short of the @DomainWeek.Duration(goal) target</small><b data-testid="students-short">@shortNow</b><small>@(shortNow == 1 ? "student" : "students") this week · <a href="reports/students">Student hours</a></small></div>
+                }
                 <div class="card"><small>People</small><b>@t.Students.Count</b><small>@(t.Students.Count == 1 ? "student" : "students") · @Looks.Count(t.Facilitators.Count(f => !f.IsGuest), "facilitator") · @Looks.Count(t.Groups.Count, "group")</small></div>
             </div>
             break;
@@ -126,7 +135,7 @@ else
     private DateOnly _from, _to;
 
     private static readonly (string, string)[] Tabs =
-        [("overview", "Overview"), ("utilisation", "Utilisation"), ("attendance", "Attendance"), ("facilitators", "Facilitator hours"), ("registers", "Registers outstanding")];
+        [("overview", "Overview"), ("utilisation", "Utilisation"), ("attendance", "Attendance"), ("facilitators", "Facilitator hours"), ("students", "Student hours"), ("registers", "Registers outstanding")];
 
     private string Current => Tabs.Any(x => x.Item1 == Slug) ? Slug! : "overview";
 
