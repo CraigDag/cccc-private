@@ -125,5 +125,16 @@ double-click does the same with an hour and a half.
 
 ## Printed documents
 
-Unchanged: the week as shown, the list, the room grid one page a day, a calendar per student, the
-heading rule without the project's name, every generation through one gate.
+The week as shown, the list, a calendar per student, and **the building's day**: the Plan's Spaces view
+on paper, a page a day. Spaces down the side, grouped as on the plan, hours across on the week's own
+frame so a week's pages line up, each class where and when it is, overlapping classes stacked, events
+in a band along the top. Narrowed to a group or a person, their classes carry words and every other
+class in a space is a plain grey bar, with a key saying so: a space busy with somebody else must never
+print as free. Classes with no space get the first row of every sheet, because this sheet is how a
+building gets scheduled (the current app's rule). A few spaces get tall rows and big words, for a sheet
+pinned to a door; many get thinner rows, and when even the thinnest readable row would not fit, the day
+goes on over a second sheet rather than leave a space off. What the sheet draws is `SpacesDay`, tested
+apart from the drawing.
+
+All four are in the Paper look's colours, under a vermilion rule, with the heading rule without the
+project's name, and every generation goes through one gate.

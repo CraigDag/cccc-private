@@ -31,7 +31,11 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
 - **Registers start with today's classes as big cards**, made to be tapped on a phone in the room. A
   class that ended earlier today says *not taken yet* rather than *to come*.
 - **Two looks**: Paper (light, like a printed programme) and Night (dark), following the device unless
-  you choose one in your menu.
+  you choose one in your menu. The printed sheets are in the Paper look too.
+- **Print the building's day**: *Spaces, a page a day* is the plan's Spaces view on paper, every space
+  down the side and the hours across, made to be pinned up. Printed for one group or person, every
+  other class in a space is a grey bar, so a busy space never looks free on paper. A school with many
+  spaces gets a second sheet for the day rather than a space left off.
 - **"Space" and "class" everywhere** a person reads, rather than "room" and "session": a Big Top is
   not a room.
 

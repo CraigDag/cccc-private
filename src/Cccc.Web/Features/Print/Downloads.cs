@@ -43,7 +43,7 @@ public static class Downloads
                     name = $"Week {DWeek.IsoNumber(r.Monday)} list";
                     break;
                 case "rooms":
-                    doc = Sheets.RoomGrid(t, WeekModel.Build(t, view, access, clock.Today), view.Describe(t), clock.Local(clock.Now));
+                    doc = Sheets.RoomGrid(t, WeekModel.Build(t, view, access, clock.Today), view.Describe(t), clock.Local(clock.Now), access.Events, view.Rooms);
                     name = $"Week {DWeek.IsoNumber(r.Monday)} spaces";
                     break;
                 case "students":
