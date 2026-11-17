@@ -37,7 +37,7 @@ else
                         </select>
                     </div>
                 </fieldset>
-                <fieldset class="field span2"><legend>Who it is for</legend>
+                <fieldset class="field span2 ft-for"><legend>Who it is for</legend>
                     <label class="check"><input type="checkbox" checked="@_everyone" @onchange="e => _everyone = (bool)e.Value!" data-testid="find-time-everyone" /> Everyone (the whole building)</label>
                     @if (!_everyone)
                     {
@@ -127,7 +127,7 @@ else
             </div>
             @if (existing is not null)
             {
-                <label class="check field ft-moved"><input type="checkbox" @bind="_sayMoved" data-testid="find-time-say-moved" /> Mark it on the plan as moved from @Looks.WhenWithDay(existing.MovedFrom is { } mf ? existing with { Date = mf.Date, Start = mf.Start, End = mf.End } : existing)</label>
+                <label class="check ft-moved"><input type="checkbox" @bind="_sayMoved" data-testid="find-time-say-moved" /> Mark it on the plan as moved from @Looks.WhenWithDay(existing.MovedFrom is { } mf ? existing with { Date = mf.Date, Start = mf.Start, End = mf.End } : existing)</label>
             }
         </div>
 

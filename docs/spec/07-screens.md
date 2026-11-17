@@ -99,9 +99,10 @@ covering*), who changed it and when, from `Recent`; then today's events and what
   heading to open that day.
 - **Issues** (a count beside the lens): clashes, cover needed and missing registers for what is on
   screen; choosing one opens that class.
-- The side panel for a chosen class: title, when, where, who teaches (and who is away), the group and
-  roster count, where it moved from, state tags, the clash or cover note, and its verbs: Edit, Register,
-  Cancel/Restore, Cover, Another time…, Duplicate, Delete.
+- The side panel for a chosen class: title, when, its verbs straight under the title (Edit, Register,
+  Cover, Cancel/Restore, Another time…, Duplicate, Copy to Scratch Week, Delete, so they are on a laptop's
+  screen however much is said below), then where, who teaches (and who is away), the group and roster
+  count, where it moved from, state tags, and the clash or cover note.
 - **Find a time** beside *+ Class*, for editors (below).
 - **Copy** (day, week, clear the weeks after), **Print** (the four documents, narrowed as the screen
   is, and a facilitator's semester for their phone when the plan is narrowed to one) and **Show** (open

@@ -498,7 +498,8 @@ div.agenda-row { cursor: default; }
 .insp-person.away { opacity: .7; }
 .insp-note { padding: 8px 10px; border-radius: 8px; font-size: 13px; }
 .insp-note.warn { background: var(--warning-soft); color: var(--warning); font-weight: 600; }
-.insp-actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; border-top: 1px solid var(--divider); }
+.insp-actions { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--divider); }
+.insp-actions .btn { min-height: 30px; padding: 0 11px; font-size: 13px; }
 .issue {
     display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 8px 10px; text-align: left;
     border: 1px solid var(--divider); border-left: 3px solid var(--warning); border-radius: 8px;
@@ -662,6 +663,8 @@ ul.said li + li { margin-top: 4px; }
 .ft-people select { width: auto; flex: 1 1 200px; }
 .ft-plain { margin: 0; padding: 7px 0; font-size: 13px; }
 .ft-moved { grid-column: 1 / -1; }
+.ft-for .check { margin: 0; }
+.ft-for .checks.columns { margin: 4px 0 0; }
 .ft-results { margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--divider); }
 .ft-sum { margin: 0 0 14px; }
 .ft-day { margin: 0 0 16px; }

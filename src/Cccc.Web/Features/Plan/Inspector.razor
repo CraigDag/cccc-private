@@ -25,6 +25,40 @@
             }
             <button type="button" class="insp-x" aria-label="Close" @onclick="OnClose" data-testid="inspector-close">×</button>
         </header>
+        @* The verbs straight under the name, so they are on the screen however much is said about the class below. *@
+        <div class="insp-actions">
+            <button type="button" class="btn primary" @onclick="() => OnEdit.InvokeAsync(s.Id)" data-testid="inspector-edit">@(Editable ? "Edit" : "Details")</button>
+            @if (roster.Count > 0 && o.Happens && !M.Scratch)
+            {
+                <button type="button" class="btn" @onclick="() => D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = s.Id })" data-testid="inspector-register">Register</button>
+            }
+            @if (Editable)
+            {
+                @* A plan has nothing that happens: no cover and nothing to cancel. *@
+                @if (!M.Scratch && (o.NeedsCover || o.Covered))
+                {
+                    <button type="button" class="btn" @onclick="() => D.Show<CoverForm>(new Dictionary<string, object?> { [nameof(CoverForm.SessionId)] = s.Id })">Cover</button>
+                }
+                @if (!M.Scratch)
+                {
+                    <button type="button" class="btn" @onclick="() => D.Show<CancelForm>(new Dictionary<string, object?> { [nameof(CancelForm.SessionId)] = s.Id })" data-testid="inspector-cancel">@(s.Cancelled ? "Restore" : "Cancel")</button>
+                }
+                @if (!M.Scratch)
+                {
+                    <button type="button" class="btn" @onclick="() => D.Show<FindTimeForm>(new Dictionary<string, object?> { [nameof(FindTimeForm.SessionId)] = s.Id })" title="When everybody it needs, and a space, are free this week" data-testid="inspector-find-time">Another time…</button>
+                }
+                <button type="button" class="btn" @onclick="() => Duplicate(s)" data-testid="inspector-duplicate">Duplicate</button>
+            }
+            @* Copy, never move: the class stays where it is, a week that has ended included. *@
+            @if (!M.Scratch && W.Access.MaySeeScratch && W.Access.MayEdit)
+            {
+                <button type="button" class="btn" @onclick="() => CopyToScratch(s)" data-testid="inspector-to-scratch">Copy to Scratch Week</button>
+            }
+            @if (Editable)
+            {
+                <button type="button" class="btn danger" @onclick="() => Delete(s)" data-testid="inspector-delete">Delete</button>
+            }
+        </div>
         <dl class="insp-facts">
             <dt>Where</dt><dd>@(Looks.Room(t, s) is { Length: > 0 } r ? r : "No space given")</dd>
             <dt>For</dt><dd>@Looks.Audience(t, s) <small>@(roster.Count == 1 ? "1 student" : $"{roster.Count} students")</small></dd>
@@ -81,36 +115,6 @@
         {
             <div class="insp-note warn" data-testid="inspector-clash">@n</div>
         }
-        <div class="insp-actions">
-            <button type="button" class="btn primary" @onclick="() => OnEdit.InvokeAsync(s.Id)" data-testid="inspector-edit">@(Editable ? "Edit" : "Details")</button>
-            @if (roster.Count > 0 && o.Happens && !M.Scratch)
-            {
-                <button type="button" class="btn" @onclick="() => D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = s.Id })" data-testid="inspector-register">Register</button>
-            }
-            @if (Editable)
-            {
-                @* A plan has nothing that happens: no cover and nothing to cancel. *@
-                @if (!M.Scratch && (o.NeedsCover || o.Covered))
-                {
-                    <button type="button" class="btn" @onclick="() => D.Show<CoverForm>(new Dictionary<string, object?> { [nameof(CoverForm.SessionId)] = s.Id })">Cover</button>
-                }
-                @if (!M.Scratch)
-                {
-                    <button type="button" class="btn" @onclick="() => D.Show<CancelForm>(new Dictionary<string, object?> { [nameof(CancelForm.SessionId)] = s.Id })" data-testid="inspector-cancel">@(s.Cancelled ? "Restore" : "Cancel")</button>
-                }
-                @if (!M.Scratch)
-                {
-                    <button type="button" class="btn" @onclick="() => D.Show<FindTimeForm>(new Dictionary<string, object?> { [nameof(FindTimeForm.SessionId)] = s.Id })" title="When everybody it needs, and a space, are free this week" data-testid="inspector-find-time">Another time…</button>
-                }
-                <button type="button" class="btn" @onclick="() => Duplicate(s)" data-testid="inspector-duplicate">Duplicate</button>
-                <button type="button" class="btn danger" @onclick="() => Delete(s)" data-testid="inspector-delete">Delete</button>
-            }
-            @* Copy, never move: the class stays where it is, a week that has ended included. *@
-            @if (!M.Scratch && W.Access.MaySeeScratch && W.Access.MayEdit)
-            {
-                <button type="button" class="btn" @onclick="() => CopyToScratch(s)" data-testid="inspector-to-scratch">Copy to Scratch Week</button>
-            }
-        </div>
     }
 </aside>
 @code {
