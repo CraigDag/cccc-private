@@ -299,7 +299,7 @@ input[type=time] { min-width: 6.5rem; }
 .grid-table button.link:hover, .grid-table button.link:focus-visible { text-decoration: underline; }
 .grid-table tr.chosen { background: var(--hover-raised); }
 .grid-table tr.off td { opacity: .55; }
-.grid-table td.num, .grid-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.grid-table td.num, .grid-table th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .grid-table tr.total td { font-weight: 650; border-top: 2px solid var(--divider); }
 .grid-table.static tbody tr { cursor: default; }
 

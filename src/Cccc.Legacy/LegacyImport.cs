@@ -13,14 +13,16 @@ public sealed record ImportReport(
     int Sessions, int PatternSessions, int WeeksStampedFromPattern, int Registers, int Absences, int Events,
     int CancelledOrMoved, int Covered, int RecordsNotPlaced, int SessionColoursDropped, int FloorPlansDropped)
 {
+    private static string N(int n, string one, string? many = null) => $"{n} {(n == 1 ? one : many ?? one + "s")}";
+
     public IEnumerable<string> Lines()
     {
         yield return $"Read a file of format {SchemaVersion}.";
-        yield return $"{Rooms} rooms, {Programmes} programmes, {Groups} groups, {Students} students, {Facilitators} facilitators and {Classes} classes.";
+        yield return $"{N(Rooms, "room")}, {N(Programmes, "programme")}, {N(Groups, "group")}, {N(Students, "student")}, {N(Facilitators, "facilitator")} and {N(Classes, "class", "classes")}.";
         yield return PatternSessions > 0
             ? $"{Sessions} sessions in all, including {PatternSessions} weekly classes from the old standing pattern, laid onto each of {WeeksStampedFromPattern} weeks as the old app drew them."
             : $"{Sessions} sessions.";
-        yield return $"{Registers} registers, {Absences} absences and {Events} events.";
+        yield return $"{N(Registers, "register")}, {N(Absences, "absence")} and {N(Events, "event")}.";
         if (CancelledOrMoved + Covered > 0) yield return $"{CancelledOrMoved} one-off cancellations or moves and {Covered} covers, each on its own week.";
         if (RecordsNotPlaced > 0) yield return $"{RecordsNotPlaced} one-off changes or registers belonged to a week where their class no longer runs, and were not brought across.";
         if (SessionColoursDropped > 0) yield return $"{SessionColoursDropped} sessions had a colour of their own; a block is now always coloured by its class.";
