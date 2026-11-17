@@ -61,6 +61,9 @@ public sealed record Access(Account? Account)
 
     public bool MaySeeSystem => Role is Role.Administrator;
 
+    /// <summary>Pairs, renames and unpairs the screens in the building that show the timetable.</summary>
+    public bool MayManageScreens => Role is Role.Administrator;
+
     /// <summary>The name changes are recorded under: the login, which is unique.</summary>
     public string By => Account?.Login ?? "";
 

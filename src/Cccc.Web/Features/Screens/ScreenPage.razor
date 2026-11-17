@@ -1,0 +1,293 @@
+@page "/screen"
+@layout ScreenLayout
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@using Cccc.Web.Features.Week
+@using Cccc.Web.Features.Plan
+@inject ScreenDirectory Screens
+@inject ScreenPairing Pairing
+@inject ScreenLimiter Limiter
+@inject ProjectChoice Choice
+@inject SchoolClock Clock
+
+<PageTitle>@(_screen?.Name ?? "Pair this screen") · CCCC Scheduler</PageTitle>
+<HeadContent>
+    <meta name="robots" content="noindex" />
+    @if (_screen is not null)
+    {
+        @* A browser that runs no script still looks again every minute. *@
+        <noscript><meta http-equiv="refresh" content="60" /></noscript>
+    }
+    <script src="@Assets["js/screen.js"]" defer></script>
+</HeadContent>
+
+@if (_screen is null)
+{
+    @* Waiting to be paired. The claim is this browser's alone: it collects the screen's token once an
+       administrator has typed the code. *@
+    <div class="screen screen-pair" data-look="Night" data-screen-pair data-claim="@_claim" data-version="@AppVersion.Current">
+        <div class="sp-card">
+            <div class="sp-mark"><img src="icons/cccc-mark.png" alt="" width="34" height="34" /> CCCC Scheduler</div>
+            @if (_code is null)
+            {
+                <h1>This screen will ask again in a minute</h1>
+                <p>Too many screens asked to be paired at once from here.</p>
+            }
+            else
+            {
+                <h1>Show the timetable on this screen</h1>
+                <p class="sp-code" data-testid="screen-code">@ScreenPairing.Show(_code)</p>
+                <p>An administrator opens <b>Administration ▸ Screens</b> on their own computer or phone and types this code. Nobody signs in on the screen itself.</p>
+                <p class="sp-quiet">The code changes every ten minutes.</p>
+            }
+        </div>
+    </div>
+}
+else
+{
+    var b = _board!;
+    <div class="screen @(_room is null ? "screen-building" : "screen-space")" data-look="Night" data-screen-board data-seconds="@_seconds"
+         data-version="@AppVersion.Current" data-testid="screen">
+        <header class="sc-head">
+            @if (_room is { } room)
+            {
+                <div class="sc-place"><span class="sc-swatch" style="--c:@room.Colour"></span><h1 data-testid="screen-space">@room.Name</h1></div>
+            }
+            else
+            {
+                <div class="sc-place"><img class="sc-mark" src="icons/cccc-mark.png" alt="" /><h1>@(_t!.Settings.SchoolName.Trim() is { Length: > 0 } school ? school : "Today")</h1></div>
+            }
+            <div class="sc-date"><b>@PlanPage.Long(b.Today)</b><span>Week @Cccc.Domain.Week.IsoNumber(b.Today)@(b.Semester is { } sem ? " · " + sem : "")</span></div>
+            <div class="sc-clock" data-screen-clock>@Hm(b.Minute)</div>
+        </header>
+
+        @if (b.Closed is { } closed)
+        {
+            <div class="sc-closed" data-testid="screen-closed">Closed today@(closed.Name.Trim() is { Length: > 0 } why ? ": " + why : "")</div>
+        }
+
+        @if (_screen.RoomId is not null)
+        {
+            @* One space's day, for a tablet by its door: what is in it now, big, and the rest of its day. *@
+            var line = _room is null ? null : ScreenBoard.Space(b, _room.Id);
+            <main class="ss-body">
+                @if (line is null)
+                {
+                    <p class="ss-gone" data-testid="screen-no-space">This screen's space is no longer in the timetable. An administrator can choose another in Administration ▸ Screens.</p>
+                }
+                else
+                {
+                    <section class="ss-now @(line.Now is null ? "free" : "busy")" style="--k:@(line.Now?.Colour ?? line.Room.Colour)" data-testid="screen-now">
+                        <small>Now</small>
+                        @if (line.Now is { } now)
+                        {
+                            <b class="ss-title">@now.Title</b>
+                            <span class="ss-detail">@now.Detail</span>
+                            <span class="ss-until">@line.Until</span>
+                            @if (!now.AllDay)
+                            {
+                                <span class="sc-progress"><span style="width:@now.Progress(b.Minute)%"></span></span>
+                            }
+                        }
+                        else
+                        {
+                            <b class="ss-title">Free</b>
+                            <span class="ss-until">@line.Until</span>
+                        }
+                    </section>
+                    <section class="ss-day" aria-label="The rest of today">
+                        <h2>Today</h2>
+                        @if (line.Day.Count == 0)
+                        {
+                            <p class="sc-quiet">Nothing in @line.Room.Name today.</p>
+                        }
+                        <ol class="ss-list" data-testid="screen-day">
+                            @foreach (var item in line.Day)
+                            {
+                                bool past = !item.AllDay && ScreenBoard.Minutes(item.End) <= b.Minute;
+                                <li class="@(past ? "past" : "") @(ReferenceEquals(item, line.Now) ? "on" : "")" style="--k:@(item.Colour ?? "var(--border)")">
+                                    <span class="ss-when">@(item.AllDay ? "All day" : Looks.When(item.Start, item.End))</span>
+                                    <span><b>@item.Title</b><small>@item.Detail</small></span>
+                                </li>
+                            }
+                        </ol>
+                        @foreach (var ahead in _ahead)
+                        {
+                            <h2 class="ss-ahead">@(ahead.Day == b.Today.AddDays(1) ? "Tomorrow" : PlanPage.Long(ahead.Day))</h2>
+                            <ol class="ss-list" data-testid="screen-ahead">
+                                @foreach (var item in ahead.Bookings)
+                                {
+                                    <li style="--k:@(item.Colour ?? "var(--border)")">
+                                        <span class="ss-when">@(item.AllDay ? "All day" : Looks.When(item.Start, item.End))</span>
+                                        <span><b>@item.Title</b><small>@item.Detail</small></span>
+                                    </li>
+                                }
+                            </ol>
+                        }
+                    </section>
+                }
+            </main>
+        }
+        else
+        {
+            <main class="sb-body">
+                @* The building: a line a space, grouped by kind, paged if there are more than fit. *@
+                <section class="sb-board" aria-label="Every space now">
+                    <div class="sb-cols" aria-hidden="true"><span>Space</span><span>Now</span><span></span><span>Next</span></div>
+                    <div class="sb-rows" data-screen-rows>
+                        @foreach (var (part, lines) in b.Sections)
+                        {
+                            @if (b.Headed)
+                            {
+                                <div class="sb-section">@part</div>
+                            }
+                            @foreach (var line in lines)
+                            {
+                                <div class="sb-row @(line.Now is null ? "free" : "busy")" style="--c:@line.Room.Colour" data-testid="screen-row">
+                                    <span class="sb-space">@line.Room.Name</span>
+                                    <span class="sb-now" style="--k:@(line.Now?.Colour ?? "var(--ink)")">
+                                        @if (line.Now is { } now)
+                                        {
+                                            <b>@now.Title</b><small>@now.Detail</small>
+                                            @if (!now.AllDay)
+                                            {
+                                                <span class="sc-progress"><span style="width:@now.Progress(b.Minute)%"></span></span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="sb-free">Free</span>
+                                        }
+                                    </span>
+                                    <span class="sb-until">@line.Until</span>
+                                    <span class="sb-next">
+                                        @if (line.Next is { } next)
+                                        {
+                                            <small>@Cccc.Domain.Week.Hm(next.Start)</small> @next.Title
+                                        }
+                                        else if (line.Now is not null && !line.Now.AllDay)
+                                        {
+                                            <span class="sb-none">Nothing more today</span>
+                                        }
+                                    </span>
+                                </div>
+                            }
+                        }
+                    </div>
+                </section>
+                <aside class="sb-side">
+                    @if (b.Off.Count > 0 || b.ClosedFor.Count > 0)
+                    {
+                        <section data-testid="screen-off">
+                            <h2>Not on today</h2>
+                            @foreach (var c in b.ClosedFor)
+                            {
+                                <p class="sb-item warn">@c</p>
+                            }
+                            @foreach (var o in b.Off)
+                            {
+                                <p class="sb-item warn"><span class="sb-time">@Looks.When(o.Session)</span><b>@o.Title</b> <small>@Looks.Room(_t!, o.Session) · @o.Why</small></p>
+                            }
+                        </section>
+                    }
+                    @if (b.Changes.Count > 0)
+                    {
+                        <section data-testid="screen-changes">
+                            <h2>Changed since @(Recent.Since(b.Today) == b.Today.AddDays(-1) ? "yesterday" : Recent.Since(b.Today).DayOfWeek.ToString())</h2>
+                            @foreach (var c in b.Changes.Take(5))
+                            {
+                                <p class="sb-item"><span class="sb-time">@c.When</span><b>@c.Title</b> <small>@c.What</small></p>
+                            }
+                        </section>
+                    }
+                    @if (b.Coming.Count > 0)
+                    {
+                        <section data-testid="screen-coming">
+                            <h2>Coming up</h2>
+                            @foreach (var u in b.Coming)
+                            {
+                                <p class="sb-item"><span class="sb-time">@Cccc.Domain.Week.Hm(u.Booking.Start)</span><b>@u.Booking.Title</b> <small>@u.Booking.Detail@(u.Space.Length > 0 ? " · " + u.Space : "")</small></p>
+                            }
+                        </section>
+                    }
+                    @if (b.Events.Count > 0)
+                    {
+                        <section data-testid="screen-events">
+                            <h2>Today's events</h2>
+                            @foreach (var e in b.Events)
+                            {
+                                <p class="sb-item"><span class="sb-time">@(e.AllDay ? "All day" : Cccc.Domain.Week.Hm(e.Start))</span><b>@e.Title</b>@if (e.Detail.Length > 0) { <small> @e.Detail</small> }</p>
+                            }
+                        </section>
+                    }
+                    @if (b.Elsewhere.Count > 0)
+                    {
+                        <section>
+                            <h2>Without a space</h2>
+                            @foreach (var e in b.Elsewhere)
+                            {
+                                <p class="sb-item"><span class="sb-time">@Looks.When(e.Start, e.End)</span><b>@e.Title</b> <small>@e.Detail</small></p>
+                            }
+                        </section>
+                    }
+                    <section data-testid="screen-free">
+                        <h2>Free now</h2>
+                        @if (b.FreeNow.Count == 0)
+                        {
+                            <p class="sc-quiet">Every space is in use.</p>
+                        }
+                        @foreach (var l in b.FreeNow)
+                        {
+                            <p class="sb-item"><span class="sb-swatch" style="--c:@l.Room.Colour"></span><b>@l.Room.Name</b> <small>@l.Until</small></p>
+                        }
+                    </section>
+                </aside>
+            </main>
+        }
+        <footer class="sc-foot"><span data-screen-status>Updated @Hm(b.Minute)</span><span>@_screen.Name</span><span data-screen-page></span></footer>
+    </div>
+}
+
+@code {
+    [CascadingParameter] private HttpContext Http { get; set; } = default!;
+
+    private Screen? _screen;
+    private Room? _room;
+    private Timetable? _t;
+    private ScreenBoardModel? _board;
+    private IReadOnlyList<(DateOnly Day, IReadOnlyList<Booking> Bookings)> _ahead = [];
+    private string? _code, _claim;
+    private int _seconds;
+
+    protected override void OnInitialized()
+    {
+        // A screen never shows yesterday's page from a cache, and nothing here is for search engines. (Blazor's
+        // antiforgery sends no-store on every page it draws as well; this says it is meant, not incidental.)
+        Http.Response.Headers.CacheControl = "no-store";
+        var now = Clock.Now;
+        var token = Http.Request.Cookies[ScreenEndpoints.CookieName];
+        _screen = Screens.FindByToken(token);
+        if (_screen is null)
+        {
+            if (token is not null) ScreenEndpoints.TakeBack(Http);
+            if (Limiter.Allow("screen:" + SignInSetup.ClientOf(Http), now) && Pairing.Start(now) is { } pair)
+                (_code, _claim) = pair;
+            return;
+        }
+
+        // Each look starts the cookie's life again, so a screen that is on never has to be paired twice.
+        ScreenEndpoints.Give(Http, token!, now);
+        Screens.Saw(_screen, now);
+        var local = Clock.Local(now);
+        _seconds = local.Hour * 3600 + local.Minute * 60 + local.Second;
+        var today = Clock.Today;
+        var live = Choice.Open();
+        _t = live?.State ?? Timetable.Empty;
+        _room = _screen.RoomId is { } id ? _t.Rooms[id] : null;
+        var changed = live is null ? [] : Recent.ForDay(_t, live.ChangesMadeSince(Clock.StartOf(Recent.Since(today))), today);
+        _board = ScreenBoard.For(_t, today, local.Hour * 60 + local.Minute, changed);
+        if (_room is not null) _ahead = ScreenBoard.DaysAheadIn(_t, _room.Id, today);
+    }
+
+    private static string Hm(int minute) => $"{minute / 60:00}:{minute % 60:00}";
+}

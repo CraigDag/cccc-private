@@ -46,6 +46,15 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   is narrowed to them. Download it again after the timetable changes and open it over the last one:
   a class that is cancelled, closed, deleted, covered by somebody else or on a day they are away is
   taken off their phone, rather than left there for them to turn up to.
+- **The building on a screen in the corridor**: a TV can show every space as it is now, like a
+  departures board (what is on, who it is for, who is teaching it by first name, until when, and what is
+  next), with what is off today, what changed since yesterday, what starts next and where, and which
+  spaces are free to train in. A tablet by a studio door can show that studio's day instead, with *Now*
+  big enough to read from along the corridor. Nobody signs in on the screen: open the address shown in
+  **Administration ▸ Screens** on it, and type the code it shows there. It keeps itself up to date every
+  half minute, and if it loses the connection it keeps showing what it knew and says since when. It shows
+  only what a timetable pinned on the wall would: never a student's name, a note, why a class is off, who
+  is away, or an event the students may not see. Unpair a screen and it stops at once.
 - **A new, empty timetable says where to start**: what to put in, in the order the plan needs it,
   each ticked as it is done, or *Bring in a file…* to fill everything at once.
 - **"Space" and "class" everywhere** a person reads, rather than "room" and "session": a Big Top is

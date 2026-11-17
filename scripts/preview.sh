@@ -22,6 +22,9 @@ if [ "${FOLLOW:-}" = 1 ] || [ "${FOLLOW:-}" = year ]; then
   dotnet run --project tools/OldFormatSchool -- "$([ "$FOLLOW" = year ] && echo year || echo make)" "$FOLLOW_FILE"
   set -- "$@" "--Follow:File=$FOLLOW_FILE" --Follow:EverySeconds=5
 fi
+# AT=10:15 sets the school's clock to that time of day, running on from there: Now and the screens in
+# the building then show the middle of a school day whenever the preview is started.
+if [ -n "${AT:-}" ]; then set -- "$@" "--Clock:Time=$AT"; fi
 ASPNETCORE_ENVIRONMENT=Development \
 Store__Path="$STORE" Store__Create=true \
 Preview__Seed=true Preview__Accounts=true \

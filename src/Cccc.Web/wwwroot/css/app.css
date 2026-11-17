@@ -946,3 +946,119 @@ ul.said li + li { margin-top: 4px; }
 .ny-check { align-items: flex-start; margin-top: 14px; }
 .ny-check input { margin-top: 3px; }
 .ny-check small { display: block; margin-top: 2px; }
+
+/* ---- Screens in the building (/screen) ----------------------------------------------------------
+   A TV in a corridor or a tablet by a door, read from across a room by people walking past. Everything
+   is sized from the screen itself (em on a font size taken from the viewport), so one page suits a
+   1080p TV, a 4K one and a tablet. Nothing here is pressed: no hover, no focus, no scrolling. */
+/* Spelt out for the older browsers some TVs carry: no inset, and a size before the clamp() they lack. */
+.screen {
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; gap: 1.1em;
+    padding: 1.3em 1.7em .9em; overflow: hidden;
+    background: var(--window); color: var(--text); font-family: var(--sans); line-height: 1.3;
+    font-size: calc(.55vw + .75vh);
+    font-size: clamp(13px, calc(.55vw + .75vh), 40px);
+}
+.sc-head { display: flex; align-items: center; gap: 1.2em; border-bottom: 1px solid var(--divider); padding-bottom: .8em; flex: none; }
+.sc-place { display: flex; align-items: center; gap: .6em; min-width: 0; }
+.sc-place h1 { font-size: 2.1em; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-mark { width: 2.1em; height: 2.1em; flex: none; }
+.sc-swatch { width: .45em; height: 2.4em; border-radius: .22em; background: var(--c); flex: none; }
+.sc-date { display: flex; flex-direction: column; margin-left: auto; text-align: right; white-space: nowrap; }
+.sc-date b { font-family: var(--serif); font-size: 1.35em; font-weight: 600; }
+.sc-date span { color: var(--text-muted); }
+.sc-clock { font-family: var(--serif); font-size: 3em; font-weight: 600; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; flex: none; }
+.sc-closed { flex: none; background: var(--warning-soft); color: var(--warning); border-radius: var(--radius); padding: .55em 1em; font-size: 1.4em; font-weight: 650; }
+.sc-foot { flex: none; display: flex; gap: 1.5em; color: var(--text-quiet); font-size: .8em; }
+.sc-foot [data-screen-page] { margin-left: auto; }
+.screen[data-offline] [data-screen-status] { color: var(--warning); font-weight: 650; }
+.sc-progress { display: block; height: .3em; max-width: 14em; margin-top: .35em; border-radius: .15em; background: var(--well); overflow: hidden; }
+.sc-progress > span { display: block; height: 100%; background: var(--accent); }
+.sc-quiet { color: var(--text-quiet); }
+.screen h2 { font-size: .75em; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; color: var(--text-quiet); margin: 0 0 .5em; }
+
+/* The whole building: a line a space, and beside it what is off, what changed, events and free spaces. */
+.sb-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: 1.6em; }
+.sb-board { min-height: 0; display: flex; flex-direction: column; }
+.sb-cols, .sb-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 2fr) 7.2em minmax(0, 1.4fr); gap: 1em; align-items: center; }
+.sb-cols { flex: none; padding: 0 .9em .4em 1.2em; color: var(--text-quiet); font-size: .75em; text-transform: uppercase; letter-spacing: .08em; }
+/* A few spaces grow to fill the board, so they read from further away; more than fit are paged instead. */
+.sb-rows { flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.sb-section { flex: none; padding: .8em 0 .3em 1.2em; color: var(--text-quiet); font-size: .75em; text-transform: uppercase; letter-spacing: .08em; }
+.sb-row { position: relative; flex: 1 1 auto; max-height: 6.5em; padding: .6em .9em .6em 1.2em; border-top: 1px solid var(--rule); }
+.sb-row::before { content: ""; position: absolute; left: 0; top: .5em; bottom: .5em; width: .3em; border-radius: .15em; background: var(--c); }
+.sb-space { font-family: var(--serif); font-size: 1.35em; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-row.free .sb-space { color: var(--text-muted); font-weight: 500; }
+.sb-now { min-width: 0; }
+.sb-now b { display: block; font-size: 1.25em; border-left: .25em solid var(--k); padding-left: .45em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-now small { display: block; padding-left: .7em; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-now .sc-progress { margin-left: .7em; }
+.sb-free { color: var(--text-muted); font-size: 1.15em; }
+.sb-until { font-family: var(--serif); font-variant-numeric: tabular-nums; color: var(--text-muted); white-space: nowrap; }
+.sb-row.busy .sb-until { color: var(--text); }
+.sb-next { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-next small { margin-right: .3em; font-family: var(--serif); font-size: 1em; font-variant-numeric: tabular-nums; color: var(--text-quiet); }
+.sb-none { color: var(--text-quiet); }
+.sb-side { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 1.2em; border-left: 1px solid var(--divider); padding-left: 1.6em; }
+.sb-item { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 .45em; margin: 0 0 .45em; }
+.sb-item b { font-weight: 650; }
+.sb-item small { color: var(--text-muted); }
+.sb-item.warn b { color: var(--warning); }
+.sb-time { min-width: 3.2em; font-family: var(--serif); font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.sb-swatch { width: .7em; height: .7em; border-radius: 50%; background: var(--c); align-self: center; }
+
+/* One space's day, by its door: now, big, and the rest of today. Larger type than the building's, since
+   a door sign has far less to say and is read from further along the corridor. */
+.screen-space { font-size: calc(.9vw + 1.2vh); font-size: clamp(14px, calc(.9vw + 1.2vh), 52px); }
+.ss-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 2em; }
+.ss-now { display: flex; flex-direction: column; justify-content: center; gap: .3em; border-left: .5em solid var(--k); padding: .5em 0 .5em 1.2em; min-width: 0; }
+.ss-now small { text-transform: uppercase; letter-spacing: .1em; color: var(--text-quiet); font-size: .85em; }
+.ss-title { font-family: var(--serif); font-size: 3.6em; line-height: 1.05; font-weight: 600; overflow-wrap: anywhere; }
+.ss-now.free .ss-title { color: var(--text-muted); }
+.ss-detail { font-size: 1.4em; color: var(--text-muted); }
+.ss-until { font-family: var(--serif); font-size: 1.6em; font-variant-numeric: tabular-nums; }
+.ss-now .sc-progress { max-width: 22em; height: .4em; }
+/* More days than fit fade out at the foot rather than stopping mid-line. */
+.ss-day { min-height: 0; overflow: hidden; border-left: 1px solid var(--divider); padding-left: 1.6em;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5em), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5em), transparent); }
+.ss-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .2em; }
+.ss-list li { display: grid; grid-template-columns: 6.8em minmax(0, 1fr); gap: .8em; padding: .5em .6em; border-left: .25em solid var(--k); border-radius: .3em; }
+.ss-list li.on { background: var(--hover); }
+.ss-list li.past { opacity: .45; }
+.ss-list small { display: block; color: var(--text-muted); }
+.ss-ahead { margin-top: 1.4em !important; }
+.ss-when { font-family: var(--serif); font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.ss-gone { font-size: 1.4em; color: var(--text-muted); }
+
+/* Waiting to be paired: the code, big enough to read from the doorway. */
+.screen-pair { align-items: center; justify-content: center; }
+.sp-card { max-width: 40em; text-align: center; }
+.sp-mark { display: flex; justify-content: center; align-items: center; gap: .5em; margin-bottom: 2em; font-family: var(--serif); font-weight: 700; letter-spacing: .04em; color: var(--text-muted); }
+.sp-card h1 { font-size: 2em; }
+.sp-code { margin: .25em 0; font-family: var(--serif); font-size: 5.5em; font-weight: 600; letter-spacing: .12em; color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sp-quiet { color: var(--text-quiet); }
+
+/* A screen on its side, or a tablet: the parts stacked, the side list in two columns under the board, and
+   each space on two lines (what is on now and until when, then what is next) so nothing is cut short. */
+@media (max-aspect-ratio: 1/1) {
+    .screen { font-size: calc(1.45vw + .55vh); font-size: clamp(13px, calc(1.45vw + .55vh), 44px); }
+    .screen-space { font-size: calc(1.8vw + .7vh); font-size: clamp(14px, calc(1.8vw + .7vh), 52px); }
+    /* The name of the place keeps the width; the date goes under it and the clock beside both. */
+    .sc-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "place clock" "date clock"; gap: .25em 1em; }
+    .sc-place { grid-area: place; }
+    .sc-date { grid-area: date; margin-left: 0; text-align: left; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 .6em; }
+    .sc-clock { grid-area: clock; }
+    .sb-body { display: flex; flex-direction: column; }
+    .sb-board { flex: 1 1 auto; }
+    .sb-cols { display: none; }
+    .sb-row { grid-template-columns: minmax(0, .85fr) minmax(0, 2fr) 6.8em; grid-template-areas: "space now until" "space next next"; gap: .2em 1em; max-height: 8em; align-content: center; align-items: baseline; }
+    .sb-space { grid-area: space; font-size: 1.2em; align-self: center; }
+    .sb-now { grid-area: now; }
+    .sb-until { grid-area: until; text-align: right; }
+    .sb-next { grid-area: next; padding-left: .7em; }
+    .sb-next small::before { content: "Next "; font-family: var(--sans); }
+    .sb-side { flex: none; max-height: 42vh; border-left: 0; padding: 1em 0 0; border-top: 1px solid var(--divider); display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: .8em 1.6em; }
+    .ss-body { display: flex; flex-direction: column; }
+    .ss-now { flex: none; padding-top: 1em; padding-bottom: 1em; }
+    .ss-day { flex: 1 1 auto; border-left: 0; padding: 1em 0 0; border-top: 1px solid var(--divider); }
+}

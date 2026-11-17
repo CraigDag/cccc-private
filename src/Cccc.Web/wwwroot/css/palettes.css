@@ -1,8 +1,9 @@
 /* CCCC Scheduler, second design. Two looks: Paper (light, the default) and Night (dark). A device that
    asks for dark gets Night unless the person chose Paper; data-theme on <html> is set only by a choice.
-   Every rule in app.css refers to these variables and contains no colour of its own. */
+   Every rule in app.css refers to these variables and contains no colour of its own. A screen in the
+   building (/screen) chooses its own look with data-look on its root, whatever the TV prefers. */
 
-:root, :root[data-theme="Paper"] {
+:root, :root[data-theme="Paper"], [data-look="Paper"] {
     color-scheme: light;
     --window:       #F5F2EA;
     --chrome:       #FFFDF7;
@@ -33,7 +34,7 @@
     --scrim:        rgba(28, 24, 18, .32);
 }
 
-:root[data-theme="Night"] {
+:root[data-theme="Night"], [data-look="Night"] {
     color-scheme: dark;
     --window:       #111315;
     --chrome:       #181B1E;

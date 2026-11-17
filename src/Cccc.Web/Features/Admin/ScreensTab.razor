@@ -1,0 +1,132 @@
+@inject ScreenDirectory Screens
+@inject Cccc.Web.Features.Screens.ScreenPairing Pairing
+@inject ProjectChoice Choice
+@inject NavigationManager Nav
+@{
+    var screens = Screens.All();
+    // The spaces of the timetable the screens show: the one open for everybody, whatever this tab looks at.
+    var open = Choice.Open()?.State ?? Timetable.Empty;
+    var rooms = open.Rooms.Current().OrderBy(r => r.Name, NameOrder.Comparer).ToList();
+}
+<div class="section">
+    <h2>Pair a screen</h2>
+    <p class="hint">A TV in a corridor, or a tablet by a door, can show the timetable as it is now, with nobody signed in on it. On the screen, open <b data-testid="screen-address">@Address</b>: it shows a code. Type the code here. The screen shows the timetable open for everybody, refreshes itself every half minute, and carries what a timetable on the wall would: classes, who they are for, who teaches them by first name, and where. Never a student's name, a note, who is away, or an event the students may not see.</p>
+    <div class="form-grid">
+        <label class="field"><span>Code on the screen</span><input @bind="_code" @bind:event="oninput" autocomplete="off" spellcheck="false" placeholder="K7Q 4MX" data-testid="pair-code" /></label>
+        <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" maxlength="@ScreenDirectory.MaxName" placeholder="Corridor" data-testid="pair-name" /></label>
+        <label class="field"><span>It shows</span>
+            <select @bind="_shows" data-testid="pair-shows">
+                <option value="">The whole building</option>
+                @foreach (var r in rooms)
+                {
+                    <option value="@r.Id">@r.Name's day, for a screen by its door</option>
+                }
+            </select>
+        </label>
+    </div>
+    <div class="bar"><button type="button" class="btn primary" @onclick="Pair" data-testid="pair">Pair</button></div>
+    @if (_error is not null)
+    {
+        <p class="notice warn" role="alert" data-testid="pair-error">@_error</p>
+    }
+</div>
+
+<div class="section">
+    <h2>Screens</h2>
+    @if (screens.Count == 0)
+    {
+        <p class="muted" data-testid="no-screens">No screens yet.</p>
+    }
+    <ul class="list" data-testid="screens">
+        @foreach (var s in screens)
+        {
+            var room = s.RoomId is { } id ? open.Rooms[id] : null;
+            bool quiet = s.Seen is not { } seen || W.Clock.Now - seen > TimeSpan.FromDays(1);
+            <li class="list-row" style="cursor:default; flex-wrap:wrap" data-testid="screen-item">
+                @if (_editing == s.Id)
+                {
+                    <span class="name" style="display:flex; gap:8px; flex-wrap:wrap; align-items:end">
+                        <label class="field"><span>Name</span><input @bind="_editName" @bind:event="oninput" maxlength="@ScreenDirectory.MaxName" data-testid="screen-edit-name" /></label>
+                        <label class="field"><span>It shows</span>
+                            <select @bind="_editShows" data-testid="screen-edit-shows">
+                                <option value="">The whole building</option>
+                                @foreach (var r in rooms)
+                                {
+                                    <option value="@r.Id">@r.Name's day</option>
+                                }
+                            </select>
+                        </label>
+                    </span>
+                    <button type="button" class="btn primary" @onclick="() => Save(s)" data-testid="screen-save">OK</button>
+                    <button type="button" class="btn quiet" @onclick="() => _editing = null">Close</button>
+                }
+                else if (_unpairing == s.Id)
+                {
+                    <span class="name"><b>Unpair @s.Name?</b><br /><small class="muted">It stops showing the timetable and asks for a new code within a minute.</small></span>
+                    <button type="button" class="btn danger" @onclick="() => Unpair(s)" data-testid="screen-unpair-yes">Unpair</button>
+                    <button type="button" class="btn quiet" @onclick="() => _unpairing = null">Close</button>
+                }
+                else
+                {
+                    <span class="name"><b>@s.Name</b> <span class="badge">@(s.RoomId is null ? "The whole building" : room is null ? "A space no longer in the timetable" : room.Name + "'s day")</span><br />
+                        <small class="@(quiet ? "warn-text" : "muted")" data-testid="screen-seen">Paired @W.Clock.Describe(s.Paired) · @(s.Seen is { } at ? "last looked " + W.Clock.Describe(at) : "has not looked yet")@(quiet && s.Seen is not null ? ": is it switched on?" : "")</small></span>
+                    <button type="button" class="btn quiet" @onclick="() => Edit(s)" data-testid="screen-change">Change…</button>
+                    <button type="button" class="btn quiet danger" @onclick="() => _unpairing = s.Id" data-testid="screen-unpair">Unpair</button>
+                }
+            </li>
+        }
+    </ul>
+</div>
+
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+
+    private string _code = "", _name = "", _shows = "", _editName = "", _editShows = "";
+    private string? _error;
+    private Guid? _editing, _unpairing;
+
+    private string Address => Nav.BaseUri + "screen";
+
+    private static Guid? RoomOf(string value) => Guid.TryParse(value, out var id) ? id : null;
+
+    private void Pair()
+    {
+        _error = null;
+        if (!W.Access.MayManageScreens) return;
+        try
+        {
+            var screen = Pairing.Approve(_code, _name, RoomOf(_shows), W.Clock.Now);
+            W.Say($"{screen.Name} is paired. It shows the timetable within a few seconds.");
+            _code = _name = _shows = "";
+        }
+        catch (ScreenRefused e) { _error = e.Message; }
+    }
+
+    private void Edit(Screen s)
+    {
+        _editing = s.Id;
+        _unpairing = null;
+        _editName = s.Name;
+        _editShows = s.RoomId?.ToString() ?? "";
+    }
+
+    private void Save(Screen s)
+    {
+        if (!W.Access.MayManageScreens) return;
+        try
+        {
+            Screens.Change(s.Id, _editName, RoomOf(_editShows));
+            _editing = null;
+            W.Say("Changed. The screen shows it at its next refresh.");
+        }
+        catch (ScreenRefused e) { W.Warn(e.Message); }
+    }
+
+    private void Unpair(Screen s)
+    {
+        if (!W.Access.MayManageScreens) return;
+        Screens.Unpair(s.Id);
+        _unpairing = null;
+        W.Say($"{s.Name} is unpaired.");
+    }
+}

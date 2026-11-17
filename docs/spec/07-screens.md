@@ -231,6 +231,38 @@ shows. The list marks the one this tab is looking at, offers no Delete on it, an
 timetable that is not open (*In it now*). *Bring in a file…* offers *Look at it first* beside *Open it
 for everybody*.
 
+## Screens in the building (`/screen`)
+
+The building on a wall, for people walking past rather than people planning: a TV in a corridor shows
+**every space now**, and a tablet by a studio door shows **that space's day**. Nobody signs in on either;
+how a screen is paired, and what it may show, are in [`05`](05-access-and-privacy.md#screens-in-the-building).
+It is always in the Night look (a lit panel on a wall glares in Paper), and everything is sized from the
+screen itself, so one page suits a 1080p TV, a 4K one, a tablet, and a TV hung on its side.
+
+- **The whole building**: a line a space, grouped by kind as on Now, saying what is on now (with who it
+  is for, the first names of who is teaching, and a bar for how far through), until when, and what comes
+  next (*Nothing more today* once a space's day is done). Beside it: what is **not on today**, what
+  **changed since** the weekday before, **coming up** (the next eight things to start anywhere, with
+  their space, for a student who knows their class but not where it is), today's events, classes with no
+  space, and the spaces **free now** (where a student finds somewhere to train). A few spaces grow to fill
+  the board; more than fit are paged every twelve seconds, a heading never last on a page. On its side,
+  each space takes two lines and the list sits under the board.
+- **One space's day**: its name, **Now** big enough to read from along the corridor (or *Free* and until
+  when), its whole day with what has passed dimmed, and the next three days it is used within a week,
+  fading at the foot rather than stopping mid-line. A space deleted since says so, and how to choose
+  another.
+- **It keeps itself current**: it fetches the page again every half minute and swaps the board in place,
+  pages, and reloads itself every six hours to pick up a new stylesheet. The clock runs on the school's
+  time, never the TV's. **If the timetable cannot be reached it keeps the last board** and says *Cannot
+  reach the timetable since 10:42* rather than going blank in front of everybody. Unpaired since, it
+  shows a code again.
+
+**Administration ▸ Screens** (`Admin/ScreensTab`) pairs one: the address to open on the screen, the code
+it shows, a name, and what it shows (the whole building, or one space's day). The list gives each
+screen's name and what it shows, when it was paired and last looked (*is it switched on?* after a day),
+**Change…** (a name, or what it shows; the screen follows at its next look) and **Unpair**. A preview
+sits at any time of day with `AT=10:15 scripts/preview.sh`, so a screen can be looked at mid-morning.
+
 ## Following the current app
 
 When the open timetable follows the current app ([`04`](04-storage-and-editing.md)), every screen still

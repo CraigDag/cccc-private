@@ -128,6 +128,9 @@ public sealed class ProjectStore
         CREATE TABLE IF NOT EXISTS setup (token TEXT PRIMARY KEY, created TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS calendar_files (
             project TEXT NOT NULL, person TEXT NOT NULL, held TEXT NOT NULL, PRIMARY KEY (project, person));
+        CREATE TABLE IF NOT EXISTS screens (
+            id TEXT PRIMARY KEY, name TEXT NOT NULL, room TEXT, token TEXT NOT NULL UNIQUE,
+            paired TEXT NOT NULL, seen TEXT);
         """;
 
     internal SqliteConnection Connect()

@@ -18,6 +18,7 @@ else
     {
         case "projects": <ProjectsTab />; break;
         case "system": <SystemTab />; break;
+        case "screens": <ScreensTab />; break;
         case "erase": <EraseTab />; break;
         default: <AccountsTab />; break;
     }
@@ -26,7 +27,7 @@ else
     [CascadingParameter] public Workspace W { get; set; } = default!;
     [Parameter] public string? Slug { get; set; }
 
-    private static readonly (string, string)[] Tabs = [("accounts", "Accounts"), ("projects", "Projects"), ("system", "System"), ("erase", "Erase a person")];
+    private static readonly (string, string)[] Tabs = [("accounts", "Accounts"), ("projects", "Projects"), ("screens", "Screens"), ("system", "System"), ("erase", "Erase a person")];
 
     private string Current => Tabs.Any(x => x.Item1 == Slug) ? Slug! : "accounts";
 }

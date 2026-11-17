@@ -17,5 +17,8 @@ $env:Store__Path = Join-Path (Get-Location) '.local-store-preview'
 $env:Store__Create = 'true'
 $env:Preview__Seed = 'true'
 $env:Preview__Accounts = 'true'
+# $env:AT = '10:15' before running sets the school's clock to that time of day, so Now and the screens
+# show the middle of a school day; Remove-Item Env:AT goes back to the real time.
+if ($env:AT) { $env:Clock__Time = $env:AT } else { Remove-Item Env:Clock__Time -ErrorAction SilentlyContinue }
 Write-Host "Starting... when it says 'Now listening', open http://localhost:$port and sign in as admin / northlight admin"
 dotnet run --project src/Cccc.Web --no-launch-profile --urls "http://127.0.0.1:$port"

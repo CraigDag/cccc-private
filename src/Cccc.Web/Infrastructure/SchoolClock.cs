@@ -2,12 +2,15 @@ namespace Cccc.Web.Infrastructure;
 
 /// <summary>
 /// The one clock. "Today" is Copenhagen's date, never the server's, so a week ends at a Copenhagen
-/// midnight. Development may pin the date (<c>Clock:Today</c>) so a preview is about a known week.
+/// midnight. Development may pin the date (<c>Clock:Today</c>) so a preview is about a known week, and
+/// set the time of day (<c>Clock:Time</c>, from which the clock runs on) so a preview of Now or a screen
+/// is about the middle of a school day whenever it is looked at.
 /// </summary>
 public sealed class SchoolClock
 {
     private readonly TimeZoneInfo _zone;
     private readonly DateOnly? _pinned;
+    private readonly TimeSpan _shift;
 
     public SchoolClock(IConfiguration config, IHostEnvironment env, ILogger<SchoolClock> log)
     {
@@ -18,11 +21,16 @@ public sealed class SchoolClock
             _zone = TimeZoneInfo.Utc;
         }
         if (env.IsDevelopment() && DateOnly.TryParse(config["Clock:Today"], out var d)) _pinned = d;
+        if (env.IsDevelopment() && TimeOnly.TryParse(config["Clock:Time"], System.Globalization.CultureInfo.InvariantCulture, out var at))
+        {
+            var local = Local(DateTimeOffset.UtcNow).DateTime;
+            _shift = local.Date + at.ToTimeSpan() - local;
+        }
     }
 
     public TimeZoneInfo Zone => _zone;
 
-    public DateTimeOffset Now => DateTimeOffset.UtcNow;
+    public DateTimeOffset Now => DateTimeOffset.UtcNow + _shift;
 
     public DateTimeOffset Local(DateTimeOffset t) => TimeZoneInfo.ConvertTime(t, _zone);
 

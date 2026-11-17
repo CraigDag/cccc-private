@@ -13,7 +13,9 @@ it. `README.md` says what this is; `docs/spec/` says why each part is shaped the
   are short-lived tokens for that reason (`PrintRequests`).
 - **Every page is behind sign-in by a fallback policy**, and capabilities are named on `Access`, never
   compared as role levels. The server checks every change with `Access.MayChange`, whatever the screen
-  offered.
+  offered. **The one page outside it is `/screen`**, a screen in the building: its cookie is a token
+  (`ScreenDirectory`, only the hash stored) that opens nothing else, and it shows only what `ScreenBoard`
+  decides a corridor may read: never a student, a note, who is away, or an event the students may not see.
 - **A rule has one implementation, in `Cccc.Domain`**: who is on a class (`Roster`), what happens
   (`Occurrences`), clashes, hours, registers. The screen, the paper and the reports all ask it.
 - **A week that has wholly ended is locked except for registers**, and Undo cannot unlock it. The one
@@ -48,6 +50,7 @@ it. `README.md` says what this is; `docs/spec/` says why each part is shaped the
 ```bash
 scripts/check.sh      # zero warnings, then every suite; read the Total: lines
 scripts/preview.sh    # made-up school on :5299 (admin / editor / coach, "northlight <name>")
+AT=10:15 scripts/preview.sh   # the same at 10:15 school time, for Now and the screens mid-morning
 FOLLOW=1 scripts/preview.sh   # the same, also following a made-up school in the current app's own format
 FOLLOW=year scripts/preview.sh   # following a whole made-up school year, at about a real school's size
 scripts/stop.sh       # stop every server this repo started; a leftover answers health checks for the old build

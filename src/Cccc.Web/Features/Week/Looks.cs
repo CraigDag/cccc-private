@@ -15,7 +15,9 @@ public static class Looks
     public static string Title(Timetable t, Session s) =>
         string.IsNullOrWhiteSpace(s.Title) ? t.Classes.Find(s.ClassId)?.Name ?? "(untitled)" : s.Title.Trim();
 
-    public static string When(Session s) => $"{Week.Hm(s.Start)}–{Week.Hm(s.End)}";
+    public static string When(Session s) => When(s.Start, s.End);
+
+    public static string When(TimeOnly start, TimeOnly end) => $"{Week.Hm(start)}–{Week.Hm(end)}";
 
     /// <summary>"1 group", "3 groups": a count with its noun, singular for exactly one.</summary>
     public static string Count(int n, string one, string? many = null) => $"{n} {(n == 1 ? one : many ?? one + "s")}";

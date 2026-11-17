@@ -79,6 +79,9 @@ if (follow.On)
 builder.Services.AddSingleton<PdfGate>();
 builder.Services.AddSingleton<PrintRequests>();
 builder.Services.AddSingleton<PhoneCalendarFiles>();
+builder.Services.AddSingleton<ScreenDirectory>();
+builder.Services.AddSingleton<Cccc.Web.Features.Screens.ScreenPairing>();
+builder.Services.AddSingleton<Cccc.Web.Features.Screens.ScreenLimiter>();
 builder.Services.AddHostedService<Maintenance>();
 // Mail is an extra, and the end-of-day reminder is off unless Reminders__Mode says otherwise.
 var mailSettings = Cccc.Web.Features.Mail.MailSettings.Read(builder.Configuration);
@@ -140,6 +143,7 @@ app.MapStaticAssets().AllowAnonymous();
 app.MapSignInEndpoints();
 app.MapDownloads();
 app.MapProjectDownload();
+Cccc.Web.Features.Screens.ScreenEndpoints.MapScreens(app);
 Cccc.Web.Features.Reports.ReportCsv.MapReportCsv(app);
 // Our own Content-Security-Policy already says frame-ancestors 'none'; Blazor would add a second header.
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode(o => o.ContentSecurityFrameAncestorsPolicy = null);

@@ -5,7 +5,8 @@
 - **Local accounts only**: a name and passphrase, verified against a PBKDF2-SHA256 verifier
   (600,000 iterations, 16-byte salt). Passphrases are never stored.
 - **Every page is behind sign-in by a fallback authorization policy**, so a page added later is
-  refused too. Anonymous: the sign-in page, its stylesheet, and `/healthz`, each by name.
+  refused too. Anonymous: the sign-in page, its stylesheet, `/healthz`, and a screen in the building's
+  `/screen` and `/screen/collect` (below), each by name.
 - **Limited to 10 attempts a minute per client**; behind nginx the client is read from
   `X-Forwarded-For` only when `TrustedProxies` names the proxy.
 - The cookie is `HttpOnly`, `SameSite=Lax`, `Secure` when the request is https, and lasts 7 days at
@@ -31,6 +32,7 @@ Capabilities are **named**, never `role >= Editor`:
 | `SeesAdministratorsEvents` | Administrator |
 | `MayTakeEveryRegister` | Administrator |
 | `MaySeeSystem` (backups, the nightly update) | Administrator |
+| `MayManageScreens` (pair, change and unpair the screens in the building) | Administrator |
 
 **A timetable that follows the current app is changed by nobody here** (`Access.Following`;
 [`04`](04-storage-and-editing.md)). It narrows what anybody may *change* — every collection, registers
@@ -59,6 +61,38 @@ suspends themself.
 - **Who may print whose week**: an administrator anybody's; everybody else only their own, through
   their link. The PDF route refuses too, not only the button.
 - **Downloads of data about every student are administrators' only.**
+
+## Screens in the building
+
+A TV in a corridor, or a tablet by a studio door, shows the timetable as it is now (`/screen`,
+[`07`](07-screens.md#screens-in-the-building-screen)) **with nobody signed in on it**: a passphrase typed
+on a TV would be typed in front of everybody, and a signed-in browser left on a wall is an open door.
+
+- **Pairing.** A screen that is not paired shows a six-character code from letters and digits nobody
+  misreads across a corridor (no 0/O, 1/I/L, 2/Z, 5/S, 8/B, 6/G). An administrator types it in
+  Administration ▸ Screens, names the screen and says what it shows. The code only says *which* waiting
+  screen is meant: the page that showed it was also given a **claim**, a secret it keeps to itself, and
+  only that browser can collect the screen's token, once (`ScreenPairing`). A code lasts ten minutes; a
+  paired screen has two more to collect; at most 64 wait at once, and one address gets ten new codes a
+  minute, so a page reloaded in a loop cannot fill the list. Waiting screens live in memory: a restart
+  just shows a new code.
+- **The token** is 32 random bytes in a cookie sent only to `/screen` (its path), `HttpOnly`,
+  `SameSite=Strict`, `Secure` when the request is https, kept 400 days and renewed by every look, so a
+  screen that is on never needs pairing twice. The store keeps only its SHA-256 (`ScreenDirectory`).
+  **It is not a sign-in**: the fallback policy refuses a screen every other page exactly as it refuses
+  anybody not signed in, and the screen's page reads nothing but the timetable open for everybody.
+- **Unpairing** deletes the screen's row, so its token stops working at once; its next look (within half
+  a minute) shows a new code and takes the cookie back. The list says when each screen last looked, and
+  warns about one that has not looked for a day.
+- **What a screen shows**, decided in one place (`ScreenBoard`) so the page and its tests read the same
+  answer, is what a printed timetable on the wall would carry, since everybody walking past reads it,
+  visitors too: each class, who it is for, the **first names** of who is in the room, and where; what is
+  off today, as *cancelled* and nothing more; what changed since the weekday before, as a student needs
+  it (on or off, moved, a new time or space); what starts next anywhere; today's events that every
+  student may see; and which spaces are free. **Never** a student's name, a note, why a class is off,
+  who is away or covering (an uncovered class simply names nobody), or an event the students may not
+  see: in a space that one is only *Booked*, and without a space it is not there at all. A visiting
+  company's class is on it, because a space with a company in it is not free.
 
 ## GDPR
 
