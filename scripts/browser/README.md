@@ -1,8 +1,10 @@
 Browser walk-throughs against the preview (`scripts/preview.sh`, made-up data). Each prints OK or FAIL
 per step and saves screenshots and PDFs to `$OUT` (default: the temporary folder's `cccc-browser`).
 
-    node scripts/browser/every-surface.js        # forms, drag, undo, add, every PDF, data, a register, download
-    node scripts/browser/keyboard.js             # Tab to a block, Space chooses, Enter opens, focus comes back
-    node scripts/browser/two-people-and-phone.js # one person's drag reaches another's screen; phone forms
+    node scripts/browser/every-surface.js        # Now, the plan: open, choose, drag, undo, add, lenses, every PDF, Find; data, a register, download
+    node scripts/browser/keyboard.js             # Space chooses, Enter opens, Escape closes and focus comes back, Alt+arrows, Ctrl+K and /
+    node scripts/browser/two-people-and-phone.js # one person's drag reaches another's screen; the phone: Now, the plan, a drawer, Data, a report, Find
+
+Each exits non-zero when a step fails. Set `CCCC_PREVIEW` to point them at another address.
 
 They change the preview's data; start a fresh preview (delete .local-store-preview) between runs.

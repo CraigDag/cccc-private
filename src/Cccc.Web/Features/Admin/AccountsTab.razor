@@ -13,7 +13,7 @@
     {
         <li>
             <button type="button" class="list-row" @onclick="() => D.Show<AccountForm>(new Dictionary<string, object?> { [nameof(AccountForm.Id)] = a.Id })" data-testid="account-row">
-                <span class="disc">@Rail.Initials(a.Display)</span>
+                <span class="disc">@TopBar.Initials(a.Display)</span>
                 <span class="name"><b>@a.Display</b> <small class="muted">@a.Login</small>
                     @if (a.Suspended) { <span class="badge">Suspended</span> }
                     @if (a.MustChange) { <span class="badge">Must choose a passphrase</span> }

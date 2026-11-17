@@ -17,7 +17,7 @@ else if (!may)
             <dt>When</dt><dd>@Describe(existing)</dd>
             @if (t.Rooms.Find(existing.RoomId) is { } room)
             {
-                <dt>Room</dt><dd>@room.Name</dd>
+                <dt>Space</dt><dd>@room.Name</dd>
             }
             @if (existing.Place.Length > 0)
             {
@@ -88,9 +88,9 @@ else
                         <label title="Ticked alone, only administrators see it, editors included"><input type="checkbox" checked="@_e.Audience.HasFlag(EventAudience.Administrators)" @onchange="e => Flag(EventAudience.Administrators, (bool)e.Value!)" /> Administrators</label>
                     }
                 </fieldset>
-                <label class="field"><span>Room</span>
+                <label class="field"><span>Space</span>
                     <select @bind="RoomText">
-                        <option value="">No room</option>
+                        <option value="">No space</option>
                         @foreach (var r in t.Rooms.OrderBy(r => r.Name, NameOrder.Comparer))
                         {
                             <option value="@r.Id">@r.Name</option>

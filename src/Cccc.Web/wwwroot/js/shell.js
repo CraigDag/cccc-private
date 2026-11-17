@@ -1,12 +1,12 @@
 // The shell's few jobs that must not cost a round trip: the theme picker, the dialog's focus trap and
 // Escape, the keyboard shortcuts, the tab's remembered week, and downloads.
 (function () {
-    const themes = ['Setsquare Dark', 'Chalkline Dark', 'Instrument Dark', 'Sandtable Dark'];
+    const themes = ['auto', 'Paper', 'Night'];
     let keysRef = null;
     let trapped = null;
 
     function currentTheme() {
-        return document.documentElement.getAttribute('data-theme') || 'Setsquare Dark';
+        return document.documentElement.getAttribute('data-theme') || 'auto';
     }
 
     document.addEventListener('change', e => {
@@ -14,8 +14,24 @@
         if (!sel) return;
         const t = sel.value;
         if (themes.indexOf(t) < 0) return;
-        document.documentElement.setAttribute('data-theme', t);
-        try { localStorage.setItem('cccc.theme', t); } catch (err) { }
+        if (t === 'auto') document.documentElement.removeAttribute('data-theme');
+        else document.documentElement.setAttribute('data-theme', t);
+        try { if (t === 'auto') localStorage.removeItem('cccc.theme'); else localStorage.setItem('cccc.theme', t); } catch (err) { }
+    });
+
+    // Ctrl+K or / opens Find from anywhere; choosing a link in an open menu closes the menu.
+    document.addEventListener('keydown', e => {
+        const tag = (e.target.tagName || '').toLowerCase();
+        const typing = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+        if (((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) || (!typing && e.key === '/' && !e.ctrlKey && !e.metaKey)) {
+            const b = document.querySelector('[data-find-open]');
+            if (b && !document.querySelector('[data-testid=dialog]')) { e.preventDefault(); b.click(); }
+        }
+    }, true);
+    document.addEventListener('click', e => {
+        document.querySelectorAll('details[open]').forEach(d => {
+            if (!d.contains(e.target) || e.target.closest('a, button[type=submit], .dock-sheet a')) d.removeAttribute('open');
+        });
     });
 
     // A theme picker drawn by a render shows the theme in use.

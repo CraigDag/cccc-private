@@ -1,0 +1,350 @@
+@page "/plan"
+@implements IDisposable
+@inject PlanView V
+@inject Dialogs D
+@inject IJSRuntime JS
+@inject PrintRequests Prints
+@using Cccc.Web.Features.Week
+@using Cccc.Web.Features.Sessions
+@using Cccc.Web.Features.Events
+@using Cccc.Web.Features.Print
+
+<PageTitle>Plan · CCCC Scheduler</PageTitle>
+@{
+    var t = W.T;
+    var m = PlanModel.Build(t, V, W.Access, W.Today);
+    _m = m;
+    bool editable = W.Access.MayEdit && !m.Locked;
+    var semester = t.SemesterFor(V.Monday);
+    int issues = m.IssueCount(V.Scale == Scale.Day ? V.Day : null);
+}
+
+<div class="plan" data-testid="plan-page" data-day="@V.Day.ToString("yyyy-MM-dd")" data-lens="@V.Lens" data-scale="@V.Scale">
+    <header class="plan-head">
+        <div class="plan-title">
+            <h1 class="display" data-testid="plan-title">@(m.RowsAreDays ? V.Focus!.Name + "’s week" : V.Scale == Scale.Day ? Long(V.Day) : "Week " + Cccc.Domain.Week.IsoNumber(V.Monday))</h1>
+            <div class="muted">
+                @(V.Scale == Scale.Day && !m.RowsAreDays ? $"Week {Cccc.Domain.Week.IsoNumber(V.Monday)} · " : m.RowsAreDays ? Cccc.Domain.Week.ForDocuments(V.Monday) + " · " : Cccc.Domain.Week.Range(V.Monday) + " · ")@(semester?.Name ?? "Outside every semester")
+                @if (m.Locked)
+                {
+                    <span class="badge" title="A week that has ended does not change, except its registers" data-testid="locked">Ended · read only</span>
+                }
+            </div>
+        </div>
+        <div class="plan-tools">
+            @if (editable)
+            {
+                <button type="button" class="btn primary" @onclick="() => AddSession(null, null)" data-testid="add-session">+ Class</button>
+            }
+            @if (W.Access.MayEdit)
+            {
+                <button type="button" class="btn" @onclick="() => D.Show<EventForm>(new Dictionary<string, object?> { [nameof(EventForm.Date)] = V.Day })" data-testid="new-event">+ Event</button>
+            }
+            <div class="menu-wrap">
+                <button type="button" class="btn" @onclick="() => _moreOpen = !_moreOpen" aria-expanded="@(_moreOpen ? "true" : "false")" data-testid="more-menu">More ▾</button>
+                @if (_moreOpen)
+                {
+                    <div class="menu right" @onclick="() => _moreOpen = false">
+                        @if (W.Access.MayEdit)
+                        {
+                            <div class="menu-label">Copy</div>
+                            <button type="button" disabled="@m.Locked" @onclick="() => D.Show<CopyDayForm>(new Dictionary<string, object?> { [nameof(CopyDayForm.Monday)] = V.Monday })">Copy a day…</button>
+                            <button type="button" @onclick="() => D.Show<CopyWeekForm>(new Dictionary<string, object?> { [nameof(CopyWeekForm.Monday)] = V.Monday })" data-testid="copy-week">Copy this week to…</button>
+                            <button type="button" @onclick="() => D.Show<ClearAfterForm>()">Clear the weeks after this one…</button>
+                        }
+                        <div class="menu-label">Print this week</div>
+                        <a href="@PrintLink("week")" target="_blank" rel="noopener">As a calendar</a>
+                        <a href="@PrintLink("list")" target="_blank" rel="noopener">As a list</a>
+                        <a href="@PrintLink("rooms")" target="_blank" rel="noopener">Spaces, a page a day</a>
+                        @if (W.Access.MayUseAdminTools)
+                        {
+                            <a href="@PrintLink("students")" target="_blank" rel="noopener">A calendar per student</a>
+                        }
+                        <div class="menu-label">Show</div>
+                        <button type="button" @onclick="() => { V.ShowOpen = !V.ShowOpen; V.Changed(); }" data-testid="toggle-open">@(V.ShowOpen ? "✓ " : "")Open training</button>
+                        <button type="button" @onclick="() => { V.ShowGuests = !V.ShowGuests; V.Changed(); }" data-testid="toggle-guests">@(V.ShowGuests ? "✓ " : "")Guest groups</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </header>
+
+    <nav class="day-strip" aria-label="Days of the week" data-testid="day-strip">
+        <button type="button" class="btn icon quiet" @onclick="() => Step(-1)" aria-label="Previous" data-testid="day-previous">‹</button>
+        @foreach (var d in Cccc.Domain.Week.Days(V.Monday))
+        {
+            var n = m.Week.Count(o => o.Date == d && o.Happens);
+            bool weekend = d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+            if (weekend && n == 0 && d != V.Day && !m.Events.Any(e => e.Covers(d))) continue;
+            <button type="button" class="day-chip @(d == V.Day && V.Scale == Scale.Day ? "on" : "") @(d == W.Today ? "today" : "")" @onclick="() => OpenDay(d)" data-testid="day-chip" aria-current="@(d == V.Day ? "date" : null)">
+                <span class="dc-name">@d.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture)</span>
+                <span class="dc-num">@d.Day</span>
+                <span class="dc-count">@(n == 0 ? "–" : n.ToString())</span>
+                @if (m.IssueCount(d) > 0)
+                {
+                    <span class="dc-dot" title="Something on this day needs attention"></span>
+                }
+            </button>
+        }
+        <button type="button" class="btn icon quiet" @onclick="() => Step(1)" aria-label="Next" data-testid="day-next">›</button>
+        @if (V.Day != W.Today)
+        {
+            <button type="button" class="btn quiet" @onclick="() => { V.Scale = Scale.Day; V.GoTo(W.Today); }" data-testid="today">Today</button>
+        }
+        <input type="date" class="day-date" value="@V.Day.ToString("yyyy-MM-dd")" @onchange="OnDate" aria-label="Go to a date" data-testid="day-date" />
+    </nav>
+
+    <div class="plan-bar">
+        <div class="seg" role="group" aria-label="Rows are">
+            <button type="button" class="@(V.Lens == Lens.Spaces ? "on" : "")" @onclick="() => SetLens(Lens.Spaces)" data-testid="lens-spaces">Spaces</button>
+            <button type="button" class="@(V.Lens == Lens.Groups ? "on" : "")" @onclick="() => SetLens(Lens.Groups)" data-testid="lens-groups">Groups</button>
+            <button type="button" class="@(V.Lens == Lens.People ? "on" : "")" @onclick="() => SetLens(Lens.People)" data-testid="lens-people">People</button>
+        </div>
+        <div class="seg" role="group" aria-label="Show">
+            <button type="button" class="@(V.Scale == Scale.Day ? "on" : "")" @onclick="() => { V.Scale = Scale.Day; V.Changed(); }" data-testid="scale-day">Day</button>
+            <button type="button" class="@(V.Scale == Scale.Week ? "on" : "")" @onclick="() => { V.Scale = Scale.Week; V.Changed(); }" data-testid="scale-week">Week</button>
+        </div>
+        @if (V.Focus is { } f)
+        {
+            <span class="chip focus" data-testid="focus-chip">@f.Name <button type="button" aria-label="Show everybody again" @onclick="() => V.FocusOn(null)">×</button></span>
+        }
+        <span class="grow"></span>
+        @if (m.HiddenGuests > 0)
+        {
+            <button type="button" class="count quiet" @onclick="() => { V.ShowGuests = true; V.Changed(); }" data-testid="guests-hidden">@m.HiddenGuests guest @(m.HiddenGuests == 1 ? "class" : "classes") hidden</button>
+        }
+        <button type="button" class="count issues @(issues > 0 ? "warn" : "") @(V.IssuesOpen ? "open" : "")" @onclick="() => { V.IssuesOpen = !V.IssuesOpen; V.Chosen = null; V.Changed(); }" data-testid="issues-button">
+            @(issues == 0 ? "No issues" : issues == 1 ? "1 issue" : $"{issues} issues")
+        </button>
+    </div>
+
+    <div class="plan-body @(V.Chosen is not null || V.IssuesOpen ? "with-side" : "")">
+        <div class="plan-main">
+            @if (m.Week.Count == 0)
+            {
+                <div class="notice" data-testid="week-empty">
+                    <b>This week is blank.</b> A week ahead has no classes until somebody fills it.
+                    @if (editable)
+                    {
+                        <span>Copy a week that is already built onto it (More ▾ on that week), or add classes here.</span>
+                    }
+                </div>
+            }
+            @if (V.Scale == Scale.Day)
+            {
+                <Timeline M="m" W="W" Gestures="_gestures" Day="V.Day" Lens="V.Lens" Chosen="V.Chosen" Editable="editable" OpenEvent="OpenEvent" />
+            }
+            else
+            {
+                <WeekMatrix M="m" W="W" Lens="V.Lens" Chosen="V.Chosen" Choose="Choose" Open="OpenSession" OpenDay="OpenDay" />
+            }
+        </div>
+        @if (V.Chosen is { } id)
+        {
+            <Inspector M="m" W="W" Id="id" Editable="editable" OnClose="() => { V.Chosen = null; }" OnEdit="OpenSession" OnChosen="Choose" />
+        }
+        else if (V.IssuesOpen)
+        {
+            <aside class="inspector issues" data-testid="issues">
+                <header class="insp-head"><h2>Issues @(V.Scale == Scale.Day ? "on " + Cccc.Domain.Week.ShortDate(V.Day) : "this week")</h2>
+                    <button type="button" class="insp-x" aria-label="Close" @onclick="() => { V.IssuesOpen = false; }">×</button></header>
+                @if (issues == 0)
+                {
+                    <p class="muted">Nothing needs attention. Clashes, classes needing cover and registers still to take would be listed here.</p>
+                }
+                @foreach (var c in m.Clashes.Where(c => V.Scale == Scale.Week || c.SessionIds.Any(i => m.Find(i)?.Date == V.Day)))
+                {
+                    <button type="button" class="issue" @onclick="() => Choose(c.SessionIds[0])" data-testid="issue"><span class="issue-kind">Clash</span>@c.Description</button>
+                }
+                @foreach (var o in m.CoverNeeded.Where(o => V.Scale == Scale.Week || o.Date == V.Day))
+                {
+                    <button type="button" class="issue" @onclick="() => Choose(o.Session.Id)" data-testid="issue"><span class="issue-kind">Cover</span>@Looks.Title(t, o.Session), @Looks.WhenWithDay(o.Session)</button>
+                }
+                @foreach (var o in m.RegistersToFile.Where(o => V.Scale == Scale.Week || o.Date == V.Day))
+                {
+                    <button type="button" class="issue" @onclick="() => Choose(o.Session.Id)" data-testid="issue"><span class="issue-kind">Register</span>@Looks.Title(t, o.Session), @Looks.WhenWithDay(o.Session)</button>
+                }
+            </aside>
+        }
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    private PlanModel? _m;
+    private PlanGestures _gestures = default!;
+    private DotNetObjectReference<PlanGestures>? _keys;
+    private bool _moreOpen;
+
+    public static string Long(DateOnly d) => d.ToString("dddd d MMMM", System.Globalization.CultureInfo.InvariantCulture);
+
+    protected override void OnInitialized()
+    {
+        V.Start(W.Today);
+        V.Moved += Refresh;
+        _gestures = new PlanGestures
+        {
+            OnChoose = id => Do(() => Choose(id)),
+            OnChooseNone = () => Do(() => V.Chosen = null),
+            OnOpen = id => Do(() => OpenSession(id)),
+            OnMove = (id, row, start, end) => Do(() => Move(id, row, start, end)),
+            OnAddAt = (row, minute) => Do(() => AddAt(row, minute)),
+            OnKey = name => Do(() => Key(name)),
+        };
+    }
+
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (!first) return;
+        _keys = DotNetObjectReference.Create(_gestures);
+        await JS.InvokeVoidAsync("ccccShell.keys", _keys);
+        if (!V.Restored)
+        {
+            V.Restored = true;
+            var remembered = await JS.InvokeAsync<string?>("ccccShell.recall", "cccc.day");
+            if (DateOnly.TryParse(remembered, out var d) && V.Day == W.Today) V.GoTo(d);
+        }
+    }
+
+    private Task Do(Action a)
+    {
+        a();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void Choose(Guid id)
+    {
+        V.Chosen = V.Chosen == id ? null : id;
+        V.IssuesOpen = false;
+    }
+
+    private static TimeOnly Minute(int m) => m >= 1440 ? new TimeOnly(23, 59) : new TimeOnly(m / 60, m % 60);
+
+    private void Move(Guid id, string row, int start, int end)
+    {
+        var s = W.T.Sessions[id];
+        if (s is null) return;
+        if (PlanModel.FromDayKey(row) is { } date)
+        {
+            W.Commit(t => Edits.Move(t, id, date, Minute(start), Minute(end)));
+            return;
+        }
+        Guid? room = V.Lens != Lens.Spaces ? s.RoomId : row == PlanModel.NoSpace ? null : Guid.TryParse(row, out var r) ? r : s.RoomId;
+        if (room == s.RoomId)
+        {
+            W.Commit(t => Edits.Move(t, id, s.Date, Minute(start), Minute(end)));
+            return;
+        }
+        var moved = s with { RoomId = room, Start = Edits.Snap(Minute(start)), End = Edits.Snap(Minute(end)) };
+        var where = room is { } rid ? W.T.Rooms[rid]?.Name ?? "another space" : "no space";
+        W.Commit(t => Edits.PutSession(t, moved, $"Moved {s.DisplayTitle} to {where}"));
+        V.Chosen = id;
+    }
+
+    private void AddAt(string row, int minute)
+    {
+        Guid? id = Guid.TryParse(row, out var g) ? g : null;
+        if (PlanModel.FromDayKey(row) is { } date)
+        {
+            AddSession(date, Minute(minute));
+            return;
+        }
+        D.Show<SessionForm>(new Dictionary<string, object?>
+        {
+            [nameof(SessionForm.Date)] = V.Day,
+            [nameof(SessionForm.Start)] = Minute(minute),
+            [nameof(SessionForm.Room)] = V.Lens == Lens.Spaces ? id : null,
+            [nameof(SessionForm.Group)] = V.Lens == Lens.Groups ? id : null,
+        });
+    }
+
+    private void Refresh() => _ = InvokeAsync(async () =>
+    {
+        StateHasChanged();
+        try { await JS.InvokeVoidAsync("ccccShell.remember", "cccc.day", V.Day.ToString("yyyy-MM-dd")); }
+        catch (JSDisconnectedException) { }
+    });
+
+    private void Step(int dir)
+    {
+        // A week on screen, or one person's week as rows, steps a week at a time.
+        if (V.Scale == Scale.Week || _m?.RowsAreDays == true) { V.GoTo(V.Day.AddDays(7 * dir)); return; }
+        var d = V.Day.AddDays(dir);
+        // Step over an empty weekend rather than landing on it.
+        while (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday && !W.T.Sessions.Any(s => s.Date == d)) d = d.AddDays(dir);
+        V.GoTo(d);
+    }
+
+    private void OpenDay(DateOnly d)
+    {
+        V.Scale = Scale.Day;
+        if (d == V.Day) V.Changed(); else V.GoTo(d);
+    }
+
+    private void SetLens(Lens l)
+    {
+        if (V.Focus is not null) V.FocusOn(null);
+        V.Lens = l;
+        V.Changed();
+    }
+
+    private void OnDate(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), out var d)) V.GoTo(d);
+    }
+
+    private void AddSession(DateOnly? date, TimeOnly? start) =>
+        D.Show<SessionForm>(new Dictionary<string, object?>
+        {
+            [nameof(SessionForm.Date)] = date ?? V.Day,
+            [nameof(SessionForm.Start)] = start,
+            [nameof(SessionForm.Group)] = V.Focus is { Kind: "group" } f ? f.Id : null,
+            [nameof(SessionForm.Room)] = V.Focus is { Kind: "room" } r ? r.Id : null,
+        });
+
+    private void OpenSession(Guid id) =>
+        D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.SessionId)] = id });
+
+    private void OpenEvent(Guid id) =>
+        D.Show<EventForm>(new Dictionary<string, object?> { [nameof(EventForm.EventId)] = id });
+
+    private void Key(string name)
+    {
+        if (D.IsOpen) return;
+        switch (name)
+        {
+            case "delete" when W.Access.MayEdit && V.Chosen is { } id && _m is { Locked: false }:
+                if (W.Commit(t => Edits.RemoveSessions(t, [id]))) V.Chosen = null;
+                break;
+            case "escape": V.Chosen = null; V.IssuesOpen = false; _moreOpen = false; break;
+            case "undo": W.Undo(); break;
+            case "redo": W.Redo(); break;
+            case "previous": Step(-1); break;
+            case "next": Step(1); break;
+        }
+    }
+
+    /// <summary>The printed week follows what the plan is narrowed to, through the week view the documents already read.</summary>
+    private string PrintLink(string kind)
+    {
+        var view = new WeekView { ShowGuests = V.ShowGuests, ShowOpen = V.ShowOpen };
+        view.Start(V.Monday, null);
+        switch (V.Focus)
+        {
+            case { Kind: "room" } f: view.Rooms.Add(f.Id); break;
+            case { Kind: "group" } f: view.Groups.Add(f.Id); break;
+            case { Kind: "programme" } f: view.Programmes.Add(f.Id); break;
+            case { Kind: "facilitator" } f: view.Facilitators.Add(f.Id); break;
+            case { Kind: "student" } f: view.Students.Add(f.Id); break;
+        }
+        return Prints.Link(kind, view, W.Access);
+    }
+
+    public void Dispose()
+    {
+        V.Moved -= Refresh;
+        if (_keys is not null)
+            _ = JS.InvokeVoidAsync("ccccShell.unkeys", _keys).AsTask().ContinueWith(_ => _keys.Dispose());
+    }
+}

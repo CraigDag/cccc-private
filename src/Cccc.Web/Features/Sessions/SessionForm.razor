@@ -18,7 +18,7 @@ else if (!_editable && existing is not null)
             <dl class="facts">
                 <dt>When</dt><dd>@Cccc.Web.Features.Week.Looks.WhenWithDay(existing)</dd>
                 <dt>For</dt><dd>@Cccc.Web.Features.Week.Looks.Audience(t, existing)</dd>
-                <dt>Room</dt><dd>@(Cccc.Web.Features.Week.Looks.Room(t, existing) is { Length: > 0 } r ? r : "No room")</dd>
+                <dt>Space</dt><dd>@(Cccc.Web.Features.Week.Looks.Room(t, existing) is { Length: > 0 } r ? r : "No space")</dd>
                 <dt>In the room</dt><dd>@(Cccc.Web.Features.Week.Looks.Names(t, o.InTheRoom) is { Length: > 0 } n ? n : "Nobody yet")</dd>
                 @foreach (var a in existing.Facilitators.Where(a => a.From is not null || a.Until is not null))
                 {
@@ -114,9 +114,9 @@ else
                         }
                     </fieldset>
                 }
-                <label class="field"><span>Room</span>
+                <label class="field"><span>Space</span>
                     <select @bind="RoomText" @bind:after="Check" data-testid="session-room">
-                        <option value="">No room</option>
+                        <option value="">No space</option>
                         @foreach (var r in t.Rooms.OrderBy(r => r.Name, NameOrder.Comparer))
                         {
                             <option value="@r.Id">@r.Name</option>
@@ -213,6 +213,7 @@ else
     [Parameter] public DateOnly? Date { get; set; }
     [Parameter] public TimeOnly? Start { get; set; }
     [Parameter] public Guid? Group { get; set; }
+    [Parameter] public Guid? Room { get; set; }
 
     private sealed class Person { public Guid Id; public TimeOnly? From; public TimeOnly? Until; }
 
@@ -254,6 +255,7 @@ else
                 Start = start,
                 End = start.AddHours(1.5),
                 Audience = Group is { } g ? Audience.ForGroup(g) : Audience.ForGroup(Guid.Empty),
+                RoomId = Room,
             };
         }
         else _original = System.Text.Json.JsonSerializer.Serialize(s, ModelJson.Options);

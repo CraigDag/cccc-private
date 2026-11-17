@@ -45,17 +45,11 @@ else
             </ul>
         </div>
     }
-    <div class="desk-only">
-        <WeekGrid M="m" W="W" Gestures="_gestures" Editable="false" OpenEvent="OpenEvent" />
-    </div>
-    <div class="phone-only">
-        <DayList M="m" W="W" OnOpen="OpenSession" OnOpenEvent="OpenEvent" />
-    </div>
+    <DayList M="m" W="W" OnOpen="OpenSession" OnOpenEvent="OpenEvent" />
 }
 @code {
     [CascadingParameter] public Workspace W { get; set; } = default!;
     private readonly WeekView _view = new() { ShowGuests = true };
-    private WeekGestures _gestures = default!;
 
     private Facilitator? Me => W.Access.FacilitatorId is { } id ? W.T.Facilitators[id] : null;
 
@@ -63,7 +57,6 @@ else
     {
         _view.Start(W.Today, null);
         _view.Moved += () => _ = InvokeAsync(StateHasChanged);
-        _gestures = new WeekGestures { OnOpen = id => { OpenSession(id); StateHasChanged(); return Task.CompletedTask; } };
     }
 
     private void OpenSession(Guid id) => D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.SessionId)] = id });

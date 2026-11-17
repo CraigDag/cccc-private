@@ -73,6 +73,8 @@ builder.Services.AddHostedService<Cccc.Web.Features.Mail.RegisterReminderService
 builder.Services.AddScoped<Cccc.Web.Features.Shell.Dialogs>();
 builder.Services.AddScoped<Cccc.Web.Features.Shell.Toasts>();
 builder.Services.AddScoped<Cccc.Web.Features.Week.WeekView>();
+builder.Services.AddScoped<Cccc.Web.Features.Plan.PlanView>();
+builder.Services.AddScoped<Cccc.Web.Features.Find.Finder>();
 builder.Services.AddHttpContextAccessor();
 
 // Sign-in cookies are sealed with keys kept beside the store, so an update or restart does not sign

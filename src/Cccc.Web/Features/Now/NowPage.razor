@@ -1,0 +1,193 @@
+@page "/"
+@inject PlanView V
+@inject NavigationManager Nav
+@using Cccc.Web.Features.Week
+@using Cccc.Web.Features.Plan
+
+<PageTitle>Now · CCCC Scheduler</PageTitle>
+@{
+    var t = W.T;
+    var today = W.Today;
+    var local = W.Clock.Local(W.Clock.Now);
+    int now = local.Hour * 60 + local.Minute;
+    var all = Occurrences.Between(t, today, today).Where(o => !Guests.IsGuestOnly(t, o.Session)).ToList();
+    var happening = all.Where(o => o.Happens).OrderBy(o => o.Start).ToList();
+    var events = EventSchedule.Between(t, today, today, W.Access.Events);
+    var cover = Cover.StillNeeded(t, today, today).Where(o => o.Date == today).ToList();
+    var registers = Registers.FileableBy(Registers.MissingBetween(t, today, today, today.AddDays(1)), W.Access.Registers)
+        .Where(o => PlanModel.Minutes(o.End) <= now).ToList();
+    var todayIds = all.Select(o => o.Session.Id).ToHashSet();
+    var clashes = Clashes.ForWeek(t, today).Where(c => c.IsRing && c.SessionIds.Any(todayIds.Contains)).ToList();
+    var closure = Occurrences.ClosureFor(t, today, null);
+    var semester = t.SemesterFor(today);
+    int needs = cover.Count + registers.Count + clashes.Count;
+}
+
+<div class="now" data-testid="now-page">
+    <header class="now-head">
+        <h1 class="display"><span>@PlanPage.Long(today)</span> <span class="now-clock" data-now-clock>@Cccc.Domain.Week.Hm(new TimeOnly(local.Hour, local.Minute))</span></h1>
+        <div class="muted">Week @Cccc.Domain.Week.IsoNumber(today) · @(semester?.Name ?? "Outside every semester")
+            @if (closure is not null)
+            {
+                <span class="badge warn">Closed: @closure.Name</span>
+            }
+        </div>
+    </header>
+
+    <div class="now-body">
+        <section class="now-building" aria-label="The building now">
+            @if (W.Access.FacilitatorId is { } me && t.Facilitators[me] is { } person)
+            {
+                // A coach's own day first: what they teach today, their part of a shared class, guests included.
+                var mine = Occurrences.Between(t, today, today)
+                    .Where(o => o.Session.FacilitatorIds.Contains(me) || o.Session.CoverIds.Contains(me))
+                    .OrderBy(o => o.Start).ToList();
+                <h2 class="now-section">You today</h2>
+                @if (mine.Count == 0)
+                {
+                    <p class="muted" data-testid="you-today">Nothing on for you today.</p>
+                }
+                else
+                {
+                    <ul class="agenda" data-testid="you-today">
+                        @foreach (var o in mine)
+                        {
+                            var (a, b) = o.InTheRoom.Contains(me) ? TimeWindows.InRoom(o, me) : (o.Start, o.End);
+                            bool on = PlanModel.Minutes(a) <= now && now < PlanModel.Minutes(b) && o.Happens;
+                            string note = o.State switch
+                            {
+                                OccurrenceState.Cancelled => "cancelled",
+                                OccurrenceState.Closed => "closed",
+                                _ when o.AwayIds.Contains(me) => "you are away",
+                                _ when o.Session.CoverIds.Contains(me) => "covering",
+                                _ => on ? "now" : "",
+                            };
+                            <li><button type="button" class="agenda-row @(on ? "on" : "") @(o.Happens && !o.AwayIds.Contains(me) ? "" : "off")" style="--c:@(Looks.ColourOf(t, o.Session) ?? "var(--rule)")"
+                                        @onclick="() => OpenPlan(today, PersonFocus(person), o.Session.Id)">
+                                <span class="agenda-time">@Cccc.Domain.Week.Hm(a)</span><b>@Looks.Title(t, o.Session)</b> <small>@Looks.Room(t, o.Session)@(note.Length > 0 ? " · " + note : "")</small></button></li>
+                        }
+                    </ul>
+                }
+            }
+            @if (happening.Count == 0)
+            {
+                var next = t.Sessions.Where(s => s.Date > today && !s.Cancelled).OrderBy(s => s.Date).ThenBy(s => s.Start).FirstOrDefault();
+                <div class="notice" data-testid="nothing-today">
+                    <b>Nothing is on today.</b>
+                    @if (next is not null)
+                    {
+                        <span> The next class is @Looks.Title(t, next), @Cccc.Domain.Week.ShortDate(next.Date) at @Cccc.Domain.Week.Hm(next.Start).</span>
+                        <button type="button" class="link" @onclick="() => OpenPlan(next.Date, null, null)">Open that day</button>
+                    }
+                </div>
+            }
+            @foreach (var part in t.Rooms.OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer).GroupBy(r => r.Category ?? "Other spaces"))
+            {
+                <h2 class="now-section">@part.Key</h2>
+                <div class="spaces">
+                    @foreach (var room in part)
+                    {
+                        var here = happening.Where(o => o.Session.RoomId == room.Id).ToList();
+                        var current = here.FirstOrDefault(o => PlanModel.Minutes(o.Start) <= now && now < PlanModel.Minutes(o.End));
+                        var next = here.FirstOrDefault(o => PlanModel.Minutes(o.Start) > now);
+                        <button type="button" class="space @(current is null ? "free" : "busy")" style="--c:@room.Colour" @onclick="() => OpenPlan(today, RoomFocus(room), current?.Session.Id)" data-testid="space-card">
+                            <span class="space-name">@room.Name</span>
+                            @if (current is not null)
+                            {
+                                int s0 = PlanModel.Minutes(current.Start), e0 = PlanModel.Minutes(current.End);
+                                <span class="space-now" style="--k:@(Looks.ColourOf(t, current.Session) ?? "var(--ink)")">
+                                    <b>@Looks.Title(t, current.Session)</b>
+                                    <small>@Looks.Audience(t, current.Session)@(Looks.Initials(t, current) is { Length: > 0 } ini ? " · " + ini : "")</small>
+                                    <span class="space-progress"><span style="width:@(Math.Clamp((now - s0) * 100 / Math.Max(1, e0 - s0), 0, 100))%"></span></span>
+                                    <small>until @Cccc.Domain.Week.Hm(current.End)@(current.NeedsCover ? " · needs cover" : "")</small>
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="space-free">@(next is null ? (here.Count == 0 ? "Free all day" : "Free for the rest of the day") : "Free until " + Cccc.Domain.Week.Hm(next.Start))</span>
+                            }
+                            @if (next is not null)
+                            {
+                                <span class="space-next"><small>Next</small> @Cccc.Domain.Week.Hm(next.Start) @Looks.Title(t, next.Session)</span>
+                            }
+                        </button>
+                    }
+                </div>
+            }
+            @if (happening.Where(o => o.Session.RoomId is null).ToList() is { Count: > 0 } roomless)
+            {
+                <h2 class="now-section">Without a space</h2>
+                <ul class="agenda">
+                    @foreach (var o in roomless)
+                    {
+                        <li><button type="button" class="agenda-row" style="--c:@(Looks.ColourOf(t, o.Session) ?? "var(--rule)")" @onclick="() => OpenPlan(today, null, o.Session.Id)">
+                            <span class="agenda-time">@Looks.When(o.Session)</span><b>@Looks.Title(t, o.Session)</b> <small>@Looks.Audience(t, o.Session)</small></button></li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <aside class="now-needs" aria-label="Today needs" data-testid="today-needs">
+            <h2 class="now-section">Today needs</h2>
+            @if (needs == 0)
+            {
+                <p class="calm" data-testid="all-clear">Nothing. No clashes, nobody to cover, no registers waiting for you.</p>
+            }
+            @foreach (var o in cover)
+            {
+                <button type="button" class="need warn" @onclick="() => OpenPlan(today, null, o.Session.Id)" data-testid="need"><span class="need-kind">Cover</span><b>@Looks.Title(t, o.Session)</b><small>@Looks.When(o.Session) · @Looks.Room(t, o.Session)</small></button>
+            }
+            @foreach (var o in registers)
+            {
+                <button type="button" class="need" @onclick="() => OpenPlan(today, null, o.Session.Id)" data-testid="need"><span class="need-kind">Register</span><b>@Looks.Title(t, o.Session)</b><small>@Looks.When(o.Session) · @Looks.Audience(t, o.Session)</small></button>
+            }
+            @foreach (var c in clashes)
+            {
+                <button type="button" class="need warn" @onclick="() => OpenPlan(today, null, c.SessionIds[0])" data-testid="need"><span class="need-kind">Clash</span><span>@c.Description</span></button>
+            }
+            @if (events.Count > 0)
+            {
+                <h2 class="now-section">Today's events</h2>
+                @foreach (var e in events.OrderBy(e => !e.Event.AllDay).ThenBy(e => e.Event.Start))
+                {
+                    <div class="need quiet"><span class="need-kind">@(e.Event.AllDay ? "All day" : Cccc.Domain.Week.Hm(e.Event.Start))</span><b>@e.Event.Title</b>@if (t.Rooms.Find(e.Event.RoomId) is { } r) { <small>@r.Name</small> }</div>
+                }
+            }
+            <h2 class="now-section">Still to come</h2>
+            @if (happening.Where(o => PlanModel.Minutes(o.Start) > now).Take(6).ToList() is { Count: > 0 } coming)
+            {
+                <ul class="agenda">
+                    @foreach (var o in coming)
+                    {
+                        <li><button type="button" class="agenda-row" style="--c:@(Looks.ColourOf(t, o.Session) ?? "var(--rule)")" @onclick="() => OpenPlan(today, null, o.Session.Id)">
+                            <span class="agenda-time">@Cccc.Domain.Week.Hm(o.Start)</span><b>@Looks.Title(t, o.Session)</b> <small>@Looks.Room(t, o.Session)</small></button></li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p class="muted">Nothing more today.</p>
+            }
+            <button type="button" class="btn" @onclick="() => OpenPlan(today, null, null)" data-testid="open-plan">The whole day ›</button>
+        </aside>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+
+    private static Focus RoomFocus(Room r) => new("room", r.Id, r.Name);
+    private static Focus PersonFocus(Facilitator f) => new("facilitator", f.Id, f.Name);
+
+    private void OpenPlan(DateOnly day, Focus? focus, Guid? chosen)
+    {
+        V.Start(W.Today);
+        V.Restored = true;
+        V.Scale = Scale.Day;
+        V.FocusOn(focus);
+        if (focus is null) V.Lens = Lens.Spaces;
+        V.GoTo(day);
+        V.Chosen = chosen;
+        Nav.NavigateTo("plan");
+    }
+}

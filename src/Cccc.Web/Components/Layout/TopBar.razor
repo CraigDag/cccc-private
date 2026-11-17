@@ -1,0 +1,90 @@
+@inject Cccc.Web.Features.Find.Finder F
+<header class="top" data-testid="topbar">
+    <a class="brand" href="" aria-label="CCCC, now"><img src="icons/cccc-mark.png" alt="" width="24" height="24" /><span>CCCC</span></a>
+    <nav class="places" aria-label="Main" data-testid="places">
+        <NavLink class="place" href="" Match="NavLinkMatch.All" data-testid="nav-now">Now</NavLink>
+        <NavLink class="place" href="plan" data-testid="nav-plan">Plan</NavLink>
+        <NavLink class="place" href="registers" data-testid="nav-registers">Registers</NavLink>
+        @if (W.Access.FacilitatorId is not null)
+        {
+            <NavLink class="place" href="my-week" data-testid="nav-my-week">My week</NavLink>
+        }
+        @if (W.Access.MayEdit)
+        {
+            <NavLink class="place" href="cover" data-testid="nav-cover">Cover</NavLink>
+        }
+        @if (W.Access.MayUseAdminTools)
+        {
+            <NavLink class="place" href="data" data-testid="nav-data">People &amp; places</NavLink>
+            <NavLink class="place" href="reports" data-testid="nav-reports">Reports</NavLink>
+            <NavLink class="place" href="admin" data-testid="nav-admin">Admin</NavLink>
+        }
+    </nav>
+    <button type="button" class="find-open" @onclick="F.Open" data-find-open data-testid="find-open">
+        <span aria-hidden="true">⌕</span><span class="find-open-text">Find anyone or anything</span><kbd>Ctrl K</kbd>
+    </button>
+    <div class="top-right">
+        @if (W.Project is { } p)
+        {
+            <button type="button" class="btn quiet undo" disabled="@(!p.CanUndo(W.Access.By))" title="@(p.UndoLabel(W.Access.By) is { } u ? "Undo: " + u : "Nothing of yours to undo")" @onclick="W.Undo" data-testid="undo">↶ <span>Undo</span></button>
+            <button type="button" class="btn quiet redo" disabled="@(!p.CanRedo(W.Access.By))" title="@(p.RedoLabel(W.Access.By) is { } r ? "Redo: " + r : "")" @onclick="W.Redo" data-testid="redo">↷</button>
+        }
+        <details class="me" data-testid="me-menu">
+            <summary aria-label="You"><span class="disc me-disc">@Initials(W.Access.Display)</span></summary>
+            <div class="me-panel">
+                <div class="me-who" data-testid="signed-in-as"><b>@W.Access.Display</b><small>@RoleName</small></div>
+                @if (W.Project is not null)
+                {
+                    <div class="me-project" title="The timetable everybody is looking at">@W.ProjectName</div>
+                }
+                <label class="me-theme"><span>Look</span>
+                    <select data-theme-picker aria-label="Look">
+                        <option value="auto">Follow this device</option>
+                        <option value="Paper">Paper (light)</option>
+                        <option value="Night">Night (dark)</option>
+                    </select>
+                </label>
+                <a class="me-link" href="passphrase" data-enhance-nav="false" target="_self">Change passphrase</a>
+                <form method="post" action="signout" class="me-signout">
+                    <AntiforgeryToken />
+                    <button type="submit" class="me-link" data-testid="sign-out">Sign out</button>
+                </form>
+                <div class="me-version" data-testid="version">Version @AppVersion.Current</div>
+            </div>
+        </details>
+    </div>
+</header>
+<nav class="dock" aria-label="Main" data-testid="dock">
+    <NavLink class="dock-item" href="" Match="NavLinkMatch.All"><span aria-hidden="true">◉</span>Now</NavLink>
+    <NavLink class="dock-item" href="plan"><span aria-hidden="true">▤</span>Plan</NavLink>
+    <NavLink class="dock-item" href="registers"><span aria-hidden="true">✓</span>Registers</NavLink>
+    <button type="button" class="dock-item" @onclick="F.Open" data-testid="dock-find"><span aria-hidden="true">⌕</span>Find</button>
+    <details class="dock-more">
+        <summary class="dock-item"><span aria-hidden="true">⋯</span>More</summary>
+        <div class="dock-sheet">
+            @if (W.Access.FacilitatorId is not null) { <NavLink class="me-link" href="my-week">My week</NavLink> }
+            @if (W.Access.MayEdit) { <NavLink class="me-link" href="cover">Cover</NavLink> }
+            @if (W.Access.MayUseAdminTools)
+            {
+                <NavLink class="me-link" href="data">People &amp; places</NavLink>
+                <NavLink class="me-link" href="reports">Reports</NavLink>
+                <NavLink class="me-link" href="admin">Admin</NavLink>
+            }
+        </div>
+    </details>
+</nav>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+
+    private string RoleName => W.Access.Role switch
+    {
+        Role.Administrator => "Administrator",
+        Role.Editor => "Editor",
+        Role.Viewer => "Viewer",
+        _ => "",
+    };
+
+
+    public static string Initials(string name) =>
+        string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
+}

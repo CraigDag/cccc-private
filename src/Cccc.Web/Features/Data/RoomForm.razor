@@ -1,5 +1,5 @@
 @inject Dialogs D
-<DialogFrame Title="@(_old is null ? "Add a room" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@(_name.Trim().Length > 0)">
+<DialogFrame Title="@(_old is null ? "Add a space" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@(_name.Trim().Length > 0)">
     <ChildContent>
         <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" data-testid="room-name" /></label>
         <label class="field"><span>Kind of space (optional)</span><input @bind="_category" placeholder="Studio, gym, aerial hall…" /></label>
@@ -29,7 +29,7 @@
     private void Save()
     {
         var r = (_old ?? new Room()) with { Name = _name.Trim(), Category = string.IsNullOrWhiteSpace(_category) ? null : _category.Trim(), Colour = _colour };
-        if (W.Commit(t => new DraftOf(t).Put(Collections.Rooms, r).ToBatch((_old is null ? "Added the room " : "Changed the room ") + r.Name))) D.Close();
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Rooms, r).ToBatch((_old is null ? "Added the space " : "Changed the space ") + r.Name))) D.Close();
     }
 
     private void Delete()

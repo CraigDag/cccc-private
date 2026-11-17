@@ -15,7 +15,7 @@ else
 {
     <CascadingValue Value="_ws">
         <div class="shell" data-testid="shell">
-            <Rail />
+            <TopBar />
             <div class="shell-main">
                 <main class="shell-page">
                     @if (_ws.Project is null && !IsAdministrationPage)
@@ -30,6 +30,7 @@ else
                 <StatusBar />
             </div>
         </div>
+        <Cccc.Web.Features.Find.FindPalette />
         <DialogHost />
         <ToastHost />
     </CascadingValue>

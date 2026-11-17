@@ -1,0 +1,242 @@
+using Cccc.Domain;
+using Cccc.Domain.Model;
+using Cccc.Domain.Rules;
+using Cccc.Web.Infrastructure;
+
+namespace Cccc.Web.Features.Plan;
+
+/// <summary>What the rows of the plan are: the question being asked of the timetable.</summary>
+public enum Lens { Spaces, Groups, People }
+
+public enum Scale { Day, Week }
+
+/// <summary>A thing the plan is narrowed to, from Find: a person's day, a space's day, a group's day.</summary>
+public sealed record Focus(string Kind, Guid Id, string Name);
+
+/// <summary>
+/// One tab's way of looking at the plan. None of it is the project's: it is never saved, undone or seen
+/// by anybody else. Shared between Now, Plan and Find within the tab, so Find can move the plan.
+/// </summary>
+public sealed class PlanView
+{
+    public DateOnly Day { get; private set; }
+    public bool Started { get; private set; }
+    public Lens Lens { get; set; } = Lens.Spaces;
+    public Scale Scale { get; set; } = Scale.Day;
+    public Focus? Focus { get; private set; }
+    public Guid? Chosen { get; set; }
+    /// <summary>Guest classes start hidden on every visit and that is remembered nowhere.</summary>
+    public bool ShowGuests { get; set; }
+    /// <summary>Open training is shown until somebody switches it off; it is the class's question, not the audience's.</summary>
+    public bool ShowOpen { get; set; } = true;
+    public bool IssuesOpen { get; set; }
+    /// <summary>Whether the tab's remembered day has been put back after a reload.</summary>
+    public bool Restored { get; set; }
+
+    public event Action? Moved;
+
+    public DateOnly Monday => Cccc.Domain.Week.MondayOf(Day);
+
+    public void Start(DateOnly today)
+    {
+        if (Started) return;
+        Day = today;
+        Started = true;
+    }
+
+    public void GoTo(DateOnly day)
+    {
+        if (day == Day) return;
+        if (Cccc.Domain.Week.MondayOf(day) != Monday) Chosen = null;
+        Day = day;
+        Moved?.Invoke();
+    }
+
+    public void FocusOn(Focus? f)
+    {
+        Focus = f;
+        Chosen = null;
+        if (f is not null)
+            Lens = f.Kind switch { "room" => Lens.Spaces, "group" or "programme" => Lens.Groups, _ => Lens.People };
+        Moved?.Invoke();
+    }
+
+    public void Changed() => Moved?.Invoke();
+}
+
+/// <summary>One row of the plan: a space, a group or a person.</summary>
+public sealed record PlanRow(string Key, Guid? Id, string Name, string? Colour, string Section, string? Note = null);
+
+/// <summary>A class drawn on a row. Start and End are minutes from midnight; for a person, their part of it.</summary>
+public sealed record PlanBar(Occurrence O, string RowKey, DateOnly Date, int Start, int End, bool Part)
+{
+    public int Lane { get; init; }
+}
+
+/// <summary>Everything one render of the plan needs, worked out once from the domain's own rules.</summary>
+public sealed class PlanModel
+{
+    public required IReadOnlyList<PlanRow> Rows { get; init; }
+    public required IReadOnlyList<PlanBar> Bars { get; init; }
+    /// <summary>How many lanes each row needs on each day: overlapping bars on one row stack.</summary>
+    public required IReadOnlyDictionary<(string Row, DateOnly Date), int> Lanes { get; init; }
+    public required IReadOnlyList<Occurrence> Week { get; init; }
+    public required IReadOnlyList<DateOnly> Days { get; init; }
+    public required int FrameStart { get; init; }
+    public required int FrameEnd { get; init; }
+    public required IReadOnlyList<Clash> Clashes { get; init; }
+    public required IReadOnlySet<Guid> Ringed { get; init; }
+    public required IReadOnlyList<Occurrence> CoverNeeded { get; init; }
+    public required IReadOnlyList<Occurrence> RegistersToFile { get; init; }
+    public required IReadOnlyList<EventOccurrence> Events { get; init; }
+    public required bool Locked { get; init; }
+    /// <summary>
+    /// Narrowed to one person, space or group, a day is a single short row; so the rows become the
+    /// days of the week instead, and the timeline reads as that one thing's week.
+    /// </summary>
+    public bool RowsAreDays { get; init; }
+    public required int HiddenGuests { get; init; }
+
+    public Occurrence? Find(Guid id) => Week.FirstOrDefault(o => o.Session.Id == id);
+
+    public int LanesOf(string row, DateOnly date) => Lanes.TryGetValue((row, date), out var n) ? n : 1;
+
+    public int IssueCount(DateOnly? day) =>
+        Clashes.Count(c => day is null || c.SessionIds.Any(id => Find(id)?.Date == day))
+        + CoverNeeded.Count(o => day is null || o.Date == day)
+        + RegistersToFile.Count(o => day is null || o.Date == day);
+
+    public static int Minutes(TimeOnly t) => t.Hour * 60 + t.Minute;
+
+    public const string NoSpace = "none";
+
+    public static string DayKey(DateOnly d) => "day-" + d.ToString("yyyy-MM-dd");
+
+    public static DateOnly? FromDayKey(string key) =>
+        key.StartsWith("day-", StringComparison.Ordinal) && DateOnly.TryParseExact(key[4..], "yyyy-MM-dd", out var d) ? d : null;
+
+    public static PlanModel Build(Timetable t, PlanView v, Access access, DateOnly today)
+    {
+        var monday = v.Monday;
+        var week = Occurrences.ForWeek(t, monday);
+        var focus = v.Focus;
+        bool AskedForGuests(Session s) => focus is not null && (focus.Kind is "facilitator" or "student"
+            || s.Audience.Cohorts.Any(g => focus.Id == g || t.Groups[g]?.ProgrammeId == focus.Id));
+        bool Drawn(Occurrence o) =>
+            (v.ShowOpen || Hours.WorkloadOf(t, o.Session) != Workload.DropIn)
+            && (v.ShowGuests || !Guests.IsGuestOnly(t, o.Session) || AskedForGuests(o.Session));
+        var drawn = week.Where(Drawn).ToList();
+        int hiddenGuests = week.Count(o => !v.ShowGuests && Guests.IsGuestOnly(t, o.Session) && !drawn.Contains(o));
+        bool rowsAreDays = v.Scale == Scale.Day && focus is { Kind: "room" or "facilitator" or "student" or "group" };
+        var range = v.Scale == Scale.Day && !rowsAreDays ? drawn.Where(o => o.Date == v.Day).ToList() : drawn;
+
+        var rows = new List<PlanRow>();
+        var bars = new List<PlanBar>();
+        switch (v.Lens)
+        {
+            case Lens.Spaces:
+                foreach (var r in t.Rooms.OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer))
+                    if (focus is not { Kind: "room" } || focus.Id == r.Id)
+                        rows.Add(new PlanRow(r.Id.ToString(), r.Id, r.Name, r.Colour, r.Category ?? "Other spaces"));
+                if (focus is null && range.Any(o => o.Session.RoomId is null || t.Rooms[o.Session.RoomId.Value] is null))
+                    rows.Add(new PlanRow(NoSpace, null, "No space given", null, "Other spaces"));
+                foreach (var o in range)
+                {
+                    var key = o.Session.RoomId is { } rid && t.Rooms[rid] is not null ? rid.ToString() : NoSpace;
+                    bars.Add(new PlanBar(o, key, o.Date, Minutes(o.Start), Minutes(o.End), false));
+                }
+                break;
+
+            case Lens.Groups:
+                var programmes = t.Programmes.ToDictionary(p => p.Id);
+                foreach (var g in t.Groups
+                             .Where(g => focus is null || focus.Id == g.Id || g.ProgrammeId == focus.Id)
+                             .Where(g => v.ShowGuests || focus is not null || t.Programmes.Find(g.ProgrammeId) is not { IsGuest: true })
+                             .OrderBy(g => g.ProgrammeId is null).ThenBy(g => t.Programmes.Find(g.ProgrammeId)?.Name, NameOrder.Comparer).ThenBy(g => g.Name, NameOrder.Comparer))
+                    rows.Add(new PlanRow(g.Id.ToString(), g.Id, g.Name, g.Colour, t.Programmes.Find(g.ProgrammeId)?.Name ?? "No programme"));
+                // A whole-building class is on for every group, so it sits on every group's row.
+                foreach (var o in range)
+                    foreach (var row in rows)
+                        if (o.Session.Audience.IsFor(row.Id!.Value))
+                            bars.Add(new PlanBar(o, row.Key, o.Date, Minutes(o.Start), Minutes(o.End), false));
+                break;
+
+            case Lens.People:
+                if (focus is { Kind: "student" } st)
+                {
+                    rows.Add(new PlanRow(st.Id.ToString(), st.Id, st.Name, null, "Student"));
+                    foreach (var o in range.Where(o => Roster.Includes(t, o.Session, st.Id)))
+                        bars.Add(new PlanBar(o, st.Id.ToString(), o.Date, Minutes(o.Start), Minutes(o.End), false));
+                    break;
+                }
+                var people = t.Facilitators.Where(f => focus is null || focus.Id == f.Id).OrderBy(f => f.Name, NameOrder.Comparer).ToList();
+                foreach (var f in people)
+                {
+                    var key = f.Id.ToString();
+                    foreach (var o in range.Where(o => o.Session.FacilitatorIds.Contains(f.Id) || o.Session.CoverIds.Contains(f.Id)))
+                    {
+                        // A person's row draws their part of a class, as their own week does.
+                        var (a, b) = o.InTheRoom.Contains(f.Id) ? TimeWindows.InRoom(o, f.Id) : (o.Start, o.End);
+                        bars.Add(new PlanBar(o, key, o.Date, Minutes(a), Minutes(b), a != o.Start || b != o.End));
+                    }
+                    // Nobody needs thirty empty rows: a person with nothing on is listed only when asked for.
+                    if (focus is not null || bars.Any(x => x.RowKey == key))
+                        rows.Add(new PlanRow(key, f.Id, f.Name, f.Colour, f.IsGuest ? "Guests" : "Facilitators"));
+                }
+                break;
+        }
+
+        // A bar only counts on a row that is drawn: narrowed to one space, the other spaces' classes go.
+        var drawnRows = rows.Select(r => r.Key).ToHashSet();
+        bars = bars.Where(b => drawnRows.Contains(b.RowKey)).ToList();
+        var days = Cccc.Domain.Week.Days(monday).Where(d =>
+            d.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday) || week.Any(o => o.Date == d)).ToList();
+        if (rowsAreDays)
+        {
+            // One focused row becomes one row per day; a bar keeps its own date, which is now its row.
+            var name = rows.FirstOrDefault()?.Name ?? focus!.Name;
+            var colour = rows.FirstOrDefault()?.Colour;
+            rows = days.Select(d => new PlanRow(DayKey(d), null, d.ToString("dddd d", System.Globalization.CultureInfo.InvariantCulture), colour, name)).ToList();
+            bars = bars.Select(b => b with { RowKey = DayKey(b.Date) }).ToList();
+        }
+
+        var lanes = new Dictionary<(string, DateOnly), int>();
+        var laid = new List<PlanBar>();
+        foreach (var grp in bars.GroupBy(b => (b.RowKey, b.Date)))
+        {
+            var ends = new List<int>();
+            foreach (var b in grp.OrderBy(b => b.Start).ThenByDescending(b => b.End))
+            {
+                int lane = ends.FindIndex(e => e <= b.Start);
+                if (lane < 0) { lane = ends.Count; ends.Add(b.End); } else ends[lane] = b.End;
+                laid.Add(b with { Lane = lane });
+            }
+            lanes[grp.Key] = Math.Max(1, ends.Count);
+        }
+
+        // The frame is the WEEK's, never the filtered day's, so stepping a day does not rescale the grid.
+        var events = EventSchedule.Between(t, monday, monday.AddDays(6), access.Events);
+        var (fs, fe) = GridFrame.FittedTo(week.Select(o => (Minutes(o.Start), Minutes(o.End)))
+            .Concat(events.Where(e => !e.Event.AllDay).Select(e => (Minutes(e.Event.Start), Minutes(e.Event.End)))));
+        days = days.Union(Cccc.Domain.Week.Days(monday).Where(d => events.Any(e => e.Covers(d)))).Order().ToList();
+        var clashes = Cccc.Domain.Rules.Clashes.ForWeek(t, monday);
+        return new PlanModel
+        {
+            Rows = rows,
+            RowsAreDays = rowsAreDays,
+            Bars = laid,
+            Lanes = lanes,
+            Week = week,
+            Days = days,
+            FrameStart = fs,
+            FrameEnd = fe,
+            Clashes = clashes.Where(c => c.IsRing).ToList(),
+            Ringed = Cccc.Domain.Rules.Clashes.RingedSessions(clashes),
+            CoverNeeded = Cover.StillNeeded(t, monday, today),
+            RegistersToFile = Registers.FileableBy(Registers.MissingInWeek(t, monday, today), access.Registers),
+            Events = events,
+            Locked = Cccc.Domain.Week.HasEnded(monday, today),
+            HiddenGuests = hiddenGuests,
+        };
+    }
+}

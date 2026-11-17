@@ -1,70 +1,99 @@
-# Screens
+# Screens: the second design
 
-The calendar is the shape a timetable is read in, so a project opens on the week. Dark first
-(Setsquare Dark on a first visit, mint accent), with the four dark palettes offered. Everything works
-at 360px; below 640px the week becomes a day list.
+The first version of these screens copied the current app's shape: a dark left rail, a week calendar
+with cohort lanes, and a pop-up dialog for everything. Craig, 17 Nov 2026: *"It looks very much like
+what we already have... systems and usage can stay similar but design and approach should be
+different."* So the engine (`Cccc.Domain`, the store, access, the PDFs) is unchanged, and how a person
+meets it starts again from the one sentence the whole app exists for:
+
+> **WHO is in what SPACE and WHEN.**
+
+The current app answers it from the cohort's side, as a week. This one answers it from the
+**building's** side, as a day, and lets you turn the same picture to look at it from a group's or a
+person's side.
+
+## Four ideas
+
+1. **Open on now, not on a week.** The first screen is the building as it is this minute: every space,
+   what is in it and until when, what comes next, and the few things that need somebody today.
+2. **Time runs left to right; rows are the thing you are asking about.** One timeline component draws a
+   day with spaces as rows (the default), or groups, or people. Turning the lens is one click and keeps
+   the day. A week is a grid of the same rows against days, for the overview.
+3. **Find, don't filter.** One box at the top (Ctrl+K or /) finds any student, facilitator, group,
+   space or class and any action. Choosing a person shows their day; choosing a space shows its day.
+   There is no filter panel.
+4. **Look in a side panel; edit in a drawer.** Choosing a block opens its details beside the timeline
+   (who is in it, the roster, what is wrong with it, what you can do). Forms slide in from the right
+   over the page instead of popping up in the middle, so the timeline stays in sight.
+
+## The look
+
+Light first, like a printed programme: warm paper, black ink, hairline rules, one vermilion accent and
+a deep blue for links. Headings, dates and times in a serif; everything else in the system sans. A
+class's colour is a stripe down the block's left edge on a pale wash of itself, never a solid fill, so
+text is always ink on paper. **Night** is the dark version, chosen by the device or the person.
+Nothing depends on a web font: the laptop may be offline.
 
 ## The shell
 
-- **A rail** on the left: the project's name, then SCHEDULE (Week, My week, Registers, Cover), MANAGE
-  (Data, Reports, Administration — administrators only), and at the foot the signed-in person, Change
-  passphrase and Sign out.
-- **A status bar**: who else is here ("Also editing: …"), the last change and who made it, and the
-  version at the right-hand end. The project name is never in the browser tab's title.
-- **One dialog at a time.** Forms put OK before Cancel (Close where nothing is pending), Enter commits,
-  Escape closes, focus is trapped inside.
+- **A top bar**: the CCCC mark, the places (Now, Plan, Registers, My week for a linked facilitator,
+  Cover for editors, and for administrators People & places, Reports, Admin), the Find box, Undo and
+  Redo, and the person's menu (theme, change passphrase, sign out, the version).
+- **On a phone** the places move to a bar along the bottom (Now, Plan, Registers, Find, More).
+- **A quiet foot line**: who else is here and the last change. The version is in the person's menu.
+- **One drawer at a time**, focus trapped, Escape closes, OK before Cancel.
 
-## The week
+## Now (`/`)
 
-- A header: the week number tile, ◂ date box ▸ and *This week* (the tab's own week, kept in
-  `sessionStorage`, never saved in the project).
-- A context bar: *Add session…*, *New event*, *Cover…*, *Copy ▾* (Copy day…, Copy week to…, Clear the
-  weeks after this one…), and when something is chosen, its verbs behind its name.
-- A filter bar: *+ Filter* (search, programme, group, room, facilitator, student; also show open
-  sessions, guests, events), each active filter a chip with its ×, and beside it the counts of
-  **clashes**, **cover needed** and **registers missing** (a button, opening exactly what it counts).
-- The calendar: days across, hours down, fitted to the week; blocks as in the rules; a dashed edge and
-  a COVER tag on a block needing cover; a solid warning ring on a clash; events as a thin line at the
-  top of their day or a strip for all-day ones. Click to choose, double-click to edit, drag to move,
-  drag an edge to stretch (quarter hours, one undo step), drag a box to choose several, Delete removes
-  what is chosen. A locked week draws as read-only and says so.
-- **The week is the same for everybody** on the screen, filtered for the reader as the rules say.
+A big serif clock line (*Tuesday 17 November, 11:42*). For somebody linked to a facilitator, **You
+today** comes first: their own classes today, their part of a shared one, marked *now*, *covering* or
+*you are away*; choosing one opens their week with that class chosen. Then the spaces, grouped by their
+category, each a card: what is on now (class, group, initials, a bar showing how far through), or
+*Free until 13:00*; then what is next. Choosing a card opens that space's week. Beside them, **Today
+needs**: cover still needed, registers waiting for the reader, clashes today, today's events and what
+is still to come.
 
-## Forms
+## Plan (`/plan`)
 
-- **Session**: class (sets title and colour), audience (group, groups, programme, everyone), date and
-  times, room, facilitators each with optional from/until, students added or left off, notes,
-  provisional. Warnings (clashes, over hours) shown folded below, never blocking.
-- **Cover…**: the week's sessions needing cover, each with the ranked list of who could take it.
-- **Register**: the roster with Present / Excused / Absent, pre-filled from known absences, filed with
-  who and when.
-- **Event**: title, category, dates, times or all day, repeat (always ending), audience, place, people.
+- A day strip: the days of the week as chips (an empty weekend is left out), each with its number of
+  classes and a dot when something on it needs attention; ‹ › or Alt+← → step a day, skipping an empty
+  weekend, or a week when a week is on screen; *Today*; a date box to jump.
+- **Lens**: Spaces · Groups · People. **Scale**: Day · Week.
+- The **day timeline**: rows grouped (spaces by category, groups by programme, people as facilitators
+  then students when asked for), hours across, a line at now. Click a block to look at it; double-click
+  empty time to add a class there (the row fills in the space or group); drag sideways to move in time,
+  drag to another space row to move rooms, drag an end to stretch, in quarter hours, one undo step.
+- **Narrowed to one** person, space or group (from Find, or a card on Now), the day timeline's rows
+  become that one's days: *Cleo Marchetti's week*, Monday to Friday down the side. The chosen day is
+  marked; dragging a class onto another day's row moves it to that day. The chip beside the lens shows
+  who it is narrowed to, and × goes back to everybody.
+- The **week grid**: the same rows against days, each cell its classes as short chips; click a day
+  heading to open that day.
+- **Issues** (a count beside the lens): clashes, cover needed and missing registers for what is on
+  screen; choosing one opens that class.
+- The side panel for a chosen class: title, when, where, who teaches (and who is away), the group and
+  roster count, state tags, the clash or cover note, and its verbs: Edit, Register, Cancel/Restore,
+  Cover, Duplicate, Delete.
+- **Copy** (day, week, clear the weeks after), **Print** (the four documents, narrowed as the screen
+  is) and **Show** (open training, guest groups) sit in one *More* menu. Guest groups start hidden on
+  every visit and a count says how many classes that hides; hiding is drawing, never counting.
+- **On a phone** the timeline scrolls inside its box, with the names held at the left, and opens
+  scrolled to the class somebody came to look at, else an hour before now, else the first class. The
+  side panel becomes a sheet from the bottom.
 
-## Data (administrators)
+## Registers, People & places, Reports, Admin, My week
 
-One page per kind, each a list with a form: Rooms, Programmes, Groups, Students, Facilitators, Classes,
-Areas, Disciplines and branches, Time rules, Semesters & closures, Absences. Every list is in Danish
-name order; a thing's own colour is a spine beside its name, never text colour.
+Same jobs as before, restyled: lists are hairline tables, a thing's colour is a spine, buttons are
+outlined ink with one filled accent action per screen. Registers lead with **today's** classes as
+large tappable cards, because the register is taken standing in a room with a phone; on a phone the
+rest of the week is one card a class too, with its state on the right.
 
-## Reports (administrators)
+## Words
 
-Overview, Utilisation (by programme, group, area; whole-building last), Attendance (per class, per
-student), **Facilitator hours** (week by week, and the breakdown of teaching and each time rule), and
-the registers outstanding.
-
-## My week
-
-A facilitator's own week through their link: their sessions (their part of a session drawn as their
-part), their hours against their limit, their registers to take. Printable as their own week.
-
-## Administration
-
-Accounts (add, role, tags, link, reset, suspend, remove), Projects (new, import, export, rename,
-delete, history and putting an earlier moment back), System (last backup, last update), Erase a person.
+**Space**, never *room*, wherever a person reads it: the Plan's lens, the forms, People & places, the
+printed sheets and the file names. A Big Top is not a room. The code keeps `Room`, which nobody reads.
 
 ## Printed documents
 
-The calendar view of the week as shown (filters stated on the sheet), the list, the room grid one page
-per day, and a calendar per student. One heading rule: `CCCC Scheduler · Week 37, 7–13 September 2026 ·
-<shape>`, never the project's name. Every PDF generation goes through one gate (QuestPDF loses text when
-two generate at once).
+Unchanged: the week as shown, the list, the room grid one page a day, a calendar per student, the
+heading rule without the project's name, every generation through one gate.

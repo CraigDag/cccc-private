@@ -1,22 +1,88 @@
+// The plan by keyboard alone: Space chooses, Enter opens, Escape closes and puts focus back,
+// Ctrl+K and / open Find, Alt+arrows step the day, Ctrl+Z undoes.
 const { chromium } = require('playwright');
-const OUT = (process.env.OUT || require('os').tmpdir() + '/cccc-browser') + '/'; require('fs').mkdirSync(OUT, { recursive: true });
-const B = 'http://127.0.0.1:5299';
+const B = process.env.CCCC_PREVIEW || 'http://127.0.0.1:5299';
+let failed = 0;
+const ok = (what) => console.log('OK   ' + what);
+const bad = (what, e) => { failed++; console.log('FAIL ' + what + ': ' + (e && e.message ? e.message.split('\n')[0] : e)); };
+async function check(what, fn) { try { await fn(); ok(what); } catch (e) { bad(what, e); } }
 (async () => {
   const browser = await chromium.launch();
   const page = await (await browser.newContext({ viewport: { width: 1400, height: 900 } })).newPage();
+  page.on('pageerror', e => bad('page error', e));
   await page.goto(B + '/signin');
   await page.fill('[data-testid=signin-login]', 'admin');
   await page.fill('[data-testid=signin-passphrase]', 'northlight admin');
   await page.click('[data-testid=signin-submit]');
-  await page.waitForSelector('[data-testid=week-grid] [data-testid=block]'); await page.waitForTimeout(1000);
-  await page.locator('[data-testid=week-grid] [data-testid=block]').nth(2).focus();
-  await page.keyboard.press(' ');
-  await page.waitForSelector('[data-testid=chosen]', { timeout: 4000 }); console.log('OK space chooses');
-  await page.locator('[data-testid=week-grid] [data-testid=block]').nth(2).focus();
-  await page.keyboard.press('Enter');
-  await page.waitForSelector('[data-testid=dialog]', { timeout: 4000 }); console.log('OK enter opens');
-  await page.keyboard.press('Escape');
-  await page.waitForSelector('[data-testid=dialog]', { state: 'detached', timeout: 4000 }); console.log('OK escape closes');
-  console.log('focus back on', await page.evaluate(() => document.activeElement?.getAttribute('data-testid')));
+  await page.waitForSelector('[data-testid=now-page]');
+  await page.click('[data-testid=nav-plan]');
+  await page.waitForSelector('[data-testid=timeline] [data-testid=block]');
+  await page.waitForTimeout(600);
+  const block = () => page.locator('[data-testid=timeline] [data-testid=block]').nth(2);
+
+  await check('Space chooses a block and the side panel opens', async () => {
+    const title = await block().getAttribute('data-title');
+    await block().focus();
+    await page.keyboard.press(' ');
+    await page.waitForFunction(t => document.querySelector('[data-testid=inspector-title]')?.textContent === t, title, { timeout: 4000 });
+  });
+  await check('Enter opens the class in a drawer', async () => {
+    await block().focus();
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-testid=dialog]', { timeout: 4000 });
+  });
+  await check('Escape closes the drawer and focus goes back to the block', async () => {
+    const id = await block().getAttribute('data-id');
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('[data-testid=dialog]', { state: 'detached', timeout: 4000 });
+    await page.waitForFunction(id => document.activeElement?.dataset?.id === id, id, { timeout: 2000 });
+  });
+  await check('Escape again closes the side panel', async () => {
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('[data-testid=inspector]', { state: 'detached', timeout: 4000 });
+  });
+  await check('Alt+Right steps to the next day with classes', async () => {
+    const before = await page.getAttribute('[data-testid=plan-page]', 'data-day');
+    await page.click('[data-testid=plan-title]');
+    await page.keyboard.press('Alt+ArrowRight');
+    await page.waitForFunction(b => document.querySelector('[data-testid=plan-page]').dataset.day !== b, before, { timeout: 4000 });
+    await page.keyboard.press('Alt+ArrowLeft');
+    await page.waitForFunction(b => document.querySelector('[data-testid=plan-page]').dataset.day === b, before, { timeout: 4000 });
+  });
+  await check('Ctrl+K opens Find with the box focused', async () => {
+    await page.keyboard.press('Control+k');
+    await page.waitForSelector('[data-testid=find]', { timeout: 4000 });
+    await page.waitForFunction(() => document.activeElement?.getAttribute('data-testid') === 'find-input', null, { timeout: 2000 });
+  });
+  await check('arrows move through what Find offers and Enter goes there', async () => {
+    await page.keyboard.type('studio');
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid=find-hit]').length >= 2 && document.querySelector('[data-testid=find-hit] .find-label')?.textContent.startsWith('Studio'), null, { timeout: 4000 });
+    await page.keyboard.press('ArrowDown');
+    const second = await page.locator('[data-testid=find-hit]').nth(1).locator('.find-label').textContent();
+    await page.waitForSelector('[data-testid=find-hit].on >> nth=0');
+    if ((await page.locator('[data-testid=find-hit].on .find-label').textContent()) !== second) throw new Error('the second hit is not the one marked');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-testid=find]', { state: 'detached', timeout: 4000 });
+    await page.waitForFunction(n => document.querySelector('[data-testid=focus-chip]')?.textContent.includes(n), second, { timeout: 4000 });
+    console.log('     narrowed to', second, '·', await page.locator('[data-testid=plan-title]').textContent());
+  });
+  await check('/ opens Find, Escape closes it', async () => {
+    await page.click('[data-testid=plan-title]');
+    await page.keyboard.press('/');
+    await page.waitForSelector('[data-testid=find]', { timeout: 4000 });
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('[data-testid=find]', { state: 'detached', timeout: 4000 });
+  });
+  await check('/ typed in a box is a character, not Find', async () => {
+    await page.goto(B + '/data/students');
+    await page.waitForSelector('[data-testid=data-search]');
+    await page.click('[data-testid=data-search]');
+    await page.keyboard.type('a/b');
+    await page.waitForTimeout(300);
+    if (await page.locator('[data-testid=find]').count()) throw new Error('Find opened while typing');
+    if ((await page.inputValue('[data-testid=data-search]')) !== 'a/b') throw new Error('the box lost the slash');
+  });
   await browser.close();
+  console.log(failed ? failed + ' failed' : 'all passed');
+  process.exit(failed ? 1 : 0);
 })();

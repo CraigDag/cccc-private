@@ -147,7 +147,7 @@ public static class Sheets
                 });
                 table.Header(h =>
                 {
-                    foreach (var name in new[] { "Day", "Time", "Session", "For", "Room", "In the room", "" })
+                    foreach (var name in new[] { "Day", "Time", "Session", "For", "Space", "In the room", "" })
                         h.Cell().BorderBottom(0.75f).BorderColor(Ink).PaddingVertical(2).Text(name).SemiBold();
                 });
                 foreach (var d in m.Days)
@@ -185,7 +185,7 @@ public static class Sheets
             foreach (var d in m.Days)
                 doc.Page(page =>
                 {
-                    Frame(page, Head(m.Monday, "Rooms, " + Week.ShortDate(d)), narrowed, printed, landscape: false);
+                    Frame(page, Head(m.Monday, "Spaces, " + Week.ShortDate(d)), narrowed, printed, landscape: false);
                     page.Content().Table(table =>
                     {
                         table.ColumnsDefinition(c => { c.ConstantColumn(110); c.RelativeColumn(); });
@@ -193,7 +193,7 @@ public static class Sheets
                         {
                             var here = m.Visible.Where(o => o.Date == d && o.Session.RoomId == r?.Id).OrderBy(o => o.Start).ToList();
                             if (r is null && here.Count == 0) continue;
-                            table.Cell().Element(Row).Text(r?.Name ?? "No room").SemiBold();
+                            table.Cell().Element(Row).Text(r?.Name ?? "No space").SemiBold();
                             table.Cell().Element(Row).Column(col =>
                             {
                                 if (here.Count == 0) col.Item().Text("Free").FontColor(Quiet);

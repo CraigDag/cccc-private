@@ -1,18 +1,17 @@
-@* The week header shared by the pages that are about one week: ◂ date ▸ and This week. *@
-<div class="week-head">
-    <div class="week-tile"><small>Week</small><b>@Cccc.Domain.Week.IsoNumber(Monday)</b></div>
-    <div class="week-nav">
-        <button type="button" class="btn icon" @onclick="() => Go.InvokeAsync(Monday.AddDays(-7))" aria-label="Previous week">◂</button>
-        <input type="date" class="week-date" value="@Monday.ToString("yyyy-MM-dd")" @onchange="OnDate" aria-label="Week of" />
-        <button type="button" class="btn icon" @onclick="() => Go.InvokeAsync(Monday.AddDays(7))" aria-label="Next week">▸</button>
-        @if (Cccc.Domain.Week.MondayOf(Today) != Monday)
-        {
-            <button type="button" class="btn" @onclick="() => Go.InvokeAsync(Today)">This week</button>
-        }
-    </div>
+@* The heading shared by the pages that are about one week: the page's name, then ‹ the week › and This week. *@
+<div class="week-head" data-testid="week-head">
     <div class="week-title">
         <h1>@Title</h1>
-        <div class="muted">@Cccc.Domain.Week.ForDocuments(Monday)</div>
+        <div class="week-nav">
+            <button type="button" class="btn icon quiet" @onclick="() => Go.InvokeAsync(Monday.AddDays(-7))" aria-label="Previous week">‹</button>
+            <span class="week-label" data-testid="week-number">Week @Cccc.Domain.Week.IsoNumber(Monday) <small>@Cccc.Domain.Week.Range(Monday)</small></span>
+            <button type="button" class="btn icon quiet" @onclick="() => Go.InvokeAsync(Monday.AddDays(7))" aria-label="Next week">›</button>
+            <input type="date" class="week-date" value="@Monday.ToString("yyyy-MM-dd")" @onchange="OnDate" aria-label="Week of" />
+            @if (Cccc.Domain.Week.MondayOf(Today) != Monday)
+            {
+                <button type="button" class="btn quiet" @onclick="() => Go.InvokeAsync(Today)">This week</button>
+            }
+        </div>
     </div>
     @ChildContent
 </div>

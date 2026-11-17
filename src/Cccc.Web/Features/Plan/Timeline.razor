@@ -1,0 +1,190 @@
+@inject IJSRuntime JS
+@implements IDisposable
+@using Cccc.Web.Features.Week
+@{
+    var t = W.T;
+    int span = Math.Max(60, M.FrameEnd - M.FrameStart);
+    int firstHour = (M.FrameStart + 59) / 60;
+    var dayEvents = M.Events.Where(e => e.Covers(Day)).OrderBy(e => !e.Event.AllDay).ThenBy(e => e.Event.Start).ToList();
+    var closure = Occurrences.ClosureFor(t, Day, null);
+    bool isToday = Day == W.Today;
+    int allDay = dayEvents.Count(e => e.Event.AllDay);
+    int eventLanes = dayEvents.Count - allDay + (allDay > 0 ? 1 : 0);
+}
+<div class="tl @(Editable ? "editable" : "")" data-testid="timeline" @ref="_root" style="--hours:@(span / 60)" data-day="@Day.ToString("yyyy-MM-dd")"
+     data-start="@M.FrameStart" data-end="@M.FrameEnd" data-edit="@(Editable ? "1" : "0")" data-rooms="@(Lens == Lens.Spaces || M.RowsAreDays ? "1" : "0")"
+     data-today="@(isToday || (M.RowsAreDays && M.Days.Contains(W.Today)) ? "1" : "0")">
+    <div class="tl-head">
+        <div class="tl-corner">@(Lens switch { Lens.Spaces => "Space", Lens.Groups => "Group", _ => "Person" })</div>
+        <div class="tl-scale">
+            @for (int h = firstHour; h * 60 < M.FrameEnd; h++)
+            {
+                <span class="tl-tick" style="left:@Pct(h * 60 - M.FrameStart, span)%">@($"{h:00}")</span>
+            }
+        </div>
+    </div>
+    @if (closure is not null)
+    {
+        <div class="tl-closed">The building is closed: @closure.Name</div>
+    }
+    @if (dayEvents.Count > 0 && !M.RowsAreDays)
+    {
+        <div class="tl-row tl-events">
+            <div class="tl-label"><span>Events</span></div>
+            <div class="tl-track" style="--lanes:@eventLanes">
+                @{ int lane = 0; }
+                @if (allDay > 0)
+                {
+                    int x = 0;
+                    foreach (var e in dayEvents.Where(e => e.Event.AllDay))
+                    {
+                        <button type="button" class="tl-event allday" style="left:@(x)%; width:@(100 / allDay)%; top:0" @onclick="() => OpenEvent.InvokeAsync(e.Event.Id)" data-testid="event-chip">All day · @e.Event.Title</button>
+                        x += 100 / allDay;
+                    }
+                    lane = 1;
+                }
+                @foreach (var e in dayEvents.Where(e => !e.Event.AllDay))
+                {
+                    int s0 = PlanModel.Minutes(e.Event.Start), e0 = PlanModel.Minutes(e.Event.End);
+                    <button type="button" class="tl-event" style="left:@Pct(s0 - M.FrameStart, span)%; width:@Pct(Math.Max(15, e0 - s0), span)%; top:calc(@lane * var(--lane))"
+                            @onclick="() => OpenEvent.InvokeAsync(e.Event.Id)" data-testid="event-chip"
+                            title="@(e.Event.Audience == EventAudience.Administrators ? "Administrators only" : "")">
+                        <b>@Cccc.Domain.Week.Hm(e.Event.Start)</b> @e.Event.Title
+                    </button>
+                    lane++;
+                }
+            </div>
+        </div>
+    }
+    @foreach (var part in M.Rows.GroupBy(r => r.Section))
+    {
+        <div class="tl-section"><span>@part.Key</span></div>
+        @foreach (var row in part)
+        {
+            var bars = M.Bars.Where(b => b.RowKey == row.Key && (M.RowsAreDays || b.Date == Day)).ToList();
+            var rowDay = PlanModel.FromDayKey(row.Key) ?? Day;
+            <div class="tl-row @(bars.Count == 0 ? "free" : "") @(M.RowsAreDays && rowDay == W.Today ? "today" : "") @(M.RowsAreDays && rowDay == Day ? "picked" : "")" data-row="@row.Key" data-testid="row">
+                <div class="tl-label" title="@row.Name">
+                    <span class="spine" style="--c:@(row.Colour ?? "var(--rule)")"></span>
+                    <span class="tl-name">@row.Name</span>
+                    @if (bars.Count == 0)
+                    {
+                        <small>@(M.RowsAreDays ? "nothing" : "free")</small>
+                    }
+                </div>
+                <div class="tl-track" style="--lanes:@M.LanesOf(row.Key, rowDay)">
+                    @if (rowDay == W.Today && NowMinutes is { } now && now >= M.FrameStart && now <= M.FrameEnd)
+                    {
+                        <div class="tl-now" style="left:@Pct(now - M.FrameStart, span)%"></div>
+                    }
+                    @foreach (var b in bars)
+                    {
+                        var s = b.O.Session;
+                        var colour = Looks.ColourOf(t, s);
+                        bool movable = Editable && !b.Part;
+                        <div class="blk @Classes(b)" data-id="@s.Id" data-start="@b.Start" data-end="@b.End" data-move="@(movable ? "1" : "0")"
+                             data-testid="block" data-title="@Looks.Title(t, s)" tabindex="0" role="button"
+                             aria-label="@(Looks.Title(t, s) + ", " + Cccc.Domain.Week.Hm(b.O.Start) + " to " + Cccc.Domain.Week.Hm(b.O.End))"
+                             style="left:@Pct(b.Start - M.FrameStart, span)%; width:@Pct(Math.Max(15, b.End - b.Start), span)%; top:calc(@b.Lane * var(--lane)); @(colour is null ? "" : $"--c:{colour};")">
+                            <span class="blk-title">@Looks.Title(t, s)</span>
+                            <span class="blk-meta">@Meta(b)</span>
+                            @if (Tag(b.O) is { } tag)
+                            {
+                                <span class="blk-tag">@tag</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+    @if (M.Rows.Count == 0)
+    {
+        <div class="tl-empty">@(Lens == Lens.People ? "Nobody is teaching on this day." : "Nothing to show here yet.")</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PlanModel M { get; set; } = default!;
+    [Parameter, EditorRequired] public Workspace W { get; set; } = default!;
+    [Parameter, EditorRequired] public PlanGestures Gestures { get; set; } = default!;
+    [Parameter] public DateOnly Day { get; set; }
+    [Parameter] public Lens Lens { get; set; }
+    [Parameter] public Guid? Chosen { get; set; }
+    [Parameter] public bool Editable { get; set; }
+    [Parameter] public EventCallback<Guid> OpenEvent { get; set; }
+    private ElementReference _root;
+    private DotNetObjectReference<PlanGestures>? _ref;
+
+    private int? NowMinutes
+    {
+        get
+        {
+            var local = W.Clock.Local(W.Clock.Now);
+            return DateOnly.FromDateTime(local.DateTime) == W.Today ? local.Hour * 60 + local.Minute : null;
+        }
+    }
+
+    private static string Pct(int minutes, int span) => (minutes * 100.0 / span).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+    private string Meta(PlanBar b)
+    {
+        var t = W.T;
+        var s = b.O.Session;
+        var when = $"{Cccc.Domain.Week.Hm(b.O.Start)}–{Cccc.Domain.Week.Hm(b.O.End)}";
+        if (b.Part) when = $"{Cccc.Domain.Week.Hm(new TimeOnly(b.Start / 60, b.Start % 60))}–{Cccc.Domain.Week.Hm(new TimeOnly(Math.Min(b.End, 1439) / 60, Math.Min(b.End, 1439) % 60))} (part)";
+        var other = Lens switch
+        {
+            Lens.Spaces => Looks.Audience(t, s),
+            Lens.Groups => Looks.Room(t, s),
+            _ => string.Join(" · ", new[] { Looks.Room(t, s), Looks.Audience(t, s) }.Where(x => x.Length > 0)),
+        };
+        var who = Lens == Lens.People ? "" : Looks.Initials(t, b.O);
+        return string.Join(" · ", new[] { when, other, who }.Where(x => !string.IsNullOrEmpty(x)));
+    }
+
+    private string Classes(PlanBar b)
+    {
+        var o = b.O;
+        var c = new List<string>();
+        if (Looks.ColourOf(W.T, o.Session) is null) c.Add("neutral");
+        if (o.NeedsCover) c.Add("cover");
+        if (o.State == OccurrenceState.Cancelled) c.Add("cancelled");
+        if (o.State == OccurrenceState.Closed) c.Add("closed");
+        if (M.Ringed.Contains(o.Session.Id)) c.Add("clash");
+        if (o.Session.Provisional) c.Add("provisional");
+        if (o.Session.Audience.IsEveryone && Lens == Lens.Groups) c.Add("everyone");
+        if (Chosen == o.Session.Id) c.Add("chosen");
+        if (b.End - b.Start <= 45) c.Add("short");
+        return string.Join(' ', c);
+    }
+
+    private static string? Tag(Occurrence o) => o.State switch
+    {
+        OccurrenceState.NeedsCover => "COVER",
+        OccurrenceState.Cancelled => "CANCELLED",
+        OccurrenceState.Closed => "CLOSED",
+        _ when o.Session.MovedFrom is not null => "MOVED",
+        _ when o.Session.Provisional => "PROVISIONAL",
+        _ => null,
+    };
+
+    private DateOnly? _attachedDay;
+
+    // Attached once, and again when the day changes, so the script can scroll a narrow window to
+    // the part of the new day that matters. Every other render costs nothing here.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        bool same = _ref is not null && ReferenceEquals(_ref.Value, Gestures);
+        if (same && !firstRender && _attachedDay == Day) return;
+        if (!same)
+        {
+            _ref?.Dispose();
+            _ref = DotNetObjectReference.Create(Gestures);
+        }
+        _attachedDay = Day;
+        await JS.InvokeVoidAsync("ccccPlan.attach", _root, _ref);
+    }
+
+    public void Dispose() => _ref?.Dispose();
+}

@@ -24,17 +24,19 @@ public static class Week
     public static bool HasEnded(DateOnly anyDateInWeek, DateOnly today) => MondayOf(anyDateInWeek).AddDays(6) < today;
 
     /// <summary>"Week 37, 7–13 September 2026" — dates and year, because week numbers repeat.</summary>
-    public static string ForDocuments(DateOnly anyDateInWeek)
+    public static string ForDocuments(DateOnly anyDateInWeek) => $"Week {IsoNumber(anyDateInWeek)}, {Range(anyDateInWeek)}";
+
+    /// <summary>"7–13 September 2026", the week's Monday to Sunday, for beside a heading that already says the week.</summary>
+    public static string Range(DateOnly anyDateInWeek)
     {
         var m = MondayOf(anyDateInWeek);
         var s = m.AddDays(6);
         var inv = CultureInfo.InvariantCulture;
-        string range = m.Month == s.Month
+        return m.Month == s.Month
             ? $"{m.Day}–{s.Day} {s.ToString("MMMM yyyy", inv)}"
             : m.Year == s.Year
                 ? $"{m.Day} {m.ToString("MMMM", inv)} – {s.Day} {s.ToString("MMMM yyyy", inv)}"
                 : $"{m.Day} {m.ToString("MMMM yyyy", inv)} – {s.Day} {s.ToString("MMMM yyyy", inv)}";
-        return $"Week {IsoNumber(m)}, {range}";
     }
 
     public static string ShortDay(DayOfWeek day) => day.ToString()[..3];

@@ -7,7 +7,7 @@ public static class Kinds
 {
     public static readonly Kind[] All =
     [
-        new("rooms", "Rooms", "room"),
+        new("rooms", "Spaces", "space"),
         new("programmes", "Programmes", "programme"),
         new("groups", "Groups", "group"),
         new("students", "Students", "student"),

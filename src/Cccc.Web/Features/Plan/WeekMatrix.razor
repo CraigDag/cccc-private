@@ -1,0 +1,56 @@
+@using Cccc.Web.Features.Week
+@{
+    var t = W.T;
+}
+<div class="wm-wrap">
+    <table class="wm" data-testid="week-matrix">
+        <thead>
+            <tr>
+                <th class="wm-corner">@(Lens switch { Lens.Spaces => "Space", Lens.Groups => "Group", _ => "Person" })</th>
+                @foreach (var d in M.Days)
+                {
+                    <th class="@(d == W.Today ? "today" : "")">
+                        <button type="button" class="wm-day" @onclick="() => OpenDay.InvokeAsync(d)" data-testid="matrix-day">
+                            <span>@d.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture)</span> <b>@d.Day</b>
+                        </button>
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var part in M.Rows.GroupBy(r => r.Section))
+            {
+                <tr class="wm-section"><th colspan="@(M.Days.Count + 1)"><span>@part.Key</span></th></tr>
+                @foreach (var row in part)
+                {
+                    <tr data-row="@row.Key">
+                        <th class="wm-label"><span class="spine" style="--c:@(row.Colour ?? "var(--rule)")"></span>@row.Name</th>
+                        @foreach (var d in M.Days)
+                        {
+                            var cell = M.Bars.Where(b => b.RowKey == row.Key && b.Date == d).OrderBy(b => b.Start).ToList();
+                            <td class="@(d == W.Today ? "today" : "") @(Occurrences.ClosureFor(t, d, null) is not null ? "closed" : "")">
+                                @foreach (var b in cell)
+                                {
+                                    var s = b.O.Session;
+                                    <button type="button" class="wm-chip @(b.O.NeedsCover ? "cover" : "") @(M.Ringed.Contains(s.Id) ? "clash" : "") @(b.O.Happens ? "" : "off") @(Chosen == s.Id ? "chosen" : "")"
+                                            style="--c:@(Looks.ColourOf(t, s) ?? "var(--rule)")" @onclick="() => Choose.InvokeAsync(s.Id)" @ondblclick="() => Open.InvokeAsync(s.Id)" data-testid="block">
+                                        <span class="wm-time">@Cccc.Domain.Week.Hm(new TimeOnly(b.Start / 60, b.Start % 60))</span> @Looks.Title(t, s)
+                                    </button>
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+@code {
+    [Parameter, EditorRequired] public PlanModel M { get; set; } = default!;
+    [Parameter, EditorRequired] public Workspace W { get; set; } = default!;
+    [Parameter] public Lens Lens { get; set; }
+    [Parameter] public Guid? Chosen { get; set; }
+    [Parameter] public EventCallback<Guid> Choose { get; set; }
+    [Parameter] public EventCallback<Guid> Open { get; set; }
+    [Parameter] public EventCallback<DateOnly> OpenDay { get; set; }
+}

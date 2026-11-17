@@ -10,9 +10,8 @@
         {
             <span class="status-item muted">Last change @W.Clock.Describe(c.At) by @W.NameOf(c.By)</span>
         }
-        <span class="status-item muted">Changes are kept as you make them</span>
+        <span class="status-item muted">Every change is kept as it is made</span>
     }
-    <span class="status-version" data-testid="version">@AppVersion.Current</span>
 </footer>
 @code {
     [CascadingParameter] public Workspace W { get; set; } = default!;

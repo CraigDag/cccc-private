@@ -1,18 +1,18 @@
 @page "/data/{Slug?}"
 @inject Dialogs D
 
-<PageTitle>Data · CCCC Scheduler</PageTitle>
+<PageTitle>People &amp; places · CCCC Scheduler</PageTitle>
 @if (!W.Access.MayUseAdminTools)
 {
-    <div class="empty-state"><h1>Data</h1><p>Only an administrator can change the school's data.</p></div>
+    <div class="empty-state"><h1>People &amp; places</h1><p>Only an administrator can change the school's data.</p></div>
 }
 else
 {
     var t = W.T;
     var k = Kinds.Find(Slug);
     <div class="page-head">
-        <h1>Data</h1>
-        <TypedText @key="k.Slug" Value="@_search" ValueChanged="s => _search = s" Placeholder="Find…" Label="Find in this list" Class="find" />
+        <h1>People &amp; places</h1>
+        <TypedText @key="k.Slug" Value="@_search" ValueChanged="s => _search = s" Placeholder="Find…" Label="Find in this list" Class="find" data-testid="data-search" />
     </div>
     <nav class="tabs" aria-label="Kinds of data">
         @foreach (var kind in Kinds.All)

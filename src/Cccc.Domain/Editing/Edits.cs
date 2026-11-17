@@ -296,7 +296,7 @@ public static class Edits
         foreach (var e in t.Events.Where(e => e.RoomId == id))
             d.Put(Collections.Events, e with { RoomId = null });
         d.Remove(Collections.Rooms, id);
-        return d.ToBatch("Deleted a room");
+        return d.ToBatch("Deleted a space");
     }
 
     /// <summary>

@@ -59,7 +59,7 @@ public static class Clashes
     {
         var list = week.Where(o => o.Happens).ToList();
         var found = new List<Clash>();
-        string RoomOf(Occurrence o) => t.Rooms.Find(o.Session.RoomId)?.Name ?? "no room";
+        string RoomOf(Occurrence o) => t.Rooms.Find(o.Session.RoomId)?.Name ?? "no space";
 
         for (int i = 0; i < list.Count; i++)
             for (int j = i + 1; j < list.Count; j++)
@@ -71,7 +71,7 @@ public static class Clashes
 
                 if (a.Session.RoomId is { } r && r == b.Session.RoomId && t.Rooms.Contains(r))
                     found.Add(new Clash(ClashKind.RoomDoubleBooked,
-                        $"Room \"{RoomOf(a)}\": \"{a.Session.DisplayTitle}\" overlaps \"{b.Session.DisplayTitle}\" ({When(a)})", both));
+                        $"Space \"{RoomOf(a)}\": \"{a.Session.DisplayTitle}\" overlaps \"{b.Session.DisplayTitle}\" ({When(a)})", both));
 
                 foreach (var fid in a.InTheRoom.Intersect(b.InTheRoom))
                     if (TimeWindows.Overlap(a, b, fid))

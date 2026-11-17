@@ -1,0 +1,115 @@
+@implements IDisposable
+@inject Finder F
+@inject PlanView V
+@inject Dialogs D
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@using Cccc.Web.Features.Plan
+@using Cccc.Web.Features.Sessions
+@using Cccc.Web.Features.Events
+@if (F.IsOpen)
+{
+    var hits = FindIndex.Search(W.T, _q, W.Access.MayEdit, W.Access.MayUseAdminTools);
+    _hits = hits;
+    if (_at >= hits.Count) _at = Math.Max(0, hits.Count - 1);
+    <div class="find-backdrop" @onclick="F.Close" data-testid="find-backdrop"></div>
+    <section class="finder" role="dialog" aria-modal="true" aria-label="Find" data-testid="find" @ref="_panel">
+        <div class="find-input">
+            <span class="find-glass" aria-hidden="true">⌕</span>
+            <TypedText @key="F.Generation" Value="" ValueChanged="OnQuery" Placeholder="A person, a space, a group, or something to do" Label="Find" Class="find-box-input"
+                       data-testid="find-input" autofocus @onkeydown="OnKey" />
+            <button type="button" class="find-x" data-close aria-label="Close" @onclick="F.Close">Esc</button>
+        </div>
+        <ul class="find-hits" role="listbox">
+            @if (hits.Count == 0)
+            {
+                <li class="find-none">Nothing called that. Try a first name, a space or a group.</li>
+            }
+            @for (int i = 0; i < hits.Count; i++)
+            {
+                var h = hits[i];
+                int at = i;
+                <li role="option" aria-selected="@(i == _at ? "true" : "false")">
+                    <button type="button" class="find-hit @(i == _at ? "on" : "")" @onclick="() => Go(h)" @onmouseenter="() => _at = at" data-testid="find-hit">
+                        <span class="find-kind k-@h.Kind" style="@(h.Colour is null ? "" : $"--c:{h.Colour}")">@Badge(h)</span>
+                        <span class="find-label">@h.Label</span>
+                        <small>@h.Detail</small>
+                    </button>
+                </li>
+            }
+        </ul>
+        <footer class="find-foot">↑ ↓ to move · Enter to open · a person or space opens their day</footer>
+    </section>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    private string _q = "";
+    private int _at;
+    private IReadOnlyList<FindHit> _hits = [];
+    private ElementReference _panel;
+    private bool _trap;
+
+    protected override void OnInitialized() => F.Moved += Refresh;
+
+    private void Refresh() => _ = InvokeAsync(() =>
+    {
+        if (F.IsOpen) { _q = ""; _at = 0; _trap = true; }
+        StateHasChanged();
+    });
+
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (_trap && F.IsOpen)
+        {
+            _trap = false;
+            await JS.InvokeVoidAsync("ccccShell.trap", _panel);
+        }
+    }
+
+    private void OnQuery(string q)
+    {
+        _q = q;
+        _at = 0;
+    }
+
+    private void OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "ArrowDown") _at = Math.Min(_at + 1, Math.Max(0, _hits.Count - 1));
+        else if (e.Key == "ArrowUp") _at = Math.Max(0, _at - 1);
+        else if (e.Key == "Enter" && _at < _hits.Count) Go(_hits[_at]);
+    }
+
+    private static string Badge(FindHit h) => h.Kind switch
+    {
+        "facilitator" => "F", "student" => "S", "room" => "◻", "group" => "G", "programme" => "P", _ => "→",
+    };
+
+    private void Go(FindHit h)
+    {
+        F.Close();
+        V.Start(W.Today);
+        V.Restored = true;
+        switch (h.Kind)
+        {
+            case "facilitator" or "student" or "room" or "group" or "programme":
+                V.FocusOn(new Focus(h.Kind, h.Id!.Value, h.Label));
+                V.Scale = Scale.Day;
+                V.Changed();
+                Nav.NavigateTo("plan");
+                break;
+            case "go-today":
+                V.FocusOn(null); V.Scale = Scale.Day; V.GoTo(W.Today); V.Changed(); Nav.NavigateTo("plan"); break;
+            case "go-week":
+                V.Scale = Scale.Week; V.Changed(); Nav.NavigateTo("plan"); break;
+            case "go-registers": Nav.NavigateTo("registers"); break;
+            case "go-data": Nav.NavigateTo("data"); break;
+            case "go-reports": Nav.NavigateTo("reports"); break;
+            case "add-class":
+                D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.Date)] = V.Day }); break;
+            case "add-event":
+                D.Show<EventForm>(new Dictionary<string, object?> { [nameof(EventForm.Date)] = V.Day }); break;
+        }
+    }
+
+    public void Dispose() => F.Moved -= Refresh;
+}

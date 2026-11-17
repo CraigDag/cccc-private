@@ -1,0 +1,117 @@
+@using Cccc.Web.Features.Week
+@using Cccc.Web.Features.Sessions
+@inject Dialogs D
+@{
+    var t = W.T;
+    var o = M.Find(Id);
+}
+<aside class="inspector" data-testid="inspector" aria-label="The chosen class">
+    @if (o is null)
+    {
+        <p class="muted">That class is no longer on this week.</p>
+        <button type="button" class="btn" @onclick="OnClose">Close</button>
+    }
+    else
+    {
+        var s = o.Session;
+        var roster = Roster.For(t, s);
+        var notes = M.Clashes.Where(c => c.SessionIds.Contains(s.Id)).Select(c => c.Description).ToList();
+        <header class="insp-head" style="--c:@(Looks.ColourOf(t, s) ?? "var(--rule)")">
+            <div class="insp-when">@Cccc.Domain.Week.ShortDate(s.Date) · @Looks.When(s)</div>
+            <h2 data-testid="inspector-title">@Looks.Title(t, s)</h2>
+            @if (Looks.StateWord(o) is { Length: > 0 } state)
+            {
+                <span class="insp-state">@state</span>
+            }
+            <button type="button" class="insp-x" aria-label="Close" @onclick="OnClose" data-testid="inspector-close">×</button>
+        </header>
+        <dl class="insp-facts">
+            <dt>Where</dt><dd>@(Looks.Room(t, s) is { Length: > 0 } r ? r : "No space given")</dd>
+            <dt>For</dt><dd>@Looks.Audience(t, s) <small>@(roster.Count == 1 ? "1 student" : $"{roster.Count} students")</small></dd>
+            <dt>Teaching</dt>
+            <dd>
+                @if (s.Facilitators.Count == 0)
+                {
+                    <span class="muted">Nobody yet</span>
+                }
+                @foreach (var a in s.Facilitators)
+                {
+                    var f = t.Facilitators[a.FacilitatorId];
+                    <div class="insp-person @(o.AwayIds.Contains(a.FacilitatorId) ? "away" : "")">
+                        <span class="disc" style="--c:@(f?.Colour ?? "var(--rule)")">@Rail(f?.Name ?? "?")</span>
+                        <span>@(f?.Name ?? "Somebody removed")
+                            @if (a.From is not null || a.Until is not null)
+                            {
+                                <small> @Cccc.Domain.Week.Hm(a.From ?? s.Start)–@Cccc.Domain.Week.Hm(a.Until ?? s.End)</small>
+                            }
+                            @if (o.AwayIds.Contains(a.FacilitatorId))
+                            {
+                                <small class="warn-text"> away</small>
+                            }
+                        </span>
+                    </div>
+                }
+                @foreach (var c in s.CoverIds)
+                {
+                    <div class="insp-person"><span class="disc">@Rail(t.Facilitators[c]?.Name ?? "?")</span><span>@(t.Facilitators[c]?.Name) <small>covering</small></span></div>
+                }
+            </dd>
+            @if (!string.IsNullOrWhiteSpace(s.Notes))
+            {
+                <dt>Notes</dt><dd class="pre">@s.Notes</dd>
+            }
+            @if (s.Cancelled && s.CancelNote is { Length: > 0 } why)
+            {
+                <dt>Why</dt><dd>@why</dd>
+            }
+        </dl>
+        @if (o.NeedsCover)
+        {
+            <div class="insp-note warn">Everybody teaching it is away, so it needs cover.</div>
+        }
+        @foreach (var n in notes)
+        {
+            <div class="insp-note warn" data-testid="inspector-clash">@n</div>
+        }
+        <div class="insp-actions">
+            <button type="button" class="btn primary" @onclick="() => OnEdit.InvokeAsync(s.Id)" data-testid="inspector-edit">@(Editable ? "Edit" : "Details")</button>
+            @if (roster.Count > 0 && o.Happens)
+            {
+                <button type="button" class="btn" @onclick="() => D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = s.Id })" data-testid="inspector-register">Register</button>
+            }
+            @if (Editable)
+            {
+                @if (o.NeedsCover || o.Covered)
+                {
+                    <button type="button" class="btn" @onclick="() => D.Show<CoverForm>(new Dictionary<string, object?> { [nameof(CoverForm.SessionId)] = s.Id })">Cover</button>
+                }
+                <button type="button" class="btn" @onclick="() => D.Show<CancelForm>(new Dictionary<string, object?> { [nameof(CancelForm.SessionId)] = s.Id })" data-testid="inspector-cancel">@(s.Cancelled ? "Restore" : "Cancel")</button>
+                <button type="button" class="btn" @onclick="() => Duplicate(s)" data-testid="inspector-duplicate">Duplicate</button>
+                <button type="button" class="btn danger" @onclick="() => Delete(s)" data-testid="inspector-delete">Delete</button>
+            }
+        </div>
+    }
+</aside>
+@code {
+    [Parameter, EditorRequired] public PlanModel M { get; set; } = default!;
+    [Parameter, EditorRequired] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public bool Editable { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<Guid> OnEdit { get; set; }
+    [Parameter] public EventCallback<Guid> OnChosen { get; set; }
+
+    private static string Rail(string name) =>
+        string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
+
+    private async Task Duplicate(Session s)
+    {
+        var copy = Edits.CopyOf(s, s.Date, Guid.NewGuid());
+        if (W.Commit(t => Edits.PutSession(t, copy, $"Duplicated {s.DisplayTitle}"))) await OnChosen.InvokeAsync(copy.Id);
+    }
+
+    private async Task Delete(Session s)
+    {
+        if (W.Commit(t => Edits.RemoveSessions(t, [s.Id]))) await OnClose.InvokeAsync();
+    }
+}

@@ -1,6 +1,6 @@
 const { chromium } = require('playwright');
 const OUT = (process.env.OUT || require('os').tmpdir() + '/cccc-browser') + '/'; require('fs').mkdirSync(OUT, { recursive: true });
-const B = 'http://127.0.0.1:5299';
+const B = process.env.CCCC_PREVIEW || 'http://127.0.0.1:5299';
 const log = (...a) => console.log(...a);
 (async () => {
   const browser = await chromium.launch();
@@ -9,80 +9,121 @@ const log = (...a) => console.log(...a);
   const errors = [];
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', e => errors.push(e.message));
-  const step = async (name, fn) => { try { await fn(); log('OK  ', name); } catch (e) { log('FAIL', name, e.message.split('\n')[0]); await page.screenshot({ path: `${OUT}fail-${name.replace(/\W+/g,'-')}.png` }); } };
+  let failed = 0;
+  const step = async (name, fn) => { try { await fn(); log('OK  ', name); } catch (e) { failed++; log('FAIL', name, e.message.split('\n')[0]); await page.screenshot({ path: `${OUT}fail-${name.replace(/\W+/g,'-')}.png` }); } };
   await page.goto(B + '/signin');
   await page.fill('[data-testid=signin-login]', 'admin');
   await page.fill('[data-testid=signin-passphrase]', 'northlight admin');
   await page.click('[data-testid=signin-submit]');
-  await page.waitForSelector('[data-testid=shell][data-ready], [data-testid=shell]');
-  await page.waitForSelector('[data-testid=week-grid] [data-testid=block]');
+  await page.waitForSelector('[data-testid=now-page]');
   await page.waitForTimeout(800);
 
+  await step('Now shows every space', async () => {
+    const n = await page.locator('[data-testid=space-card]').count();
+    log('     spaces', n);
+    if (n === 0) throw new Error('no spaces on Now');
+  });
+
+  await step('open the plan on Monday', async () => {
+    await page.click('[data-testid=nav-plan]');
+    await page.waitForSelector('[data-testid=timeline]');
+    await page.locator('[data-testid=day-chip]').first().click();
+    await page.waitForFunction(() => document.querySelector('[data-testid=day-chip][aria-current=date]') && document.querySelectorAll('[data-testid=timeline] [data-testid=block]').length > 0);
+  });
+
   await step('open a class by double-click', async () => {
-    const b = page.locator('[data-testid=week-grid] [data-testid=block]').nth(3);
-    await b.dblclick();
+    await page.locator('[data-testid=timeline] [data-testid=block]').nth(1).dblclick();
     await page.waitForSelector('[data-testid=dialog]');
-    const t = await page.locator('[data-testid=dialog] h2').first().textContent();
-    log('     dialog:', t);
+    log('     drawer:', await page.locator('[data-testid=dialog] h2').first().textContent());
     await page.click('[data-testid=dialog-x]');
     await page.waitForSelector('[data-testid=dialog]', { state: 'detached' });
   });
 
-  await step('choose a block, chosen bar appears', async () => {
-    await page.locator('[data-testid=week-grid] [data-testid=block]').nth(5).click();
-    await page.waitForSelector('[data-testid=chosen]');
-    log('     chosen:', (await page.locator('[data-testid=chosen]').textContent()).replace(/\s+/g,' ').slice(0,120));
+  await step('choose a block, the side panel opens', async () => {
+    const b = page.locator('[data-testid=timeline] [data-testid=block]').nth(2);
+    const title = await b.getAttribute('data-title');
+    await b.click();
+    await page.waitForFunction(t => document.querySelector('[data-testid=inspector-title]')?.textContent === t, title);
+    log('     inspector:', title);
   });
 
-  await step('drag a block down an hour', async () => {
-    const b = page.locator('[data-testid=week-grid] [data-testid=block]').nth(5);
-    const id = await b.getAttribute('data-id');
-    const before = (await b.textContent()).replace(/\s+/g,' '); global.dragId = id; global.dragBefore = before;
+  await step('drag a block an hour later', async () => {
+    const b = page.locator('[data-testid=timeline] [data-testid=block][data-move="1"]').first();
+    const id = await b.getAttribute('data-id'); const before = await b.getAttribute('data-start');
+    global.dragId = id; global.dragBefore = before;
+    const tl = page.locator('[data-testid=timeline]');
+    const span = (+await tl.getAttribute('data-end')) - (+await tl.getAttribute('data-start'));
+    const track = await page.locator('.tl-row[data-row] .tl-track').first().boundingBox();
+    const hour = track.width / span * 60;
     const box = await b.boundingBox();
-    await page.mouse.move(box.x + box.width/2, box.y + 10);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
-    for (let i = 1; i <= 10; i++) await page.mouse.move(box.x + box.width/2, box.y + 10 + i*6);
+    for (let i = 1; i <= 10; i++) await page.mouse.move(box.x + box.width / 2 + i * hour / 10, box.y + box.height / 2);
     await page.mouse.up();
-    await page.waitForFunction(([id, before]) => { const e = document.querySelector(`[data-testid=block][data-id="${id}"]`); return e && e.textContent.replace(/\s+/g,' ') !== before; }, [id, before], { timeout: 5000 });
-    log('     before:', before.slice(0,60)); log('     after: ', (await page.locator(`[data-testid=block][data-id="${id}"]`).textContent()).replace(/\s+/g,' ').slice(0,60));
+    await page.waitForFunction(([id, before]) => { const e = document.querySelector(`[data-testid=block][data-id="${id}"]`); return e && e.dataset.start !== before; }, [id, before], { timeout: 5000 });
+    log('     start', before, '->', await page.locator(`[data-testid=block][data-id="${id}"]`).getAttribute('data-start'));
   });
 
   await step('undo the drag', async () => {
     await page.click('[data-testid=undo]');
-    await page.waitForFunction(([id, before]) => { const e = document.querySelector(`[data-testid=block][data-id="${id}"]`); return e && e.textContent.replace(/\s+/g,' ') === before; }, [global.dragId, global.dragBefore], { timeout: 5000 });
+    await page.waitForFunction(([id, before]) => { const e = document.querySelector(`[data-testid=block][data-id="${id}"]`); return e && e.dataset.start === before; }, [global.dragId, global.dragBefore], { timeout: 5000 });
   });
 
-  await step('Escape clears the choice and brings the bar back', async () => {
+  await step('Escape closes the side panel', async () => {
+    await page.click('[data-testid=plan-title]');
     await page.keyboard.press('Escape');
-    await page.waitForSelector('[data-testid=add-session]', { timeout: 4000 });
+    await page.waitForSelector('[data-testid=inspector]', { state: 'detached', timeout: 4000 });
   });
 
   await step('add a class', async () => {
-    const n = await page.locator('[data-testid=week-grid] [data-testid=block]').count();
+    const n = await page.locator('[data-testid=timeline] [data-testid=block]').count();
     await page.click('[data-testid=add-session]');
     await page.waitForSelector('[data-testid=dialog]');
     await page.selectOption('[data-testid=session-class]', { index: 1 });
     await page.selectOption('[data-testid=session-group]', { index: 1 });
     await page.click('[data-testid=dialog-ok]');
     await page.waitForSelector('[data-testid=dialog]', { state: 'detached' });
-    await page.waitForFunction(n => document.querySelectorAll('[data-testid=week-grid] [data-testid=block]').length > n, n);
-    log('     blocks', n, '->', await page.locator('[data-testid=week-grid] [data-testid=block]').count());
+    await page.waitForFunction(n => document.querySelectorAll('[data-testid=timeline] [data-testid=block]').length > n, n);
+    log('     blocks', n, '->', await page.locator('[data-testid=timeline] [data-testid=block]').count());
   });
 
-  for (const kind of ['The week as shown', 'The week as a list', 'Room grid, a page a day', 'A calendar per student']) {
+  await step('turn the lens: groups, people, the week', async () => {
+    await page.click('[data-testid=lens-groups]');
+    await page.waitForSelector('[data-testid=plan-page][data-lens=Groups]');
+    await page.click('[data-testid=lens-people]');
+    await page.waitForSelector('[data-testid=plan-page][data-lens=People]');
+    await page.click('[data-testid=scale-week]');
+    await page.waitForSelector('[data-testid=week-matrix]');
+    log('     week chips', await page.locator('[data-testid=week-matrix] [data-testid=block]').count());
+    await page.click('[data-testid=scale-day]');
+    await page.click('[data-testid=lens-spaces]');
+    await page.waitForSelector('[data-testid=plan-page][data-lens=Spaces][data-scale=Day]');
+  });
+
+  for (const kind of ['As a calendar', 'As a list', 'Spaces, a page a day', 'A calendar per student']) {
     await step('print: ' + kind, async () => {
-      await page.keyboard.press('Escape');
-      await page.click('[data-testid=print-menu]');
+      await page.click('[data-testid=more-menu]');
       const href = await page.locator('.menu a', { hasText: kind }).getAttribute('href');
       const r = await page.request.get(B + '/' + href.replace(/^\//,''));
       const body = await r.body();
       log('     ', r.status(), r.headers()['content-type'], body.length, 'bytes', r.headers()['content-disposition']);
       if (r.status() !== 200 || body.slice(0,4).toString() !== '%PDF') throw new Error('not a pdf');
       require('fs').writeFileSync(OUT + kind.replace(/\W+/g,'-') + '.pdf', body);
-      await page.keyboard.press('Escape');
-      await page.click('[data-testid=week-page] h1, body', { position: { x: 5, y: 5 } }).catch(()=>{});
+      await page.click('[data-testid=more-menu]');
     });
   }
+
+  await step('find a person and see their week', async () => {
+    await page.keyboard.press('Control+k');
+    await page.waitForSelector('[data-testid=find]');
+    await page.keyboard.type('Cleo');
+    await page.waitForFunction(() => document.querySelector('[data-testid=find-hit] .find-label')?.textContent.startsWith('Cleo'));
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-testid=focus-chip]');
+    log('     ', await page.locator('[data-testid=plan-title]').textContent(), '·', await page.locator('[data-testid=timeline] [data-testid=row]').count(), 'rows');
+    await page.click('[data-testid=focus-chip] button');
+    await page.waitForSelector('[data-testid=focus-chip]', { state: 'detached' });
+  });
 
   await step('add a room in Data', async () => {
     await page.goto(B + '/data');
@@ -108,7 +149,7 @@ const log = (...a) => console.log(...a);
   });
 
   await step('take a missing register', async () => {
-    await page.goto(B + '/registers?week=2026-11-16');
+    await page.goto(B + '/registers');
     await page.waitForSelector('[data-testid=registers-table]');
     const row = page.locator('[data-testid=register-line]', { hasText: 'Missing' }).first();
     await row.locator('[data-testid=register-open]').click();
@@ -127,4 +168,7 @@ const log = (...a) => console.log(...a);
 
   log('errors', JSON.stringify(errors));
   await browser.close();
+  if (errors.length) failed++;
+  console.log(failed ? failed + ' failed' : 'all passed');
+  process.exit(failed ? 1 : 0);
 })();

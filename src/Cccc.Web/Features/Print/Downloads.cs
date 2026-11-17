@@ -44,7 +44,7 @@ public static class Downloads
                     break;
                 case "rooms":
                     doc = Sheets.RoomGrid(t, WeekModel.Build(t, view, access, clock.Today), view.Describe(t), clock.Local(clock.Now));
-                    name = $"Week {DWeek.IsoNumber(r.Monday)} rooms";
+                    name = $"Week {DWeek.IsoNumber(r.Monday)} spaces";
                     break;
                 case "students":
                     // Data about every student is an administrator's only.

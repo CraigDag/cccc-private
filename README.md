@@ -9,6 +9,12 @@ this one replaces it is Craig's decision.
 
 ## What is different, in one breath
 
+- **It looks at the school from the building's side.** It opens on *Now*: every space, what is in it
+  and until when, what comes next, and what needs somebody today. *Plan* is a day with time running
+  left to right and the spaces as rows, turned with one click to groups or people, or to a week. One
+  box (Ctrl+K) finds any person, space, group or action instead of a filter panel; a class opens in a
+  side panel, and forms slide in from the side. [`docs/spec/07-screens.md`](docs/spec/07-screens.md)
+  has the reasoning.
 - A class is a real occurrence on a real date. No standing pattern, no freezing by copy, no exceptions
   stored on the side: cancelled, cover and a move are facts on the session itself.
 - Every change is kept as it is made, in one SQLite file. Two people edit at once with nothing to merge,
