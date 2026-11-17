@@ -1,21 +1,25 @@
 # Importing old files
 
 The school's term lives in a `.cccc` on the laptop. Switching to the rebuild must never mean typing it
-in again, so the rebuild reads **every `.cccc` from schema 1 to schema 23**.
+in again, so the rebuild reads **every `.cccc` from schema 1 to schema 24**.
 
 ## Two steps, kept apart
 
 1. **Read and migrate, exactly as the old app does.** `src/Cccc.Legacy` carries the old app's own file
-   model, `ProjectPackage.LoadFromBytes` and `ProjectStore.Validate` — the migration blocks for 2→23 and
-   every repair scrub — copied from `cccc-scheduler` at 1.66.0 (`2f2f3a5`) with only what they need, and
-   with nothing that writes a file. Re-implementing twenty-two migrations would be the riskiest code in
-   the rebuild for no gain; copying them means a file opens here exactly as it opens there. The copy is
-   frozen: it is never edited except to keep it compiling.
-2. **Translate the migrated schema-23 project into the new model** (`LegacyTranslator`). This is new
+   model, `ProjectPackage.LoadFromBytes` and `ProjectStore.Validate` — the migration blocks for 2→24 and
+   every repair scrub — copied from `cccc-scheduler` at 1.66.0 (`2f2f3a5`) and refreshed whole at 1.68.0
+   (`f9259a2`) for schema 24, with only what they need, and with nothing that writes a file.
+   Re-implementing twenty-three migrations would be the riskiest code in the rebuild for no gain;
+   copying them means a file opens here exactly as it opens there. The copy is frozen: it is never
+   edited except to keep it compiling, and when the current app's format moves on it is refreshed as a
+   whole copy, never patched by hand.
+2. **Translate the migrated schema-24 project into the new model** (`LegacyTranslator`). This is new
    code, and it is where the structural changes in [`01-what-changes.md`](01-what-changes.md) meet old
    data.
 
-A file newer than schema 23 is refused, in the old app's words.
+A file newer than schema 24 is refused, in the old app's words. **Following stops at the same wall**: when
+the current app's format moves on, every screen says *Behind the current app* and nothing is lost until
+the copy is refreshed (the runbook's step 8 says so to Craig).
 
 ## The translation
 
@@ -29,6 +33,7 @@ A file newer than schema 23 is refused, in the old app's words.
 | `ScheduleEntry` | one **Session per week it runs in**, dated, as below |
 | `SessionException` | `Cancelled` / `CoverIds` / a moved date and time with `MovedFrom` |
 | `AttendanceRecord` | a **Register** on that week's session |
+| `Building.ScratchSessions` (schema 24) | the **Scratch Week**, `Timetable.Scratch`: each a session dated in the same Monday, 2200-01-06, keeping its id |
 
 **Which weeks a session lands in**:
 

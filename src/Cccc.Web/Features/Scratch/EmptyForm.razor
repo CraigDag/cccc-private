@@ -1,0 +1,14 @@
+@* Empty Scratch Week…: takes the whole plan out. No real week changes. *@
+@inject Dialogs D
+@{ int n = W.T.Scratch.Count; }
+<DialogFrame Title="Empty the Scratch Week" OnOk="Save" OkEnabled="@(n > 0)" OkLabel="@("Take out " + Looks.Count(n, "class", "classes"))">
+    <p>Takes @(n == 1 ? "the one class" : $"all {n} classes") out of the Scratch Week, for everybody who edits. No real week changes. Undo brings @(n == 1 ? "it" : "them") back.</p>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+
+    private void Save()
+    {
+        if (W.Commit(t => ScratchWeek.Empty(t))) D.Close();
+    }
+}

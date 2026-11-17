@@ -28,7 +28,8 @@ const log = (...a) => console.log(...a);
     await page.click('[data-testid=nav-plan]');
     await page.waitForSelector('[data-testid=timeline]');
     await page.locator('[data-testid=day-chip]').first().click();
-    await page.waitForFunction(() => document.querySelector('[data-testid=day-chip][aria-current=date]') && document.querySelectorAll('[data-testid=timeline] [data-testid=block]').length > 0);
+    // The FIRST chip must be the picked one: today's chip already is before the click lands.
+    await page.waitForFunction(() => document.querySelector('[data-testid=day-chip]')?.getAttribute('aria-current') === 'date' && document.querySelectorAll('[data-testid=timeline] [data-testid=block]').length > 0);
   });
 
   await step('open a class by double-click', async () => {

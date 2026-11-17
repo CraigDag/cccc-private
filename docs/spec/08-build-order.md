@@ -8,7 +8,7 @@ released to the school; Craig decides if and when the rebuild replaces the curre
 | 1 | **Spec** | these files are in the repository |
 | 2 | **Domain** | the model and every rule in `03-the-rules.md` exist with tests, including a falsified test per rule |
 | 3 | **Store** | the operation log, snapshots, undo per person, history, soft delete, the start-up refusals; tests that kill the process mid-write and find the state whole |
-| 4 | **Import** | every schema 1–23 fixture imports; the round-trip test agrees with the old resolver |
+| 4 | **Import** | every schema 1–24 fixture imports; the round-trip test agrees with the old resolver |
 | 5 | **Sign-in and accounts** | local accounts, the fallback policy, the limiter, capabilities, the first-start setup link |
 | 6 | **The week** | the calendar with lanes, filters, counts, choose, edit, drag, box-select, copy week/day |
 | 7 | **Forms and Data** | session, event, cover, register forms; every Data kind |

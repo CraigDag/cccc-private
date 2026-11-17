@@ -1,7 +1,7 @@
 @inject Dialogs D
 @inject Cccc.Web.Features.Plan.PlanView PV
 @{
-    var t = W.T;
+    var t = T;
     var existing = SessionId is { } sid ? t.Sessions[sid] : null;
 }
 @if (SessionId is not null && existing is null)
@@ -44,7 +44,7 @@ else if (!_editable && existing is not null)
             }
         </ChildContent>
         <Extra>
-            @if (Roster.For(t, existing).Count > 0 && o.Happens)
+            @if (Roster.For(t, existing).Count > 0 && o.Happens && !_scratch)
             {
                 <button type="button" class="btn" @onclick="() => Register(existing.Id)">Register…</button>
             }
@@ -53,7 +53,7 @@ else if (!_editable && existing is not null)
 }
 else
 {
-    <DialogFrame Title="@(existing is null ? "Add a class" : "Edit " + Cccc.Web.Features.Week.Looks.Title(t, existing))" OnOk="Save" OkEnabled="@(_why is null)" Class="wide">
+    <DialogFrame Title="@((existing is null ? "Add a class" : "Edit " + Cccc.Web.Features.Week.Looks.Title(t, existing)) + (_scratch ? (existing is null ? " to the Scratch Week" : " in the Scratch Week") : ""))" OnOk="Save" OkEnabled="@(_why is null)" Class="wide">
         <ChildContent>
             <div class="form-grid">
                 <label class="field"><span>Class</span>
@@ -68,7 +68,22 @@ else
                 <label class="field"><span>Title</span>
                     <input @bind="_title" placeholder="@(t.Classes.Find(_classId)?.Name ?? "Untitled")" data-testid="session-title" />
                 </label>
-                <label class="field"><span>Date</span><input type="date" @bind="_date" @bind:after="Check" data-testid="session-date" /></label>
+                @if (_scratch)
+                {
+                    @* The Scratch Week has days and no dates: a class in it stays in it. *@
+                    <label class="field"><span>Day</span>
+                        <select @bind="DayText" @bind:after="Check" data-testid="session-day">
+                            @foreach (var d in Cccc.Domain.Week.Days(Cccc.Domain.Week.ScratchMonday))
+                            {
+                                <option value="@d.ToString("yyyy-MM-dd")">@d.ToString("dddd", System.Globalization.CultureInfo.InvariantCulture)</option>
+                            }
+                        </select>
+                    </label>
+                }
+                else
+                {
+                    <label class="field"><span>Date</span><input type="date" @bind="_date" @bind:after="Check" data-testid="session-date" /></label>
+                }
                 <div class="field two">
                     <label><span>From</span><input type="time" step="900" @bind="_start" @bind:after="Check" data-testid="session-start" /></label>
                     <label><span>Until</span><input type="time" step="900" @bind="_end" @bind:after="Check" data-testid="session-end" /></label>
@@ -239,7 +254,7 @@ else
             @if (existing is not null)
             {
                 <button type="button" class="btn danger" @onclick="Delete" data-testid="session-delete">Delete</button>
-                @if (Roster.For(t, existing).Count > 0)
+                @if (Roster.For(t, existing).Count > 0 && !_scratch)
                 {
                     <button type="button" class="btn" @onclick="() => Register(existing.Id)">Register…</button>
                 }
@@ -261,6 +276,20 @@ else
     [Parameter] public Guid? Facilitator { get; set; }
 
     private sealed class Person { public Guid Id; public TimeOnly? From; public TimeOnly? Until; }
+
+    /// <summary>Whether this is a class of the Scratch Week: read from its view, written back to it.</summary>
+    private bool _scratch;
+
+    /// <summary>The timetable the form reads: the real one, or the Scratch Week's view of it.</summary>
+    private Timetable T => _scratch ? ScratchWeek.View(W.T) : W.T;
+
+    private Func<Timetable, Batch> Written(Func<Timetable, Batch> edit) => _scratch ? t => ScratchWeek.Edit(t, edit) : edit;
+
+    private string DayText
+    {
+        get => _date.ToString("yyyy-MM-dd");
+        set { if (DateOnly.TryParse(value, out var d) && Cccc.Domain.Week.IsScratch(d)) _date = d; }
+    }
 
     private bool _editable, _lockedWeek;
     private string? _original;
@@ -286,7 +315,10 @@ else
 
     protected override void OnInitialized()
     {
-        var t = W.T;
+        _scratch = SessionId is { } asked
+            ? W.T.Sessions[asked] is null && W.T.Scratch[asked] is not null
+            : Cccc.Domain.Week.IsScratch(Date ?? W.Today);
+        var t = T;
         var s = SessionId is { } id ? t.Sessions[id] : null;
         if (s is null && SessionId is not null) return;
         _lockedWeek = s is not null && Cccc.Domain.Week.HasEnded(s.Date, W.Today);
@@ -312,7 +344,7 @@ else
         _programmeId = s.Audience.ProgrammeId;
         _groups.UnionWith(s.Audience.GroupIds);
         _people.AddRange(s.Facilitators.Select(a => new Person { Id = a.FacilitatorId, From = a.From, Until = a.Until }));
-        if (_original is null && Facilitator is { } fid && W.T.Facilitators[fid] is not null && _people.All(x => x.Id != fid)) _people.Add(new Person { Id = fid });
+        if (_original is null && Facilitator is { } fid && T.Facilitators[fid] is not null && _people.All(x => x.Id != fid)) _people.Add(new Person { Id = fid });
         _added.UnionWith(s.AddedStudentIds); _leftOff.UnionWith(s.LeftOffStudentIds);
         _notes = s.Notes; _provisional = s.Provisional;
         Check();
@@ -320,13 +352,13 @@ else
 
     private static string Hm(TimeOnly? t) => t is { } x ? Cccc.Domain.Week.Hm(x) : "";
 
-    private IEnumerable<Room> SpacesInOrder() => W.T.Rooms
+    private IEnumerable<Room> SpacesInOrder() => T.Rooms
         .OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer);
 
-    private IReadOnlyDictionary<Guid, Occurrence> BusyRooms() => Spaces.InUse(W.T, _date, _start, _end, except: _id);
+    private IReadOnlyDictionary<Guid, Occurrence> BusyRooms() => Spaces.InUse(T, _date, _start, _end, except: _id);
 
     private RenderFragment SpaceOption(Room r, IReadOnlyDictionary<Guid, Occurrence> busy) =>
-        @<option value="@r.Id">@r.Name@(busy.TryGetValue(r.Id, out var b) ? $" — busy: {Cccc.Web.Features.Week.Looks.Title(W.T, b.Session)} {Hm(b.Start)}–{Hm(b.End)}" : "")</option>;
+        @<option value="@r.Id">@r.Name@(busy.TryGetValue(r.Id, out var b) ? $" — busy: {Cccc.Web.Features.Week.Looks.Title(T, b.Session)} {Hm(b.Start)}–{Hm(b.End)}" : "")</option>;
 
     /// <summary>
     /// Where a facilitator is instead, for the stretch they would be in this class: away, or teaching
@@ -335,16 +367,16 @@ else
     private string? Elsewhere(Guid id, TimeOnly from, TimeOnly until)
     {
         if (until <= from) return null;
-        if (Occurrences.IsAway(W.T, id, _date, from, until)) return "away then";
-        return Teaching.At(W.T, _date, from, until, except: _id).TryGetValue(id, out var o)
-            ? $"teaching {Cccc.Web.Features.Week.Looks.Title(W.T, o.Session)} {Hm(o.Start)}–{Hm(o.End)}"
+        if (Occurrences.IsAway(T, id, _date, from, until)) return "away then";
+        return Teaching.At(T, _date, from, until, except: _id).TryGetValue(id, out var o)
+            ? $"teaching {Cccc.Web.Features.Week.Looks.Title(T, o.Session)} {Hm(o.Start)}–{Hm(o.End)}"
             : null;
     }
 
     private void OnClassChosen()
     {
-        var c = W.T.Classes.Find(_classId);
-        if (c is not null && (string.IsNullOrWhiteSpace(_title) || W.T.Classes.Any(k => k.Name == _title))) _title = c.Name;
+        var c = T.Classes.Find(_classId);
+        if (c is not null && (string.IsNullOrWhiteSpace(_title) || T.Classes.Any(k => k.Name == _title))) _title = c.Name;
         Check();
     }
 
@@ -384,8 +416,8 @@ else
     {
         AudienceKind.Everyone => Audience.Everyone,
         AudienceKind.Group => _groupId is { } g ? Audience.ForGroup(g) : new Audience { Kind = AudienceKind.Group },
-        AudienceKind.Groups => Audience.ForGroups(_groups.Where(W.T.Groups.Contains)),
-        _ => _programmeId is { } p ? Edits.ForProgramme(W.T, p) : new Audience { Kind = AudienceKind.Programme },
+        AudienceKind.Groups => Audience.ForGroups(_groups.Where(T.Groups.Contains)),
+        _ => _programmeId is { } p ? Edits.ForProgramme(T, p) : new Audience { Kind = AudienceKind.Programme },
     };
 
     private Session Proposal() => _base with
@@ -414,7 +446,7 @@ else
             : p.Audience.Kind == AudienceKind.Groups && p.Audience.GroupIds.Count == 0 ? "Tick at least one group."
             : p.Audience.Kind == AudienceKind.Programme && p.Audience.ProgrammeId is null ? "Choose the programme it is for."
             : null;
-        _warnings = _why is null ? Clashes.CausedBy(W.T, TimeWindows.Normalise(p)) : [];
+        _warnings = _why is null ? Clashes.CausedBy(T, TimeWindows.Normalise(p)) : [];
     }
 
     private void Save()
@@ -423,9 +455,9 @@ else
         if (_why is not null) return;
         var p = Proposal();
         bool isNew = _original is null;
-        bool changedUnderneath = !isNew && W.T.Sessions[_id] is { } now && System.Text.Json.JsonSerializer.Serialize(now, ModelJson.Options) != _original;
-        var label = (isNew ? "Added " : "Changed ") + Cccc.Web.Features.Week.Looks.Title(W.T, p) + " on " + Cccc.Domain.Week.ShortDate(p.Date);
-        if (W.Commit(t => Edits.PutSession(t, p, label)))
+        bool changedUnderneath = !isNew && T.Sessions[_id] is { } now && System.Text.Json.JsonSerializer.Serialize(now, ModelJson.Options) != _original;
+        var label = (isNew ? "Added " : "Changed ") + Cccc.Web.Features.Week.Looks.Title(T, p) + " on " + Cccc.Domain.Week.ShortDate(p.Date);
+        if (W.Commit(Written(t => Edits.PutSession(t, p, label))))
         {
             if (changedUnderneath) W.Warn("Somebody else changed this class while it was open here; yours is the version kept. Undo puts theirs back.");
             // The plan follows what was just saved, and shows it chosen, so it is plain where it went.
@@ -438,8 +470,8 @@ else
 
     private void Delete()
     {
-        var label = "Deleted " + Cccc.Web.Features.Week.Looks.Title(W.T, _base) + " on " + Cccc.Domain.Week.ShortDate(_base.Date);
-        if (W.Commit(t => Edits.RemoveSessions(t, [_id], label)))
+        var label = "Deleted " + Cccc.Web.Features.Week.Looks.Title(T, _base) + " on " + Cccc.Domain.Week.ShortDate(_base.Date);
+        if (W.Commit(Written(t => Edits.RemoveSessions(t, [_id], label))))
         {
             if (PV.Chosen == _id) { PV.Chosen = null; PV.Changed(); }
             D.Close();

@@ -16,6 +16,7 @@ public class AccessTests
     [InlineData("registers", true, true, true)]
     [InlineData("sessions", false, true, true)]
     [InlineData("events", false, true, true)]
+    [InlineData("scratch", false, true, true)]
     [InlineData("rooms", false, false, true)]
     [InlineData("students", false, false, true)]
     [InlineData("settings", false, false, true)]
@@ -29,11 +30,29 @@ public class AccessTests
     [Theory]
     [InlineData("registers")]
     [InlineData("sessions")]
+    [InlineData("scratch")]
     [InlineData("rooms")]
     public void NobodyAndASuspendedAdministratorMayChangeNothing(string collection)
     {
         Assert.False(Access.Nobody.MayChange(collection));
         Assert.False(As(Role.Administrator, suspended: true).MayChange(collection));
+    }
+
+    /// <summary>
+    /// The Scratch Week is editors' and administrators' only, one of its four safeguards: a coach is never
+    /// shown it. Following the current app hides nothing from an editor (its plan comes across to look at)
+    /// and changes nothing (the one door refuses, as for every collection).
+    /// </summary>
+    [Fact]
+    public void OnlyEditorsAndAdministratorsSeeTheScratchWeekAndFollowingChangesNothingInIt()
+    {
+        Assert.False(Access.Nobody.MaySeeScratch);
+        Assert.False(As(Role.Viewer).MaySeeScratch);
+        Assert.True(As(Role.Editor).MaySeeScratch);
+        Assert.True(As(Role.Administrator).MaySeeScratch);
+        var following = As(Role.Editor) with { Following = true };
+        Assert.True(following.MaySeeScratch);
+        Assert.False(following.MayChange("scratch"));
     }
 }
 

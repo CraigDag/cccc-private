@@ -2,7 +2,7 @@
 @implements IDisposable
 @using Cccc.Web.Features.Week
 @{
-    var t = W.T;
+    var t = M.T;
     int span = Math.Max(60, M.FrameEnd - M.FrameStart);
     int firstHour = (M.FrameStart + 59) / 60;
     var dayEvents = M.Events.Where(e => e.Covers(Day)).OrderBy(e => !e.Event.AllDay).ThenBy(e => e.Event.Start).ToList();
@@ -78,7 +78,7 @@
                     @if (M.RowsAreDays)
                     {
                         @* A day's short name on a phone, where "Wednesday 18" does not fit beside the hours. *@
-                        <span class="tl-name"><span class="day-long">@row.Name</span><span class="day-short">@rowDay.ToString("ddd d", System.Globalization.CultureInfo.InvariantCulture)</span></span>
+                        <span class="tl-name"><span class="day-long">@row.Name</span><span class="day-short">@M.DayName(rowDay, "ddd d")</span></span>
                     }
                     else
                     {
@@ -146,7 +146,7 @@
 
     private string Meta(PlanBar b)
     {
-        var t = W.T;
+        var t = M.T;
         var s = b.O.Session;
         var when = $"{Cccc.Domain.Week.Hm(b.O.Start)}–{Cccc.Domain.Week.Hm(b.O.End)}";
         if (b.Part) when = $"{Cccc.Domain.Week.Hm(new TimeOnly(b.Start / 60, b.Start % 60))}–{Cccc.Domain.Week.Hm(new TimeOnly(Math.Min(b.End, 1439) / 60, Math.Min(b.End, 1439) % 60))} (part)";
@@ -164,7 +164,7 @@
     {
         var o = b.O;
         var c = new List<string>();
-        if (Looks.ColourOf(W.T, o.Session) is null) c.Add("neutral");
+        if (Looks.ColourOf(M.T, o.Session) is null) c.Add("neutral");
         if (o.NeedsCover) c.Add("cover");
         if (o.State == OccurrenceState.Cancelled) c.Add("cancelled");
         if (o.State == OccurrenceState.Closed) c.Add("closed");

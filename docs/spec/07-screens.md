@@ -102,6 +102,17 @@ covering*), who changed it and when, from `Recent`; then today's events and what
 - **Copy** (day, week, clear the weeks after), **Print** (the four documents, narrowed as the screen
   is) and **Show** (open sessions, guest groups) sit in one *More* menu. Guest groups start hidden on
   every visit and a count says how many classes that hides; hiding is drawing, never counting.
+- **The Scratch Week**, for editors and administrators: *Scratch Week · 3* beside *+ Class* opens it on
+  the same day of the week, and *Back to week 47* returns. It is the plan with its dates taken away: the
+  title says *Scratch Week · Monday*, the chips carry counts and no dates, there is no *Today*, date box,
+  *+ Event* or Print, and the boxes are hatched in the accent under an **A plan** badge and the line
+  *Nothing in it counts until it is placed onto a week*. Adding a class there asks for a day, not a
+  date; the side panel has no Register, Cover or Cancel; dragging, stretching and Copy a day work as on
+  any week. *More ▾* there holds *Place onto a week…* (every week from this one to the end of the year,
+  each saying whether it is blank, how many classes it would replace, or that it has registers and is
+  kept) and *Empty Scratch Week…*. A real week's side panel has *Copy to Scratch Week*, and its *More ▾*
+  *Copy this week to Scratch Week…*, which says how many classes of the plan it replaces. An empty
+  Scratch Week says how to fill it.
 - **On a phone** the timeline scrolls inside its box, with the names held at the left, and opens
   scrolled to the class somebody came to look at, else an hour before now, else the first class. The
   side panel becomes a sheet from the bottom.
@@ -151,7 +162,8 @@ across reads *the current app* wherever a name goes.
 
 `FOLLOW=1 scripts/preview.sh` tries it on made-up data: `tools/OldFormatSchool` writes a school in the
 current app's own format and changes it the way the current app would, and
-`scripts/browser/following.js` walks through it.
+`scripts/browser/following.js` walks through it. A Scratch Week planned in the current app comes across
+too, for editors to look at and not change.
 
 ## Words
 

@@ -19,9 +19,19 @@
     int issues = m.IssueCount(V.Scale == Scale.Day ? V.Day : null);
 }
 
-<div class="plan" data-testid="plan-page" data-day="@V.Day.ToString("yyyy-MM-dd")" data-lens="@V.Lens" data-scale="@V.Scale">
+<div class="plan @(m.Scratch ? "scratch" : "")" data-testid="plan-page" data-day="@V.Day.ToString("yyyy-MM-dd")" data-lens="@V.Lens" data-scale="@V.Scale" data-scratch="@(m.Scratch ? "1" : "0")">
     <header class="plan-head">
         <div class="plan-title">
+            @if (m.Scratch)
+            {
+                <h1 class="display" data-testid="plan-title">@(m.RowsAreDays ? V.Focus!.Name + " in the Scratch Week" : V.Scale == Scale.Day ? "Scratch Week · " + m.DayName(V.Day, "dddd") : "Scratch Week")</h1>
+                <div class="muted" data-testid="scratch-note">
+                    <span class="badge scratch-badge">A plan</span> Nothing in it counts until it is placed onto a week: no hours, registers, cover or clashes with the real timetable.
+                    <FollowingNotice Badge="true" />
+                </div>
+            }
+            else
+            {
             <h1 class="display" data-testid="plan-title">@(m.RowsAreDays ? V.Focus!.Name + "’s week" : V.Scale == Scale.Day ? Long(V.Day) : "Week " + Cccc.Domain.Week.IsoNumber(V.Monday))</h1>
             <div class="muted">
                 @(V.Scale == Scale.Day && !m.RowsAreDays ? $"Week {Cccc.Domain.Week.IsoNumber(V.Monday)} · " : m.RowsAreDays ? Cccc.Domain.Week.ForDocuments(V.Monday) + " · " : Cccc.Domain.Week.Range(V.Monday) + " · ")@(semester?.Name ?? "Outside every semester")
@@ -31,6 +41,7 @@
                 }
                 <FollowingNotice Badge="true" />
             </div>
+            }
             @if (V.Focus is { } focused && Cccc.Domain.Week.MondayOf(W.Today) == V.Monday)
             {
                 <FocusNow Focus="focused" Choose="Choose" />
@@ -41,22 +52,44 @@
             {
                 <button type="button" class="btn primary" @onclick="() => AddSession(null, null)" data-testid="add-session">+ Class</button>
             }
-            @if (W.Access.MayEdit)
+            @if (W.Access.MayEdit && !m.Scratch)
             {
                 <button type="button" class="btn" @onclick="() => D.Show<EventForm>(new Dictionary<string, object?> { [nameof(EventForm.Date)] = V.Day })" data-testid="new-event">+ Event</button>
+            }
+            @if (m.Scratch)
+            {
+                <button type="button" class="btn" @onclick="V.CloseScratch" data-testid="scratch-close">Back to week @Cccc.Domain.Week.IsoNumber(V.RealMonday)</button>
+            }
+            else if (W.Access.MaySeeScratch)
+            {
+                <button type="button" class="btn" @onclick="V.OpenScratch" title="A week with no dates to try a timetable out in; nothing in it counts" data-testid="scratch-open">Scratch Week@(t.Scratch.Count > 0 ? $" · {t.Scratch.Count}" : "")</button>
             }
             <div class="menu-wrap">
                 <button type="button" class="btn" @onclick="() => _moreOpen = !_moreOpen" aria-expanded="@(_moreOpen ? "true" : "false")" data-testid="more-menu">More ▾</button>
                 @if (_moreOpen)
                 {
                     <div class="menu right" @onclick="() => _moreOpen = false">
-                        @if (W.Access.MayEdit)
+                        @if (W.Access.MayEdit && m.Scratch)
+                        {
+                            <div class="menu-label">The Scratch Week</div>
+                            <button type="button" @onclick="() => D.Show<CopyDayForm>(new Dictionary<string, object?> { [nameof(CopyDayForm.Monday)] = V.Monday })">Copy a day…</button>
+                            <button type="button" disabled="@(m.T.Sessions.Count == 0)" @onclick="() => D.Show<Cccc.Web.Features.Scratch.PlaceForm>()" data-testid="scratch-place">Place onto a week…</button>
+                            <button type="button" disabled="@(m.T.Sessions.Count == 0)" @onclick="() => D.Show<Cccc.Web.Features.Scratch.EmptyForm>()" data-testid="scratch-empty">Empty Scratch Week…</button>
+                        }
+                        else if (W.Access.MayEdit)
                         {
                             <div class="menu-label">Copy</div>
                             <button type="button" disabled="@m.Locked" @onclick="() => D.Show<CopyDayForm>(new Dictionary<string, object?> { [nameof(CopyDayForm.Monday)] = V.Monday })">Copy a day…</button>
                             <button type="button" @onclick="() => D.Show<CopyWeekForm>(new Dictionary<string, object?> { [nameof(CopyWeekForm.Monday)] = V.Monday })" data-testid="copy-week">Copy this week to…</button>
+                            @if (W.Access.MaySeeScratch)
+                            {
+                                <button type="button" @onclick="() => D.Show<Cccc.Web.Features.Scratch.CopyInForm>(new Dictionary<string, object?> { [nameof(Cccc.Web.Features.Scratch.CopyInForm.Monday)] = V.Monday })" data-testid="scratch-copy-week">Copy this week to Scratch Week…</button>
+                            }
                             <button type="button" @onclick="() => D.Show<ClearAfterForm>()">Clear the weeks after this one…</button>
                         }
+                        @* The Scratch Week is on no printout: nothing in it is real. *@
+                        @if (!m.Scratch)
+                        {
                         <div class="menu-label">Print this week</div>
                         <a href="@PrintLink("week")" target="_blank" rel="noopener">As a calendar</a>
                         <a href="@PrintLink("list")" target="_blank" rel="noopener">As a list</a>
@@ -64,6 +97,7 @@
                         @if (W.Access.MayUseAdminTools)
                         {
                             <a href="@PrintLink("students")" target="_blank" rel="noopener">A calendar per student</a>
+                        }
                         }
                         <div class="menu-label">Show</div>
                         <button type="button" @onclick="() => { V.ShowOpen = !V.ShowOpen; V.Changed(); }" data-testid="toggle-open">@(V.ShowOpen ? "✓ " : "")Open sessions</button>
@@ -75,7 +109,10 @@
     </header>
 
     <nav class="day-strip" aria-label="Days of the week" data-testid="day-strip">
-        <button type="button" class="btn icon quiet" @onclick="() => Step(-1)" aria-label="Previous" data-testid="day-previous">‹</button>
+        @if (!m.Scratch || V.Scale == Scale.Day)
+        {
+            <button type="button" class="btn icon quiet" @onclick="() => Step(-1)" aria-label="Previous" data-testid="day-previous">‹</button>
+        }
         @foreach (var d in Cccc.Domain.Week.Days(V.Monday))
         {
             var n = m.Week.Count(o => o.Date == d && o.Happens);
@@ -83,7 +120,10 @@
             if (weekend && n == 0 && d != V.Day && !m.Events.Any(e => e.Covers(d))) continue;
             <button type="button" class="day-chip @(d == V.Day && V.Scale == Scale.Day ? "on" : "") @(d == W.Today ? "today" : "")" @onclick="() => OpenDay(d)" data-testid="day-chip" aria-current="@(d == V.Day ? "date" : null)">
                 <span class="dc-name">@d.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture)</span>
-                <span class="dc-num">@d.Day</span>
+                @if (!m.Scratch)
+                {
+                    <span class="dc-num">@d.Day</span>
+                }
                 <span class="dc-count">@(n == 0 ? "–" : n.ToString())</span>
                 @if (m.IssueCount(d) > 0)
                 {
@@ -91,12 +131,18 @@
                 }
             </button>
         }
-        <button type="button" class="btn icon quiet" @onclick="() => Step(1)" aria-label="Next" data-testid="day-next">›</button>
-        @if (V.Day != W.Today)
+        @if (!m.Scratch || V.Scale == Scale.Day)
         {
-            <button type="button" class="btn quiet" @onclick="() => { V.Scale = Scale.Day; V.GoTo(W.Today); }" data-testid="today">Today</button>
+            <button type="button" class="btn icon quiet" @onclick="() => Step(1)" aria-label="Next" data-testid="day-next">›</button>
         }
-        <input type="date" class="day-date" value="@V.Day.ToString("yyyy-MM-dd")" @onchange="OnDate" aria-label="Go to a date" data-testid="day-date" />
+        @if (!m.Scratch)
+        {
+            @if (V.Day != W.Today)
+            {
+                <button type="button" class="btn quiet" @onclick="() => { V.Scale = Scale.Day; V.GoTo(W.Today); }" data-testid="today">Today</button>
+            }
+            <input type="date" class="day-date" value="@V.Day.ToString("yyyy-MM-dd")" @onchange="OnDate" aria-label="Go to a date" data-testid="day-date" />
+        }
     </nav>
 
     <div class="plan-bar">
@@ -125,7 +171,20 @@
 
     <div class="plan-body @(V.Chosen is not null || V.IssuesOpen ? "with-side" : "")">
         <div class="plan-main">
-            @if (W.T.Sessions.Count == 0)
+            @if (m.Scratch)
+            {
+                @if (m.Week.Count == 0)
+                {
+                    <div class="notice" data-testid="scratch-empty-note">
+                        <b>The Scratch Week is empty.</b> It is one week with no dates, shared by everybody who edits, to try a timetable out in without touching a real week.
+                        @if (W.Access.MayEdit)
+                        {
+                            <span>Add classes here, or bring some in from a real week: <i>Copy to Scratch Week</i> on a class, or <i>More ▾ › Copy this week to Scratch Week…</i> for a whole week. When it is right, <i>More ▾ › Place onto a week…</i> puts it onto a real one.</span>
+                        }
+                    </div>
+                }
+            }
+            else if (W.T.Sessions.Count == 0)
             {
                 <StartHere />
             }
@@ -139,7 +198,7 @@
                     }
                 </div>
             }
-            @if (W.T.Sessions.Count == 0 && m.Rows.Count == 0)
+            @if (!m.Scratch && W.T.Sessions.Count == 0 && m.Rows.Count == 0)
             {
                 @* An empty timetable with nothing to draw rows for: the start panel says it all. *@
             }
@@ -194,6 +253,8 @@
     protected override void OnInitialized()
     {
         V.Start(W.Today);
+        // A tab left on the Scratch Week by somebody who may no longer see it goes back to the real week.
+        if (V.InScratch && !W.Access.MaySeeScratch) V.CloseScratch();
         V.Moved += Refresh;
         _gestures = new PlanGestures
         {
@@ -216,7 +277,7 @@
         {
             V.Restored = true;
             var remembered = await JS.InvokeAsync<string?>("ccccShell.recall", "cccc.day");
-            if (DateOnly.TryParse(remembered, out var d) && V.Day == W.Today) V.GoTo(d);
+            if (DateOnly.TryParse(remembered, out var d) && V.Day == W.Today && !Cccc.Domain.Week.IsScratch(d)) V.GoTo(d);
         }
     }
 
@@ -237,22 +298,23 @@
 
     private void Move(Guid id, string row, int start, int end)
     {
-        var s = W.T.Sessions[id];
+        if (_m is not { } m) return;
+        var s = m.T.Sessions[id];
         if (s is null) return;
         if (PlanModel.FromDayKey(row) is { } date)
         {
-            W.Commit(t => Edits.Move(t, id, date, Minute(start), Minute(end)));
+            W.Commit(m.Edit(t => Edits.Move(t, id, date, Minute(start), Minute(end))));
             return;
         }
         Guid? room = V.Lens != Lens.Spaces ? s.RoomId : row == PlanModel.NoSpace ? null : Guid.TryParse(row, out var r) ? r : s.RoomId;
         if (room == s.RoomId)
         {
-            W.Commit(t => Edits.Move(t, id, s.Date, Minute(start), Minute(end)));
+            W.Commit(m.Edit(t => Edits.Move(t, id, s.Date, Minute(start), Minute(end))));
             return;
         }
         var moved = s with { RoomId = room, Start = Edits.Snap(Minute(start)), End = Edits.Snap(Minute(end)) };
         var where = room is { } rid ? W.T.Rooms[rid]?.Name ?? "another space" : "no space";
-        W.Commit(t => Edits.PutSession(t, moved, $"Moved {s.DisplayTitle} to {where}"));
+        W.Commit(m.Edit(t => Edits.PutSession(t, moved, $"Moved {s.DisplayTitle} to {where}")));
         V.Chosen = id;
     }
 
@@ -281,17 +343,28 @@
     private void Refresh() => _ = InvokeAsync(async () =>
     {
         StateHasChanged();
-        try { await JS.InvokeVoidAsync("ccccShell.remember", "cccc.day", V.Day.ToString("yyyy-MM-dd")); }
+        // The real day is what a reload comes back to: the Scratch Week is a place to visit, not to land on.
+        try { await JS.InvokeVoidAsync("ccccShell.remember", "cccc.day", V.RealDay.ToString("yyyy-MM-dd")); }
         catch (JSDisconnectedException) { }
     });
 
     private void Step(int dir)
     {
+        var sessions = _m?.T.Sessions ?? W.T.Sessions;
+        if (V.InScratch)
+        {
+            // The Scratch Week is one week: a day steps inside it and stops at its ends.
+            if (V.Scale == Scale.Week || _m?.RowsAreDays == true) return;
+            var day = V.Day.AddDays(dir);
+            while (Cccc.Domain.Week.IsScratch(day) && day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday && !sessions.Any(s => s.Date == day)) day = day.AddDays(dir);
+            if (Cccc.Domain.Week.IsScratch(day)) V.GoTo(day);
+            return;
+        }
         // A week on screen, or one person's week as rows, steps a week at a time.
         if (V.Scale == Scale.Week || _m?.RowsAreDays == true) { V.GoTo(V.Day.AddDays(7 * dir)); return; }
         var d = V.Day.AddDays(dir);
         // Step over an empty weekend rather than landing on it.
-        while (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday && !W.T.Sessions.Any(s => s.Date == d)) d = d.AddDays(dir);
+        while (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday && !sessions.Any(s => s.Date == d)) d = d.AddDays(dir);
         V.GoTo(d);
     }
 
@@ -310,7 +383,7 @@
 
     private void OnDate(ChangeEventArgs e)
     {
-        if (DateOnly.TryParse(e.Value?.ToString(), out var d)) V.GoTo(d);
+        if (DateOnly.TryParse(e.Value?.ToString(), out var d) && !Cccc.Domain.Week.IsScratch(d)) V.GoTo(d);
     }
 
     private void AddSession(DateOnly? date, TimeOnly? start, TimeOnly? end = null) =>
@@ -335,8 +408,8 @@
         if (D.IsOpen) return;
         switch (name)
         {
-            case "delete" when W.Access.MayEdit && V.Chosen is { } id && _m is { Locked: false }:
-                if (W.Commit(t => Edits.RemoveSessions(t, [id]))) V.Chosen = null;
+            case "delete" when W.Access.MayEdit && V.Chosen is { } id && _m is { Locked: false } m:
+                if (W.Commit(m.Edit(t => Edits.RemoveSessions(t, [id])))) V.Chosen = null;
                 break;
             case "escape": V.Chosen = null; V.IssuesOpen = false; _moreOpen = false; break;
             case "undo": W.Undo(); break;

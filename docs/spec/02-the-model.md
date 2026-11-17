@@ -58,6 +58,11 @@ Initials for a facilitator are the first letters of the first two words of their
 (both or neither), `Reason?` (free text, administrators only), `Notice?` (Planned, Unplanned),
 `Cause?` (Illness, Personal, ApprovedLeave, Other).
 
+**The Scratch Week** (`Scratch`, schema 24 in the current app) — a plan: sessions exactly like the
+ones above, in a collection of their own, all dated in one week no semester reaches (the Monday
+2200-01-06, `Week.ScratchMonday`, the current app's own). One per timetable, shared by everybody who
+edits. Nothing that counts reads it; see the rules.
+
 **Event** — beside the classes, never one of them: `Title`, `Category` (Meeting, Performance, Audition,
 Deadline, Trip, Visitor, HostedGroup, Other), `Date`, `EndDate?`, `AllDay`, `Start`, `End`, `Repeat?`
 (Daily, Weekly, MonthlyOnDate, MonthlyOnWeekday; `Every`, `Days`, `Until?`/`Count?` — a repeat always

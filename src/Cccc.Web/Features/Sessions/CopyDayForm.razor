@@ -1,15 +1,29 @@
 @inject Dialogs D
-<DialogFrame Title="Copy a day" OnOk="Save" OkEnabled="@(_why is null)" OkLabel="Copy">
+<DialogFrame Title="@(Scratch ? "Copy a day of the Scratch Week" : "Copy a day")" OnOk="Save" OkEnabled="@(_why is null)" OkLabel="Copy">
     <p>Copies every class of one day onto another. The day it lands on keeps what it already has; the copies are added beside them.</p>
     <label class="field"><span>Copy</span>
         <select @bind="_from" @bind:after="Check">
             @foreach (var d in DomainWeek.Days(Monday))
             {
-                <option value="@d.ToString("yyyy-MM-dd")">@DomainWeek.ShortDate(d) (@W.T.Sessions.Count(s => s.Date == d) sessions)</option>
+                <option value="@d.ToString("yyyy-MM-dd")">@DomainWeek.ShortDate(d) (@T.Sessions.Count(s => s.Date == d) sessions)</option>
             }
         </select>
     </label>
-    <label class="field"><span>Onto</span><input type="date" @bind="_to" @bind:after="Check" /></label>
+    @if (Scratch)
+    {
+        <label class="field"><span>Onto</span>
+            <select @bind="ToText" @bind:after="Check">
+                @foreach (var d in DomainWeek.Days(Monday))
+                {
+                    <option value="@d.ToString("yyyy-MM-dd")">@d.ToString("dddd", System.Globalization.CultureInfo.InvariantCulture)</option>
+                }
+            </select>
+        </label>
+    }
+    else
+    {
+        <label class="field"><span>Onto</span><input type="date" @bind="_to" @bind:after="Check" /></label>
+    }
     @if (_why is not null)
     {
         <p class="form-error">@_why</p>
@@ -21,6 +35,16 @@
     private string _from = "";
     private DateOnly _to;
     private string? _why;
+
+    /// <summary>The Scratch Week copies a day inside itself, read from its view and written back to it.</summary>
+    private bool Scratch => DomainWeek.IsScratch(Monday);
+    private Timetable T => Scratch ? ScratchWeek.View(W.T) : W.T;
+
+    private string ToText
+    {
+        get => _to.ToString("yyyy-MM-dd");
+        set { if (DateOnly.TryParse(value, out var d) && DomainWeek.IsScratch(d)) _to = d; }
+    }
 
     protected override void OnInitialized()
     {
@@ -35,13 +59,14 @@
         var from = DateOnly.Parse(_from);
         _why = _to == from ? "Choose a different day to copy onto."
             : DomainWeek.HasEnded(_to, W.Today) ? "That day's week has ended, so nothing can be added to it."
-            : !W.T.Sessions.Any(s => s.Date == from) ? "There is nothing on that day to copy."
+            : !T.Sessions.Any(s => s.Date == from) ? "There is nothing on that day to copy."
             : null;
     }
 
     private void Save()
     {
         var from = DateOnly.Parse(_from);
-        if (W.Commit(t => Edits.CopyDay(t, from, _to))) D.Close();
+        Func<Timetable, Batch> copy = t => Edits.CopyDay(t, from, _to);
+        if (W.Commit(Scratch ? t => ScratchWeek.Edit(t, copy) : copy)) D.Close();
     }
 }

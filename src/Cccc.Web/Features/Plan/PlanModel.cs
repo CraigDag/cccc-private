@@ -1,4 +1,5 @@
 using Cccc.Domain;
+using Cccc.Domain.Editing;
 using Cccc.Domain.Model;
 using Cccc.Domain.Rules;
 using Cccc.Web.Features.Shell;
@@ -38,6 +39,31 @@ public sealed class PlanView
 
     public DateOnly Monday => Cccc.Domain.Week.MondayOf(Day);
 
+    private DateOnly _realDay;
+
+    /// <summary>
+    /// Whether the tab is looking at the Scratch Week, whose days are dated in
+    /// <see cref="Cccc.Domain.Week.ScratchMonday"/>, so the plan draws and edits it as it does any week.
+    /// </summary>
+    public bool InScratch => Cccc.Domain.Week.IsScratch(Day);
+
+    /// <summary>
+    /// The day on the real timetable: the one the tab was on before it went into the Scratch Week. For
+    /// anything that must show a real week (Cover, Registers, a new event) and for going back.
+    /// </summary>
+    public DateOnly RealDay => InScratch ? _realDay : Day;
+
+    public DateOnly RealMonday => Cccc.Domain.Week.MondayOf(RealDay);
+
+    /// <summary>Into the Scratch Week, on the same day of the week the tab was on.</summary>
+    public void OpenScratch() => GoTo(Cccc.Domain.Week.DateOf(Cccc.Domain.Week.ScratchMonday, Day.DayOfWeek));
+
+    /// <summary>Back to the real day the tab came from.</summary>
+    public void CloseScratch()
+    {
+        if (InScratch) GoTo(_realDay);
+    }
+
     public void Start(DateOnly today)
     {
         if (Started) return;
@@ -48,6 +74,7 @@ public sealed class PlanView
     public void GoTo(DateOnly day)
     {
         if (day == Day) return;
+        if (Cccc.Domain.Week.IsScratch(day) && !InScratch) _realDay = Day;
         if (Cccc.Domain.Week.MondayOf(day) != Monday) Chosen = null;
         Day = day;
         Moved?.Invoke();
@@ -91,6 +118,19 @@ public sealed class PlanModel
     public required IReadOnlyList<Occurrence> RegistersToFile { get; init; }
     public required IReadOnlyList<EventOccurrence> Events { get; init; }
     public required bool Locked { get; init; }
+
+    /// <summary>The timetable this plan was drawn from: the real one, or the Scratch Week's view of it.</summary>
+    public required Timetable T { get; init; }
+
+    /// <summary>Whether this is the Scratch Week: a plan that counts for nothing, with no dates.</summary>
+    public bool Scratch { get; init; }
+
+    /// <summary>An edit made on this plan, written back where it was drawn from: the Scratch Week's to the Scratch Week.</summary>
+    public Func<Timetable, Batch> Edit(Func<Timetable, Batch> edit) => Scratch ? t => ScratchWeek.Edit(t, edit) : edit;
+
+    /// <summary>"Monday 7", or "Monday" in the Scratch Week, which has no dates.</summary>
+    public string DayName(DateOnly d, string format = "dddd d") =>
+        d.ToString(Scratch ? format.Replace(" d", "") : format, System.Globalization.CultureInfo.InvariantCulture);
     /// <summary>
     /// Narrowed to one person, space or group, a day is a single short row; so the rows become the
     /// days of the week instead, and the timeline reads as that one thing's week.
@@ -122,6 +162,10 @@ public sealed class PlanModel
     public static PlanModel Build(Timetable t, PlanView v, Access access, DateOnly today)
     {
         var monday = v.Monday;
+        // The Scratch Week is drawn from its own view: its classes in place of the real ones, nothing dated.
+        // Somebody who may not see it is drawn an empty one, whatever the tab was left on.
+        bool scratch = Cccc.Domain.Week.IsScratch(monday);
+        if (scratch) t = ScratchWeek.View(access.MaySeeScratch ? t : t with { Scratch = EntitySet<Session>.Empty });
         var week = Occurrences.ForWeek(t, monday);
         var focus = v.Focus;
         bool AskedForGuests(Session s) => focus is not null && (focus.Kind is "facilitator" or "student"
@@ -199,7 +243,7 @@ public sealed class PlanModel
             // One focused row becomes one row per day; a bar keeps its own date, which is now its row.
             var name = rows.FirstOrDefault()?.Name ?? focus!.Name;
             var colour = rows.FirstOrDefault()?.Colour;
-            rows = days.Select(d => new PlanRow(DayKey(d), null, d.ToString("dddd d", System.Globalization.CultureInfo.InvariantCulture), colour, name)).ToList();
+            rows = days.Select(d => new PlanRow(DayKey(d), null, d.ToString(scratch ? "dddd" : "dddd d", System.Globalization.CultureInfo.InvariantCulture), colour, name)).ToList();
             bars = bars.Select(b => b with { RowKey = DayKey(b.Date) }).ToList();
         }
 
@@ -240,6 +284,8 @@ public sealed class PlanModel
             Events = events,
             Locked = Cccc.Domain.Week.HasEnded(monday, today),
             HiddenGuests = hiddenGuests,
+            T = t,
+            Scratch = scratch,
         };
     }
 }

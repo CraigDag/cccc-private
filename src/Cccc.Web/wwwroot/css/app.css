@@ -325,6 +325,14 @@ div.agenda-row { cursor: default; }
 .plan-body.with-side { grid-template-columns: minmax(0, 1fr) 340px; }
 .plan-main { min-width: 0; }
 
+/* The Scratch Week: a plan, drawn on ruled paper so that nobody takes it for a real week. No dates. */
+.plan.scratch .tl, .plan.scratch .wm-wrap {
+    background-image: repeating-linear-gradient(135deg, transparent 0 14px, color-mix(in srgb, var(--accent) 8%, transparent) 14px 15px);
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--divider));
+}
+.scratch-badge { margin: 0 6px 0 0; border-color: var(--accent); background: var(--accent); color: var(--accent-text); font-weight: 650; }
+.plan.scratch .dc-count { grid-column: 1; }
+
 .tl {
     position: relative; overflow-x: auto; user-select: none;
     background: var(--panel); border: 1px solid var(--divider); border-radius: var(--radius);

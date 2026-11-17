@@ -2,7 +2,8 @@
 // trying "follow the current app" on the preview (scripts/preview.sh with FOLLOW=1) and for the
 // walk-through that checks it. Made-up names only; it never reads or writes a real file.
 //
-//   make <file>            this week, every day: four classes a day for two groups
+//   make <file>            this week, every day: four classes a day for two groups, and a plan of two
+//                          classes in the Scratch Week (schema 24), which counts for nothing
 //   year <file>            a whole school year at about a real school's size, registers taken on every
 //                          class that has been, for timing the import and following on a file that big
 //   cancel <file> <class>  cancels today's class of that name, as the current app records a one-off cancel
@@ -47,10 +48,18 @@ if (mode == "make")
         sessions.Add(Class("Aerial", 13, 30, 16, 0, ba, rooms[2], dag));
         sessions.Add(Class("Handstands", 16, 15, 18, 0, foundation, rooms[0], ada));
     }
+    // The current app's Scratch Week: a plan, dated in its own week no term reaches.
+    var scratch = new List<Old.ScheduleEntry>
+    {
+        new() { Title = "Trial duet", Day = DayOfWeek.Monday, WeekMonday = Old.Building.ScratchMonday, Start = new(10, 0), End = new(11, 30),
+                Scope = Old.SessionScope.Group, GroupId = ba.Id, RoomId = rooms[1].Id, FacilitatorIds = [ada.Id] },
+        new() { Title = "Trial lifts", Day = DayOfWeek.Wednesday, WeekMonday = Old.Building.ScratchMonday, Start = new(14, 0), End = new(15, 0),
+                Scope = Old.SessionScope.Group, GroupId = foundation.Id, RoomId = rooms[2].Id, FacilitatorIds = [dag.Id] },
+    };
     var building = new Old.Building
     {
         Name = "Northlight", Groups = [ba, foundation], Students = students, Facilitators = [ada, dag], Sessions = sessions,
-        WeeksAreSeparate = true,
+        ScratchSessions = scratch, WeeksAreSeparate = true,
     };
     foreach (var r in rooms) building.Rooms.Add(r);
     p = new Old.ProjectFile

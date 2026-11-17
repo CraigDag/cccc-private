@@ -51,7 +51,7 @@ What this gives:
 
 **Rebuild:** one SQLite file (`cccc.db`) holding projects, their operation logs, snapshots, accounts
 and sign-ins, written with SQLite's own atomic transactions (WAL). A backup is one file, taken with
-`VACUUM INTO`. `.cccc` remains a format the app can **import** (every schema up to 23) and **export**
+`VACUUM INTO`. `.cccc` remains a format the app can **import** (every schema up to 24) and **export**
 (the rebuilt shape is a different format, `.cccc2`, so the two cannot be confused).
 
 Drafts disappear: there is no unsaved work, because every change is stored the moment it is made.
@@ -66,7 +66,7 @@ desktop-shaped view-model, and the rules live in `ViewModels/` beside UI state.
 ```
 src/Cccc.Domain    the model and every rule; no I/O, no UI, no clock (today is passed in)
 src/Cccc.Store     SQLite: the operation log, snapshots, accounts
-src/Cccc.Legacy    reading old .cccc files (schemas 1–23) into the new model
+src/Cccc.Legacy    reading old .cccc files (schemas 1–24) into the new model
 src/Cccc.Web       Blazor Server; Features/<Thing>/ holds that thing's pages, forms and services
 tests/…            one test project per library
 ```

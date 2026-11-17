@@ -1,6 +1,6 @@
 @using Cccc.Web.Features.Week
 @{
-    var t = W.T;
+    var t = M.T;
 }
 <div class="wm-wrap">
     <table class="wm" data-testid="week-matrix">
@@ -11,7 +11,7 @@
                 {
                     <th class="@(d == W.Today ? "today" : "")">
                         <button type="button" class="wm-day" @onclick="() => OpenDay.InvokeAsync(d)" data-testid="matrix-day">
-                            <span>@d.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture)</span> <b>@d.Day</b>
+                            <span>@d.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture)</span> @if (!M.Scratch) { <b>@d.Day</b> }
                         </button>
                     </th>
                 }

@@ -147,6 +147,32 @@ is advice, never a refusal.
   account's tags and link. Only administrators may choose Administrators.
 - Every download and print asks the same rule; **an Administrators-only event never prints**.
 
+## The Scratch Week (`ScratchWeek`, the current app's 1.67.0)
+
+One week with no dates, to try a timetable out in without touching a real week. Craig asked for it in
+the current app with four safeguards, and all four hold here:
+
+- **Copy in, never move.** *Copy to Scratch Week* on a class puts a copy there, on the same day of the
+  week, with an id of its own, and leaves the class where it is. *Copy this week to Scratch Week*
+  replaces the plan with a copy of the whole week.
+- **Nothing in it counts.** Its classes are a collection of their own (`Timetable.Scratch`), never
+  `Sessions`, so hours, time rules, a student's load, registers, cover, clashes with the real
+  timetable, Now, Find, the printed sheets and the reports cannot see it without somebody writing a
+  line to make them. Drawn, it has its own clashes (a plan double-booking a space is worth seeing) and
+  nothing dated: no closures, absences, events or registers.
+- **Editors and administrators only** (`Access.MaySeeScratch`). A coach is never offered it, and the
+  server refuses a change to it from anybody else.
+- **One step to bring it back.** *Place onto a week…* puts the plan onto one real week, replacing that
+  week's classes, each on the same day and time; it is one change, so one Undo takes it back. It
+  refuses a week that has ended or has a register taken, exactly as Copy week does. The plan stays, so
+  it can be placed again.
+
+Every edit of a class (add, change, drag, Copy a day, delete) works on it through `ScratchWeek.Edit`,
+which makes the edit on the plan and writes it back to `Scratch`. **`Edits.CheckLocks` keeps the two
+apart on every change**: nothing real is dated into the Scratch Week, and nothing of the plan leaves it
+except by being placed. Deleting a space, person, group, programme or class, and renaming a class,
+reach the plan as they reach the weeks that are not locked.
+
 ## Drawing the week (`WeekLanes`, `the-week-calendar.md`)
 
 - A block names its class's title, time, group, room — in that order of importance — and is coloured
@@ -170,7 +196,8 @@ is advice, never a refusal.
 ## Editing rules that are decisions
 
 - **Copy week replaces the destination week** and never merges; registers, cancellations and cover do
-  not travel with a copy. **Copy day appends.** Both say how many sessions they will overwrite first.
+  not travel with a copy. Copying a week again never pulls a class back out of another week it has
+  since been moved to. **Copy day appends.** Both say how many sessions they will overwrite first.
 - **Clear the weeks after this one** empties every week after today's (clamped inside the year), on a
   press, never automatically.
 - **Renaming a class renames the sessions still carrying its old title**, in weeks that are not locked.

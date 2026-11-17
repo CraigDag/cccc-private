@@ -1,0 +1,60 @@
+@* Place onto a week…: the plan onto one real week, replacing what that week had. *@
+@inject Dialogs D
+@inject PlanView V
+@{
+    var t = W.T;
+    var weeks = Targets().ToList();
+    int n = t.Scratch.Count;
+    var chosen = weeks.FirstOrDefault(w => w.Monday == _chosen);
+}
+<DialogFrame Title="Place the Scratch Week onto a week" OnOk="Save" OkEnabled="@(chosen is { Why: null } && n > 0)" OkLabel="@(chosen is null ? "Place" : "Place onto week " + DomainWeek.IsoNumber(chosen.Monday))" Class="wide">
+    <p>Puts the plan's @Looks.Count(n, "class", "classes") onto the week you choose, each on the same day and at the same time. <b>That week's own classes are replaced</b>, and from then on the placed ones count like any other: hours, registers, cover and clashes. The Scratch Week keeps its plan, so it can be placed again.</p>
+    <p class="muted">A week that has ended, or already has a register taken, is never replaced: that would delete what somebody recorded.</p>
+    <div class="checks rows week-picks" data-testid="place-weeks">
+        @foreach (var w in weeks)
+        {
+            <label class="@(w.Why is null ? "" : "off")">
+                <input type="radio" name="place-week" disabled="@(w.Why is not null)" checked="@(w.Monday == _chosen)" @onchange="() => _chosen = w.Monday" />
+                <span class="grow">Week @DomainWeek.IsoNumber(w.Monday), @DomainWeek.ShortDate(w.Monday)@(t.SemesterFor(w.Monday) is { } s ? " · " + s.Name : "")@(w.Monday == V.RealMonday ? " · the week you came from" : "")</span>
+                <small>@(w.Why is not null ? "has registers, kept" : w.Count == 0 ? "blank" : $"{Looks.Count(w.Count, "class", "classes")}, replaced")</small>
+            </label>
+        }
+    </div>
+    @if (chosen is { Why: null, Count: > 0 })
+    {
+        <p data-testid="place-replaces"><b>Week @DomainWeek.IsoNumber(chosen.Monday)'s @Looks.Count(chosen.Count, "class", "classes") will be replaced</b> by the plan's @n. Undo puts @(chosen.Count == 1 ? "it" : "them") back.</p>
+    }
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    private DateOnly _chosen;
+
+    private sealed record Target(DateOnly Monday, int Count, string? Why);
+
+    /// <summary>This week to the end of the year: every week that has not ended, as Copy this week to… offers them.</summary>
+    private IEnumerable<Target> Targets()
+    {
+        var t = W.T;
+        var first = DomainWeek.MondayOf(W.Today);
+        var last = t.YearEndMonday is { } e && e > first ? e : first.AddDays(7 * 20);
+        for (var m = first; m <= last; m = m.AddDays(7))
+            yield return new Target(m, Edits.SessionCountIn(t, m), ScratchWeek.WhyNot(t, m, W.Today));
+    }
+
+    protected override void OnInitialized()
+    {
+        // The week the plan was opened from, when it can take it; otherwise the first week that can.
+        var weeks = Targets().ToList();
+        _chosen = weeks.FirstOrDefault(w => w.Monday == V.RealMonday && w.Why is null)?.Monday
+                  ?? weeks.FirstOrDefault(w => w.Why is null)?.Monday ?? default;
+    }
+
+    private void Save()
+    {
+        var to = _chosen;
+        if (!W.Commit(t => ScratchWeek.PlaceOnto(t, to, W.Today))) return;
+        D.Close();
+        // Off to the week it landed on, on the day of the week the plan was showing.
+        V.GoTo(DomainWeek.DateOf(to, V.Day.DayOfWeek));
+    }
+}

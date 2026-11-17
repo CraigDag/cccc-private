@@ -45,6 +45,27 @@ async function signIn(browser, who, viewport) {
     }
   });
 
+  await step('the current app\'s Scratch Week comes across, to be looked at and not changed', async () => {
+    const open = page.locator('[data-testid=scratch-open]');
+    const label = (await open.textContent()).trim();
+    if (label !== 'Scratch Week · 2') throw new Error('the button reads "' + label + '"');
+    await open.click();
+    await page.waitForFunction(() => document.querySelector('[data-testid=plan-page]')?.dataset.scratch === '1');
+    await page.click('[data-testid=scale-week]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=plan-page]')?.dataset.scale === 'Week' && document.querySelector('[data-testid=week-matrix]'));
+    const titles = (await page.locator('[data-testid=week-matrix] [data-testid=block]').allTextContents()).map(t => t.replace(/\s+/g, ' ').trim());
+    if (titles.join(' | ') !== '10:00 Trial duet | 14:00 Trial lifts') throw new Error('the plan reads "' + titles.join(' | ') + '"');
+    for (const id of ['add-session', 'scratch-place', 'scratch-empty']) {
+      if (await page.locator(`[data-testid=${id}]`).count()) throw new Error(id + ' is offered');
+    }
+    await page.click('[data-testid=more-menu]');
+    await page.locator('.menu .menu-label', { hasText: 'Show' }).waitFor();
+    if (await page.locator('[data-testid=scratch-place]').count()) throw new Error('Place onto a week is offered');
+    await page.click('[data-testid=more-menu]');
+    await page.click('[data-testid=scratch-close]');
+    await page.waitForFunction(() => document.querySelector('[data-testid=plan-page]')?.dataset.scratch === '0');
+  });
+
   await step('a class cancelled over there is on Now within seconds, by the current app', async () => {
     await page.goto(B + '/');
     await page.waitForSelector('[data-testid=now-page]');

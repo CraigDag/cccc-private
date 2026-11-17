@@ -55,7 +55,7 @@ One SQLite database file, `cccc.db`, in WAL mode:
 | `ops` | batch, index, collection, thing id, `before` JSON, `after` JSON |
 | `snapshots` | project id, sequence, whole state JSON, compressed |
 | `accounts`, `signins` | see [`05-access-and-privacy.md`](05-access-and-privacy.md) |
-| `meta` | the store's own format number |
+| `meta` | the store's own format number: **2** since the Scratch Week. A store at 1 is brought up to 2 as it opens (its timetables simply have an empty Scratch Week); a store of a newer number is refused, so an older build never opens a store whose timetables hold a plan it would drop |
 
 - **Loading** a project reads the newest snapshot and replays the batches after it.
 - **A snapshot is written** every 200 batches and when the last person leaves a project, so a load
@@ -78,8 +78,9 @@ command (`cccc backup <path>`), so the existing rclone off-site sync keeps worki
 
 ## Export and import
 
-- **Export** a project as `.cccc2` — a zip holding `project.json` (the state) and `format.json`.
-- **Import** a `.cccc2`, or an old `.cccc` of any schema up to 23 (see
+- **Export** a project as `.cccc2` — a zip holding `project.json` (the state) and `format.txt`, whose
+  marker is `cccc2 2` since the Scratch Week. `cccc2 1` files still read (with an empty Scratch Week).
+- **Import** a `.cccc2`, or an old `.cccc` of any schema up to 24 (see
   [`06-importing-old-files.md`](06-importing-old-files.md)), as a **new** project. Import never
   overwrites a project in place.
 - A file of a newer format than this build understands is refused, in the same words as today.

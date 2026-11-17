@@ -103,6 +103,18 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
 - **Erasing a person reaches somebody already taken off the timetable**, whose name the last 30 days
   of history still hold: they are listed under *Taken off in the last 30 days*.
 
+- **The Scratch Week**, as in the current app since 1.67.0: one week with no dates, shared by everybody
+  who edits, to try a timetable out in without touching a real week. *Copy to Scratch Week* on a class
+  (or *More ▾ › Copy this week to Scratch Week…* for a whole week) puts a copy there and leaves the real
+  class where it is. Nothing in it counts: no hours, registers, cover, or clashes with the real
+  timetable. Plan in it as on any week, then *Place onto a week…* puts it onto one real week in one
+  step, replacing that week's classes, and Undo takes that back. A week that has ended or has a register
+  taken is never replaced. Coaches never see it.
+- **It reads the current app's newest files** (1.67.0 onwards, with their Scratch Week), through
+  *Bring in a file…* and when following.
+- **Copying a week again no longer takes a class out of another week**: if a copied class had since been
+  moved to a different week, copying the first week a second time pulled it back out of there.
+
 - **The end-of-day register reminder email** is here, off until it is switched on, with a Preview mode
   that sends every reminder to one address first. Administration ▸ System shows its state. The
   settings have the same names as the current app's.

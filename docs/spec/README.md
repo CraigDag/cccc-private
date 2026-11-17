@@ -1,7 +1,7 @@
 # CCCC timetable, rebuilt: the spec
 
 This is the specification for a fresh build of the school's timetable app. It is written from the
-current app (`CraigDag/cccc-scheduler`, 1.66.0, schema 23), its `CLAUDE.md`, its five guides and the
+current app (`CraigDag/cccc-scheduler`, 1.66.0, schema 23; the Scratch Week of 1.67.0 and schema 24 since), its `CLAUDE.md`, its five guides and the
 project's notes. The current app is a reference and nothing more: **this repository never writes to it,
 and nothing here reaches the school's laptop until Craig chooses to switch.**
 
@@ -14,7 +14,7 @@ and nothing here reaches the school's laptop until Craig chooses to switch.**
 | [`03-the-rules.md`](03-the-rules.md) | The rules won with real use: rosters, cover, hours, time rules, registers, guests, events, lanes |
 | [`04-storage-and-editing.md`](04-storage-and-editing.md) | The operation log, live editing, undo per person, history, backups |
 | [`05-access-and-privacy.md`](05-access-and-privacy.md) | Sign-in, roles, capabilities, and GDPR |
-| [`06-importing-old-files.md`](06-importing-old-files.md) | Reading every `.cccc` up to schema 23 |
+| [`06-importing-old-files.md`](06-importing-old-files.md) | Reading every `.cccc` up to schema 24 |
 | [`07-screens.md`](07-screens.md) | What a person sees, in the order it gets built |
 | [`08-build-order.md`](08-build-order.md) | Milestones, and what "done" means for each |
 

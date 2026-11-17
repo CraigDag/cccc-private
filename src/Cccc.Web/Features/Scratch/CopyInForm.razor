@@ -1,0 +1,31 @@
+@* Copy this week to Scratch Week…: a whole real week into the plan, replacing what the plan held. *@
+@inject Dialogs D
+@inject PlanView V
+@{
+    var t = W.T;
+    int count = Edits.SessionCountIn(t, Monday);
+    int held = t.Scratch.Count;
+}
+<DialogFrame Title="@("Copy week " + DomainWeek.IsoNumber(Monday) + " to the Scratch Week")" OnOk="Save" OkEnabled="@(count > 0)" OkLabel="@("Copy " + Looks.Count(count, "class", "classes") + " in")">
+    <p>Copies this week's @Looks.Count(count, "class", "classes") into the Scratch Week, where you can move them about and try things without touching a real week. This week is not changed.</p>
+    @if (count == 0)
+    {
+        <p class="form-error">This week is blank, so there is nothing to copy.</p>
+    }
+    else if (held > 0)
+    {
+        <p data-testid="scratch-replaces"><b>The Scratch Week's @Looks.Count(held, "class", "classes") are replaced</b> by this week's. Undo brings them back.</p>
+    }
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public DateOnly Monday { get; set; }
+
+    private void Save()
+    {
+        if (!W.Commit(t => ScratchWeek.CopyWeekIn(t, Monday))) return;
+        D.Close();
+        // The plan goes where the copy went, so it is plain what happened and the planning can start.
+        V.OpenScratch();
+    }
+}

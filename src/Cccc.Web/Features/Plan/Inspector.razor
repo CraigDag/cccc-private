@@ -2,7 +2,7 @@
 @using Cccc.Web.Features.Sessions
 @inject Dialogs D
 @{
-    var t = W.T;
+    var t = M.T;
     var o = M.Find(Id);
 }
 <aside class="inspector" data-testid="inspector" aria-label="The chosen class">
@@ -79,19 +79,28 @@
         }
         <div class="insp-actions">
             <button type="button" class="btn primary" @onclick="() => OnEdit.InvokeAsync(s.Id)" data-testid="inspector-edit">@(Editable ? "Edit" : "Details")</button>
-            @if (roster.Count > 0 && o.Happens)
+            @if (roster.Count > 0 && o.Happens && !M.Scratch)
             {
                 <button type="button" class="btn" @onclick="() => D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = s.Id })" data-testid="inspector-register">Register</button>
             }
             @if (Editable)
             {
-                @if (o.NeedsCover || o.Covered)
+                @* A plan has nothing that happens: no cover and nothing to cancel. *@
+                @if (!M.Scratch && (o.NeedsCover || o.Covered))
                 {
                     <button type="button" class="btn" @onclick="() => D.Show<CoverForm>(new Dictionary<string, object?> { [nameof(CoverForm.SessionId)] = s.Id })">Cover</button>
                 }
-                <button type="button" class="btn" @onclick="() => D.Show<CancelForm>(new Dictionary<string, object?> { [nameof(CancelForm.SessionId)] = s.Id })" data-testid="inspector-cancel">@(s.Cancelled ? "Restore" : "Cancel")</button>
+                @if (!M.Scratch)
+                {
+                    <button type="button" class="btn" @onclick="() => D.Show<CancelForm>(new Dictionary<string, object?> { [nameof(CancelForm.SessionId)] = s.Id })" data-testid="inspector-cancel">@(s.Cancelled ? "Restore" : "Cancel")</button>
+                }
                 <button type="button" class="btn" @onclick="() => Duplicate(s)" data-testid="inspector-duplicate">Duplicate</button>
                 <button type="button" class="btn danger" @onclick="() => Delete(s)" data-testid="inspector-delete">Delete</button>
+            }
+            @* Copy, never move: the class stays where it is, a week that has ended included. *@
+            @if (!M.Scratch && W.Access.MaySeeScratch && W.Access.MayEdit)
+            {
+                <button type="button" class="btn" @onclick="() => CopyToScratch(s)" data-testid="inspector-to-scratch">Copy to Scratch Week</button>
             }
         </div>
     }
@@ -111,11 +120,13 @@
     private async Task Duplicate(Session s)
     {
         var copy = Edits.CopyOf(s, s.Date, Guid.NewGuid());
-        if (W.Commit(t => Edits.PutSession(t, copy, $"Duplicated {s.DisplayTitle}"))) await OnChosen.InvokeAsync(copy.Id);
+        if (W.Commit(M.Edit(t => Edits.PutSession(t, copy, $"Duplicated {s.DisplayTitle}")))) await OnChosen.InvokeAsync(copy.Id);
     }
 
     private async Task Delete(Session s)
     {
-        if (W.Commit(t => Edits.RemoveSessions(t, [s.Id]))) await OnClose.InvokeAsync();
+        if (W.Commit(M.Edit(t => Edits.RemoveSessions(t, [s.Id])))) await OnClose.InvokeAsync();
     }
+
+    private void CopyToScratch(Session s) => W.Commit(t => ScratchWeek.CopyIn(t, s.Id));
 }
