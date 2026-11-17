@@ -6,11 +6,20 @@
             <h2 id="dialog-title">@Title</h2>
             <button type="button" class="dialog-x" aria-label="Close" data-close data-testid="dialog-x" @onclick="D.Close">×</button>
         </header>
-        <div class="dialog-body">@ChildContent</div>
+        <div class="dialog-body">
+            @if (Held)
+            {
+                <FollowingNotice />
+            }
+            @ChildContent
+        </div>
         <footer class="dialog-foot">
-            @Extra
+            @if (!Held)
+            {
+                @Extra
+            }
             <span class="grow"></span>
-            @if (OnOk.HasDelegate)
+            @if (OnOk.HasDelegate && !Held)
             {
                 <button type="submit" class="btn primary" disabled="@(!OkEnabled)" data-testid="dialog-ok">@OkLabel</button>
                 <button type="button" class="btn" @onclick="D.Close" data-testid="dialog-cancel">@DismissLabel</button>
@@ -31,6 +40,15 @@
     [Parameter] public string OkLabel { get; set; } = "OK";
     [Parameter] public bool OkEnabled { get; set; } = true;
     [Parameter] public string DismissLabel { get; set; } = "Cancel";
+
+    /// <summary>False for a form that changes no timetable (an account, a timetable's name).</summary>
+    [Parameter] public bool ChangesTheTimetable { get; set; } = true;
+
+    [CascadingParameter] public Workspace? W { get; set; }
+
+    // A form that would change a timetable following the current app offers nothing to press but Close:
+    // whatever it saved would be undone by the next save over there (Access.Following).
+    private bool Held => OnOk.HasDelegate && ChangesTheTimetable && W is { Access.Following: true };
     private ElementReference _panel;
 
     protected override async Task OnAfterRenderAsync(bool first)

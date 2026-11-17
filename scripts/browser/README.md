@@ -5,6 +5,7 @@ per step and saves screenshots and PDFs to `$OUT` (default: the temporary folder
     node scripts/browser/keyboard.js             # Space chooses, Enter opens, Escape closes and focus comes back, Alt+arrows, Ctrl+K and /
     node scripts/browser/two-people-and-phone.js # one person's drag reaches another's screen; the phone: Now, the plan, a drawer, Data, a report, Find
     node scripts/browser/a-coach.js              # a coach: Now's registers from earlier days match My week, everybody's registers, who is away, admin pages refuse
+    node scripts/browser/following.js            # with FOLLOW=1 scripts/preview.sh: the current app's timetable, read only here; a class cancelled over there on Now in seconds; erasing somebody taken off over there
 
 Each exits non-zero when a step fails. Set `CCCC_PREVIEW` to point them at another address.
 

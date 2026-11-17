@@ -1,0 +1,22 @@
+@inject FollowStatus Follow
+@* Said wherever somebody would otherwise try to change the timetable: it follows the current app, so it is
+   changed there. A badge where a page's heading line has room; a line of its own where a form or list is. *@
+@if (W is { Access.Following: true })
+{
+    bool behind = Follow.Problem is not null;
+    // Why it stopped is for an administrator, who can do something about it; everybody else is told it may be behind.
+    string words = behind ? FollowWords.Behind(Follow, W.Clock.Describe) + (W.Access.MaySeeSystem ? " " + Follow.Problem : "") : FollowWords.Notice;
+    @if (Badge)
+    {
+        <span class="badge @(behind ? "warn" : "")" title="@words" data-testid="following">@(behind ? "Behind the current app" : "Follows the current app")</span>
+    }
+    else if (behind || !OnlyWhenBehind)
+    {
+        <p class="notice @(behind ? "warn" : "")" role="@(behind ? "alert" : "status")" data-testid="following">@words</p>
+    }
+}
+@code {
+    [CascadingParameter] public Workspace? W { get; set; }
+    [Parameter] public bool Badge { get; set; }
+    [Parameter] public bool OnlyWhenBehind { get; set; }
+}

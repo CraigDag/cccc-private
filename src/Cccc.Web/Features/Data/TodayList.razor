@@ -7,6 +7,8 @@
         .Select(id => t.Students[id]).Where(s => s is not null).Select(s => s!)
         .OrderBy(s => t.Groups[s.GroupId ?? Guid.Empty]?.Name ?? "~", NameOrder.Comparer).ThenBy(s => s.Name, NameOrder.Comparer).ToList();
     var awayCount = students.Count(s => AwayToday(t, s.Id) is not null);
+    // A timetable that follows the current app is changed there: the list still says who is away.
+    bool may = !W.Access.Following;
 }
 <section class="today-list" data-testid="today-list">
     <h2>Today, @Looks.DayHeading(day)</h2>
@@ -26,12 +28,16 @@
                 var a = AwayToday(t, s.Id);
                 <li class="today-row @(a is null ? "" : "away")" data-testid="today-row">
                     <span class="today-name"><b>@s.Name</b> <small>@(t.Groups[s.GroupId ?? Guid.Empty]?.Name ?? "No group")</small></span>
-                    @if (a is null)
+                    @if (a is null && may)
                     {
                         <button type="button" class="btn" @onclick="() => Away(s.Id, AbsenceNotice.Planned)" data-testid="today-planned">Away, planned</button>
                         <button type="button" class="btn" @onclick="() => Away(s.Id, AbsenceNotice.Unplanned)" data-testid="today-unplanned">Away, unplanned</button>
                     }
-                    else
+                    else if (a is not null && !may)
+                    {
+                        <span class="today-state">Away@(a.Notice is { } n ? " · " + (n == AbsenceNotice.Planned ? "planned" : "unplanned") : "")@(a.Cause is { } why ? " · " + CauseWords(why) : "")</span>
+                    }
+                    else if (a is not null)
                     {
                         <span class="today-state">Away@(a.Notice is { } n ? " · " + (n == AbsenceNotice.Planned ? "planned" : "unplanned") : "")</span>
                         <select aria-label="Why @s.Name is away" value="@(a.Cause?.ToString() ?? "")" @onchange="e => SetCause(a, e.Value as string)" data-testid="today-cause">
@@ -64,6 +70,14 @@
 
     private void Away(Guid studentId, AbsenceNotice notice) =>
         W.Commit(t => Edits.PutAbsence(t, new Absence { Person = AbsentPerson.Student, PersonId = studentId, From = W.Today, To = W.Today, Notice = notice }));
+
+    private static string CauseWords(AbsenceCause c) => c switch
+    {
+        AbsenceCause.Illness => "illness",
+        AbsenceCause.Personal => "personal",
+        AbsenceCause.ApprovedLeave => "approved leave",
+        _ => "other",
+    };
 
     private void SetCause(Absence a, string? value) =>
         W.Commit(t => Edits.PutAbsence(t, a with { Cause = Enum.TryParse<AbsenceCause>(value, out var c) ? c : null }), announce: false);

@@ -21,6 +21,7 @@
         <label class="check"><input type="checkbox" @bind="_mine" data-testid="registers-mine" /> Only the ones I can take</label>
     }
 </WeekNav>
+<FollowingNotice />
 @if (Cccc.Domain.Week.MondayOf(W.Today) == V.Monday && rows.Where(o => o.Date == W.Today && o.Happens).ToList() is { Count: > 0 } today)
 {
     <h2 class="now-section">Today</h2>

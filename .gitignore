@@ -483,6 +483,7 @@ $RECYCLE.BIN/
 
 # local stores
 .local-store*/
+.local-follow*/
 *.db
 *.db-wal
 *.db-shm

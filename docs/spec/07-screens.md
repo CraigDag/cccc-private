@@ -136,6 +136,21 @@ their own classes with *Only the ones I can take* ticked, and unticking it shows
 everybody reads every register. When nobody is in the room because the facilitator is away, the *In
 the room* column says *Nobody yet: … away* rather than nothing.
 
+## Following the current app
+
+When the open timetable follows the current app ([`04`](04-storage-and-editing.md)), every screen still
+reads it and nothing offers to change it: Now's and the plan's heading lines carry a *Follows the
+current app* badge (amber, *Behind the current app*, when the file could not be read); People & places,
+Registers and Cover say in a line that it is changed in the current app, within a minute (My week only
+when it is behind); a form that would change it shows that line and only Close; Add buttons and the
+morning list's buttons are not drawn. The foot line says so, System has a card for it, Projects marks
+the timetable and offers no Delete on it, and Erase a person explains the order. A change brought
+across reads *the current app* wherever a name goes.
+
+`FOLLOW=1 scripts/preview.sh` tries it on made-up data: `tools/OldFormatSchool` writes a school in the
+current app's own format and changes it the way the current app would, and
+`scripts/browser/following.js` walks through it.
+
 ## Words
 
 **Space**, never *room*, wherever a person reads it: the Plan's lens, the forms, People & places, the

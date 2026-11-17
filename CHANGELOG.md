@@ -86,6 +86,14 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
 - **The line at "now"** moves by itself through the day, runs beneath the classes so it never crosses
   their names, and the time sits on the ruler above it.
 - **Bring in a file…** reads the current app's `.cccc` (every version) and says what came across.
+- **It can sit beside the current app**, following its timetable rather than holding a copy that goes
+  out of date: each save in the current app is here within a minute, so Now (with *Changed since
+  yesterday*, which names *the current app* as who changed it), the plan and every other view show the
+  school's real week with nothing typed twice. That timetable is changed in the current app, and this
+  one says so wherever somebody would try. It is optional and off until it is switched on (the
+  runbook's step 8), and it only ever reads the current app's file.
+- **Erasing a person reaches somebody already taken off the timetable**, whose name the last 30 days
+  of history still hold: they are listed under *Taken off in the last 30 days*.
 
 - **The end-of-day register reminder email** is here, off until it is switched on, with a Preview mode
   that sends every reminder to one address first. Administration ▸ System shows its state. The

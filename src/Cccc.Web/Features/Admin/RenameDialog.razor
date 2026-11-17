@@ -1,6 +1,6 @@
 @inject ProjectStore Store
 @inject Dialogs D
-<DialogFrame Title="Rename the timetable" OnOk="Save" OkEnabled="@(_name.Trim().Length > 0)">
+<DialogFrame ChangesTheTimetable="false" Title="Rename the timetable" OnOk="Save" OkEnabled="@(_name.Trim().Length > 0)">
     <label class="field"><span>Name (seen inside the app only: never on paper, in a browser tab or a link)</span><input @bind="_name" @bind:event="oninput" /></label>
 </DialogFrame>
 @code {

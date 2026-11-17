@@ -76,11 +76,27 @@ public sealed class LiveProject
         return result;
     }
 
-    private Changed CommitLocked(Batch batch, string by, bool pushUndo)
+    /// <summary>
+    /// Makes the project exactly <paramref name="to"/>, as one change by <paramref name="by"/>, for a
+    /// timetable that follows another app's file. That app keeps its own week lock, so this does not
+    /// apply one, and nobody here undoes it. Nothing is written, and nobody is told, when nothing differs.
+    /// </summary>
+    public Changed Follow(Timetable to, string by, string label)
+    {
+        Changed result;
+        lock (_gate)
+        {
+            result = CommitLocked(Difference(State, to, label), by, pushUndo: false, checkLocks: false);
+        }
+        if (result.Touched.Count > 0) ChangedEvent?.Invoke(result);
+        return result;
+    }
+
+    private Changed CommitLocked(Batch batch, string by, bool pushUndo, bool checkLocks = true)
     {
         if (batch.IsEmpty)
             return new Changed(State, Sequence, by, batch.Label, []);
-        Edits.CheckLocks(State, batch, _today());
+        if (checkLocks) Edits.CheckLocks(State, batch, _today());
         var next = Apply.Batch(State, batch);
         var change = new Change(Sequence + 1, by, _clock(), batch);
         _store.Append(Id, change, () => next);

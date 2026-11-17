@@ -31,6 +31,13 @@ Capabilities are **named**, never `role >= Editor`:
 | `MayTakeEveryRegister` | Administrator |
 | `MaySeeSystem` (backups, the nightly update) | Administrator |
 
+**A timetable that follows the current app is changed by nobody here** (`Access.Following`;
+[`04`](04-storage-and-editing.md)). It narrows what anybody may *change* — every collection, registers
+included, at the one door and in `MayChange`; a form that would change it offers only Close; History's
+put-back and Delete are not offered on it — and nothing they may *see*: an editor still sees what
+editors see, and whose registers are outstanding is still counted, because they are outstanding over
+there. Accounts and the timetable's name are not the timetable, and stay changeable.
+
 **An account carries**: its role; **tags** (Student, Staff); a **link** to one facilitator (only an
 administrator sets either, so nobody tags themself into an audience); suspended; must-change-passphrase;
 last signed in (in `signins`, never on the account row). A guest facilitator cannot be linked.
@@ -59,6 +66,11 @@ The live file has held real students since 2026-10-29, so all of this applies to
   id kept so counts still add up). This is the one sanctioned rewrite of the log, and it is logged as
   "a person was erased" with no name. The off-site backup keeps old copies for 90 days; the erasure
   page says so and names the step on Drive, as the current runbook does.
+- **Erasure also reaches somebody taken off the timetable in the last 30 days**, because the stored
+  changes still name them until they are folded away (`FormerPeople`). While following the current app,
+  a person is erased there first; their removal comes across; then they are erased here from the
+  history. The follower's copy of the current app's file is personal data like the store, and stays on
+  the laptop.
 - **Absence reasons** are free text an administrator may fill; the form warns not to write health
   details there.
 - Security headers on every response: a content security policy (self only), `X-Content-Type-Options`,

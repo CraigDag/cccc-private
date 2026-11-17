@@ -1,8 +1,13 @@
 <div class="bar">
-    <button type="button" class="btn primary" @onclick="OnAdd" data-testid="data-add">Add @Looks.A(Kind.One)…</button>
-    @ChildContent
+    @* Nothing is added to a timetable that follows the current app: it is added there. *@
+    @if (W is not { Access.Following: true })
+    {
+        <button type="button" class="btn primary" @onclick="OnAdd" data-testid="data-add">Add @Looks.A(Kind.One)…</button>
+        @ChildContent
+    }
 </div>
 @code {
+    [CascadingParameter] public Workspace? W { get; set; }
     [Parameter, EditorRequired] public Kind Kind { get; set; } = default!;
     [Parameter] public EventCallback OnAdd { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }

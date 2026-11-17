@@ -12,6 +12,15 @@ if curl -s -o /dev/null "http://127.0.0.1:$PORT/healthz"; then
   echo "Something is already answering on port $PORT. Stop it first (scripts/stop.sh)." >&2
   exit 1
 fi
+# FOLLOW=1 also tries "follow the current app": a made-up school in the current app's own format is written
+# to .local-follow-preview/School.cccc and followed, looked at every 5 seconds. Change it "over there" with
+#   dotnet run --no-build --project tools/OldFormatSchool -- cancel .local-follow-preview/School.cccc Aerial
+if [ "${FOLLOW:-}" = 1 ]; then
+  FOLLOW_FILE="$PWD/.local-follow-preview/School.cccc"
+  mkdir -p "$(dirname "$FOLLOW_FILE")"
+  dotnet run --project tools/OldFormatSchool -- make "$FOLLOW_FILE"
+  set -- "$@" "--Follow:File=$FOLLOW_FILE" --Follow:EverySeconds=5
+fi
 ASPNETCORE_ENVIRONMENT=Development \
 Store__Path="$STORE" Store__Create=true \
 Preview__Seed=true Preview__Accounts=true \

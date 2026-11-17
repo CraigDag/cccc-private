@@ -4,22 +4,39 @@
 @inject ILogger<EraseTab> Log
 <div style="max-width:620px">
     <p>Erasing a person takes them off the timetable <b>and rewrites every stored change and snapshot that names them</b>, in every timetable on this server, so their name and email are gone from the history too. Their id is kept, so registers and counts still add up. It cannot be undone.</p>
+    @if (W.Access.Following)
+    {
+        <p class="notice" data-testid="following">This timetable follows the current app, so a person is erased there first. Within a minute they are off this timetable too, and listed below under <em>Taken off in the last 30 days</em>: erasing them here then takes their name out of this app's stored history as well.</p>
+    }
     <p class="notice">Backups taken before today still hold the name: the laptop keeps fourteen nightly copies, and any off-site copy keeps its own. To finish an erasure request, delete those too, as the runbook's <em>Erasing a person</em> section says.</p>
     <label class="field"><span>Who</span>
         <select @bind="_who">
             <option value="">Choose…</option>
-            <optgroup label="Students">
-                @foreach (var s in W.T.Students.OrderBy(s => s.Name, NameOrder.Comparer))
-                {
-                    <option value="@("s:" + s.Id)">@s.Name</option>
-                }
-            </optgroup>
-            <optgroup label="Facilitators">
-                @foreach (var f in W.T.Facilitators.OrderBy(f => f.Name, NameOrder.Comparer))
-                {
-                    <option value="@("f:" + f.Id)">@f.Name</option>
-                }
-            </optgroup>
+            @* A timetable that follows the current app takes nobody off here: they are erased there first. *@
+            @if (!W.Access.Following)
+            {
+                <optgroup label="Students">
+                    @foreach (var s in W.T.Students.OrderBy(s => s.Name, NameOrder.Comparer))
+                    {
+                        <option value="@("s:" + s.Id)">@s.Name</option>
+                    }
+                </optgroup>
+                <optgroup label="Facilitators">
+                    @foreach (var f in W.T.Facilitators.OrderBy(f => f.Name, NameOrder.Comparer))
+                    {
+                        <option value="@("f:" + f.Id)">@f.Name</option>
+                    }
+                </optgroup>
+            }
+            @if (_former.Count > 0)
+            {
+                <optgroup label="Taken off in the last 30 days" data-testid="erase-former">
+                    @foreach (var f in _former)
+                    {
+                        <option value="@((f.Student ? "s:" : "f:") + f.Id)">@f.Name (@(f.Student ? "student" : "facilitator"))</option>
+                    }
+                </optgroup>
+            }
         </select>
     </label>
     @if (Name is { } name)
@@ -36,16 +53,29 @@
     [CascadingParameter] public Workspace W { get; set; } = default!;
     private string _who = "", _confirm = "";
     private string? _done;
+    private IReadOnlyList<FormerPeople.Former> _former = [];
+    private (Guid, long)? _formerAt;
+
+    // Read from the stored history again only when the timetable has changed since the last reading.
+    protected override void OnParametersSet()
+    {
+        if (W.Project is not { } p) { _former = []; return; }
+        if (_formerAt == (p.Id, p.Sequence)) return;
+        _formerAt = (p.Id, p.Sequence);
+        _former = FormerPeople.In(Store.ChangesSince(p.Id, 0), W.T);
+    }
 
     private string? Name => _who.Length < 3 || !Guid.TryParse(_who[2..], out var id) ? null
-        : _who[0] == 's' ? W.T.Students[id]?.Name : W.T.Facilitators[id]?.Name;
+        : (_who[0] == 's' ? W.T.Students[id]?.Name : W.T.Facilitators[id]?.Name)
+          ?? _former.FirstOrDefault(f => f.Id == id && f.Student == (_who[0] == 's'))?.Name;
 
     private void Erase()
     {
         if (W.Project is not { } project || !Guid.TryParse(_who[2..], out var id)) return;
         bool student = _who[0] == 's';
-        bool removed = W.Commit(t => student ? Edits.RemoveStudent(t, id, W.Today) : Edits.RemoveFacilitator(t, id, W.Today), announce: false);
-        if (!removed) return;
+        // Somebody still on the timetable is taken off first; somebody taken off already has only history left.
+        bool onTimetable = student ? W.T.Students.Contains(id) : W.T.Facilitators.Contains(id);
+        if (onTimetable && !W.Commit(t => student ? Edits.RemoveStudent(t, id, W.Today) : Edits.RemoveFacilitator(t, id, W.Today), announce: false)) return;
         if (!student && W.Access.Account is { } me)
             foreach (var a in Accounts.All().Where(a => a.FacilitatorId == id))
                 Accounts.Update(me.Id, a.Id, a.Display, a.Role, a.Tags, null, a.Suspended);
@@ -57,6 +87,8 @@
         int changed = 0;
         foreach (var p in all) changed += Store.Rewrite(p.Id, ProjectFiles.Eraser(id));
         project.ForgetUndo();
+        _formerAt = null;
+        OnParametersSet();
         Log.LogWarning("A person was erased; {Count} stored records were rewritten.", changed);
         _done = "Erased. Their name and email are gone from every stored change and snapshot on this server.";
         _who = ""; _confirm = "";

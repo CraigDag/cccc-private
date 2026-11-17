@@ -6,6 +6,8 @@
 @inject SchoolClock Clock
 @inject Toasts ToastList
 @inject NavigationManager Nav
+@inject ProjectStore Store
+@inject FollowStatus Follow
 
 @if (_ws is null)
 {
@@ -80,7 +82,9 @@ else
             if (project is not null) project.ChangedEvent += OnChanged;
             _subscribed = project;
         }
-        _ws = new Workspace(new Access(account), project, Clock, ToastList, Accounts);
+        // The timetable kept the same as the current app's is changed there, never here (Access.Following).
+        bool following = Follow.On && project is not null && Follower.FollowedId(Store) == project.Id;
+        _ws = new Workspace(new Access(account) { Following = following }, project, Clock, ToastList, Accounts);
         project?.Here(account.Display);
     }
 

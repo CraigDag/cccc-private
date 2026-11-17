@@ -2,6 +2,7 @@
 @inject IWebHostEnvironment Env
 @inject Cccc.Web.Features.Mail.ReminderSettings Reminders
 @inject Cccc.Web.Features.Mail.MailSettings Mail
+@inject FollowStatus Follow
 @{
     var size = Store.SizeOnDisk;
     var backup = Store.GetMeta("last_backup");
@@ -24,6 +25,24 @@
                 @(last[1] == "ok" ? $" Last run {W.Clock.Describe(ran)}: {last[2]} sent." : $" Last run {W.Clock.Describe(ran)} failed ({last[2]}).")
             }
         </small>
+    </div>
+    <div class="card @(Follow.Problem is not null ? "warn" : "")" data-testid="follow-card">
+        <small>Following the current app</small>
+        @if (!Follow.On)
+        {
+            <b>Off</b>
+            <small>This app keeps its own timetables. <code>Follow__File</code> turns following on: the runbook's step 8.</small>
+        }
+        else if (Follow.Problem is not null)
+        {
+            <b>Stopped@(Follow.ProblemSince is { } ps ? " " + W.Clock.Describe(ps) : "")</b>
+            <small>@Follow.Problem The timetable here stays as it was until the file can be read again.</small>
+        }
+        else
+        {
+            <b>@(Follow.Checked is { } ch ? "Looked " + W.Clock.Describe(ch) : "Starting")</b>
+            <small>@(Follow.FileSaved is { } fs ? "Its file was last saved " + W.Clock.Describe(fs) + ". " : "")@(Follow.BroughtIn is { } bi ? $"Last brought in {W.Clock.Describe(bi)}: {Cccc.Web.Features.Week.Looks.Count(Follow.LastChanges, "thing")} changed." : "Nothing has changed there since this app started.")</small>
+        }
     </div>
 </div>
 <p class="hint">The nightly backup copies the whole store while the app runs; the runbook in <code>docs/deployment</code> has the steps.</p>

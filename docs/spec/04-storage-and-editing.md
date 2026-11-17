@@ -84,6 +84,30 @@ command (`cccc backup <path>`), so the existing rclone off-site sync keeps worki
   overwrites a project in place.
 - A file of a newer format than this build understands is refused, in the same words as today.
 
+## Following the current app
+
+Optional, and off unless `Follow:File` names a file. The rebuild then keeps **one** timetable the same
+as the current app's own `.cccc`, so the two can be used side by side with nothing typed twice:
+
+- Every `Follow:EverySeconds` (30) the file's time and length are looked at. When they change, it is
+  read whole, brought in through the same import as *Bring in a file…*, and the difference from the
+  timetable here is committed as **one batch by *the current app*** (recorded under a sign-in name no
+  account can have), so History and Now's *Changed since yesterday* see the current app's changes like
+  anybody's. Nothing is written, and nobody told, when nothing differs. That rests on the import
+  bringing one file in as one timetable every time, ids and all, which a test holds.
+- That batch skips the week lock, because the current app keeps its own, and goes on nobody's undo.
+- The first look creates the timetable (*The current app's timetable*) and opens it for everybody. Its
+  name here is this app's own, and following never touches it.
+- A file that is missing, unreadable or of a newer format changes nothing: the timetable stays as it
+  was and the problem is shown to administrators until a good read clears it. The log is told only the
+  kind of failure, never the old loader's words, which are made from the file. Whatever goes wrong, the
+  app keeps running.
+- **Nothing in that timetable is changed here** ([`05`](05-access-and-privacy.md)): the next save over
+  there would undo it.
+- On the laptop the file is a copy made by a root script that only reads the current app's folder,
+  which is root's alone; the copy is renamed into place whole, as the current app saves (the runbook's
+  step 8).
+
 ## The clock
 
 `Cccc.Domain` never reads the clock. Every rule that depends on today (locking, missing registers,

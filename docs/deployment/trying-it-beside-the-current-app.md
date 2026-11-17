@@ -4,6 +4,8 @@
 port (8080), its nginx site, its data (`/srv/cccc`), its nightly update and its backup. The rebuild
 gets a container, a port, a folder and a backup of its own, and is reached only through an SSH tunnel
 from Craig's own PC: it is not on nginx, not on the tailnet's 443, and not on the school network.
+Step 8, which is optional, lets it follow the current app's timetable by reading a copy of its file; it
+never writes to anything of the current app's.
 
 | | Current app | Rebuild |
 |---|---|---|
@@ -73,6 +75,10 @@ file is not touched. The import report lists counts, never names.
 **This is the school's real data, with students in it.** It lives only in `/srv/cccc-next` on the
 laptop and in that folder's backup below; it never goes into the repository or a chat.
 
+A timetable brought in this way is a copy as it was that day, and drifts from the school's real week
+as soon as anything changes in the current app. To keep one the same as the current app instead, use
+step 8, which brings the timetable in by itself; this step is then not needed.
+
 ## 6. Back it up every night
 
 `laptop/cccc-next-backup.sh` copies the whole store with the app running, keeps fourteen nights, and
@@ -124,10 +130,79 @@ ssh -t cccc-ts "sudo docker rm -f cccc-next; sudo docker run -d --name cccc-next
 
 No email names a student, and the log records only how many reminders went out.
 
+## 8. Follow the current app's timetable (optional)
+
+With this, the rebuild keeps one timetable the same as the current app's own file: each save there is
+here within a minute, as one change by *the current app*, so Now (with its *Changed since yesterday*),
+the plan and every other view show the school's real week with nothing typed twice. **That timetable
+is changed in the current app, never here**: the rebuild offers nothing to change on it and says so
+wherever somebody would try, registers included, because whatever was saved here would be undone by the
+next save over there.
+
+**Nothing about the current app changes.** A small script copies its file every 15 seconds into the
+rebuild's own folder, reading it only; its systemd unit makes the whole disk read-only to it except
+`/srv/cccc-next`. The current app's file is never written, renamed, locked or given new permissions.
+
+First, the file's name. The current app names it after the timetable:
+
+```powershell
+ssh -t cccc-ts "sudo ls /srv/cccc/projects"
+```
+
+Write that name down for the copier, in a file only root can read:
+
+```powershell
+ssh -t cccc-ts "sudo install -m 600 /dev/null /etc/cccc-next-follow.env; sudo nano /etc/cccc-next-follow.env"
+```
+
+and in it, one line, with the name from the list in place of `NAME` (keep the quotes; a name with
+spaces is fine):
+
+```
+FOLLOW_FILE="/srv/cccc/projects/NAME.cccc"
+```
+
+Then install and start the copier. `current.cccc` owned by `1654` in the last line means it copied:
+
+```powershell
+ssh -t cccc-ts "sudo install -m 755 /opt/cccc-next-src/docs/deployment/laptop/cccc-next-follow.sh /usr/local/bin/; sudo install -m 644 /opt/cccc-next-src/docs/deployment/laptop/cccc-next-follow.service /etc/systemd/system/; sudo systemctl daemon-reload; sudo systemctl enable --now cccc-next-follow.service; sleep 3; sudo ls -l /srv/cccc-next/follow"
+```
+
+And recreate the container with following switched on (add `--env-file /srv/cccc-next/mail.env` before
+`cccc-next` at the end if step 7 is done):
+
+```powershell
+ssh -t cccc-ts "sudo docker rm -f cccc-next; sudo docker run -d --name cccc-next --restart unless-stopped -p 127.0.0.1:8090:8080 -v /srv/cccc-next:/data -e Follow__File=/data/follow/current.cccc cccc-next; sleep 10; curl -s http://127.0.0.1:8090/healthz"
+```
+
+The first look brings the timetable in as a new one called *The current app's timetable* and opens it
+for everybody. Administration ▸ System's *Following the current app* card says when it last looked and
+what came across; if the file cannot be read it turns amber and says why, and the timetable stays as it
+was until it can. If the current app's timetable is ever renamed, its file's name changes with it:
+change `/etc/cccc-next-follow.env` and run `ssh -t cccc-ts "sudo systemctl restart cccc-next-follow.service"`.
+
+**The followed timetable holds the school's real data, students included**, like one brought in at
+step 5, and so does the copy in `/srv/cccc-next/follow`. Both stay on the laptop. Erasing a person has
+one more step while following: see below.
+
+To stop following, stop the copier, delete its copy, and recreate the container as in step 3, without
+`-e Follow__File=…`. The timetable stays, as an ordinary one that can be changed here:
+
+```powershell
+ssh -t cccc-ts "sudo systemctl disable --now cccc-next-follow.service; sudo rm -f /srv/cccc-next/follow/current.cccc /etc/cccc-next-follow.env"
+```
+
 ## Erasing a person
 
 Administration ▸ Erase a person takes the name out of every timetable and every stored copy inside the
-app. The nightly copies taken before that still hold it. To finish an erasure request, delete them and
+app. Somebody already taken off the timetable in the last 30 days is still named in its stored history,
+so they are listed too, under *Taken off in the last 30 days*.
+
+**While following the current app (step 8), erase them in the current app first.** Within a minute they
+are off the followed timetable here too, and the copier's copy of the file no longer holds them; then
+erase them here, under *Taken off in the last 30 days*, to take their name out of this app's history.
+
+The nightly copies taken before that still hold it. To finish an erasure request, delete them and
 let the next night's backup take a clean copy:
 
 ```powershell
@@ -139,7 +214,7 @@ If the off-site line in the backup script is switched on, delete that remote's o
 ## Taking it away again
 
 ```powershell
-ssh -t cccc-ts "sudo systemctl disable --now cccc-next-backup.timer; sudo docker rm -f cccc-next"
+ssh -t cccc-ts "sudo systemctl disable --now cccc-next-backup.timer; sudo systemctl disable --now cccc-next-follow.service 2>/dev/null; sudo rm -f /etc/cccc-next-follow.env; sudo docker rm -f cccc-next"
 ```
 
 That stops it and leaves `/srv/cccc-next` in place. Deleting that folder deletes the rebuild's

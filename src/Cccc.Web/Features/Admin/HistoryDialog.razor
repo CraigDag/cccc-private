@@ -1,9 +1,18 @@
 @inject ProjectStore Store
 @inject LiveProjects Live
 @inject Dialogs D
-@{ var history = Store.History(ProjectId); }
+@inject FollowStatus Follow
+@{
+    var history = Store.History(ProjectId);
+    // A timetable that follows the current app is put back there: here, the next save over there would undo it.
+    bool held = Follow.On && Follower.FollowedId(Store) == ProjectId;
+}
 <DialogFrame Title="History" Class="wide">
     <p class="hint">Every change, newest first, kept for 30 days. Putting an earlier moment back is itself a new change, so nothing here is ever lost by doing it. A week that has ended is not changed by it.</p>
+    @if (held)
+    {
+        <p class="notice" data-testid="following">This timetable follows the current app, so an earlier moment is put back there, not here. Each change brought across is one line below.</p>
+    }
     @if (_error is not null)
     {
         <p class="form-error">@_error</p>
@@ -13,7 +22,10 @@
         {
             <li class="list-row" style="cursor:default">
                 <span class="name">@h.Label <small class="muted">· @W.NameOf(h.By), @W.Clock.Describe(h.At) · @h.Changes thing@(h.Changes == 1 ? "" : "s")</small></span>
-                <button type="button" class="btn quiet" @onclick="() => PutBack(h.Sequence)">Put back as it was after this</button>
+                @if (!held)
+                {
+                    <button type="button" class="btn quiet" @onclick="() => PutBack(h.Sequence)">Put back as it was after this</button>
+                }
             </li>
         }
     </ul>
@@ -25,6 +37,7 @@
 
     private void PutBack(long seq)
     {
+        if (Follow.On && Follower.FollowedId(Store) == ProjectId) { _error = FollowWords.Refusal; return; }
         try
         {
             Live.Get(ProjectId).PutBack(seq, W.Access.By);

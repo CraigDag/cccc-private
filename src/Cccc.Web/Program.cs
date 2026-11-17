@@ -61,6 +61,21 @@ builder.Services.AddSingleton(sp =>
     return new LiveProjects(store, () => clock.Now, () => clock.Today);
 });
 builder.Services.AddSingleton<ProjectChoice>();
+// Following the current app is off unless Follow__File names its file (docs/deployment, step 8). The
+// path is never logged: the current app names a timetable's file after the timetable.
+var followFile = builder.Configuration["Follow:File"];
+var follow = new FollowStatus { On = !string.IsNullOrWhiteSpace(followFile) };
+builder.Services.AddSingleton(follow);
+if (follow.On)
+{
+    builder.Services.AddSingleton(sp =>
+    {
+        var clock = sp.GetRequiredService<SchoolClock>();
+        return new Follower(followFile!, store, sp.GetRequiredService<LiveProjects>(), sp.GetRequiredService<ProjectChoice>(),
+            follow, () => clock.Now, () => clock.Today, sp.GetRequiredService<ILogger<Follower>>());
+    });
+    builder.Services.AddHostedService<FollowService>();
+}
 builder.Services.AddSingleton<PdfGate>();
 builder.Services.AddSingleton<PrintRequests>();
 builder.Services.AddHostedService<Maintenance>();

@@ -3,6 +3,7 @@
 @inject LiveProjects Live
 @inject Dialogs D
 @inject IJSRuntime JS
+@inject FollowStatus Follow
 @using Cccc.Legacy
 @using Cccc.Domain.Sample
 @using Cccc.Web.Features.Week
@@ -10,6 +11,7 @@
     var projects = Store.List();
     var deleted = Store.List(includeDeleted: true).Where(p => p.Deleted is not null).ToList();
     var open = Choice.OpenId();
+    var followed = Follow.On ? Follower.FollowedId(Store) : null;
 }
 <div class="section">
     <div class="bar">
@@ -46,12 +48,12 @@
 
 <div class="section">
     <h2>Timetables</h2>
-    <p class="hint">Everybody sees the one marked open. Signing in opens it.</p>
+    <p class="hint">Everybody sees the one marked open. Signing in opens it.@(followed is null ? "" : " The one that follows the current app is changed there, and is the same here within a minute.")</p>
     <ul class="list" data-testid="projects">
         @foreach (var p in projects)
         {
             <li class="list-row" style="cursor:default; flex-wrap:wrap">
-                <span class="name"><b>@p.Name</b> @if (p.Id == open) { <span class="badge" style="border-color:var(--accent);color:var(--accent)">Open for everybody</span> }<br />
+                <span class="name"><b>@p.Name</b> @if (p.Id == open) { <span class="badge" style="border-color:var(--accent);color:var(--accent)">Open for everybody</span> }@if (p.Id == followed) { <span class="badge" data-testid="project-following">Follows the current app</span> }<br />
                     <small class="muted">Last changed @W.Clock.Describe(p.LastChanged) by @W.NameOf(p.LastChangedBy)</small></span>
                 @if (p.Id != open)
                 {
@@ -60,7 +62,7 @@
                 <button type="button" class="btn quiet" @onclick="() => D.Show<HistoryDialog>(new Dictionary<string, object?> { [nameof(HistoryDialog.ProjectId)] = p.Id })">History…</button>
                 <button type="button" class="btn quiet" @onclick="() => D.Show<RenameDialog>(new Dictionary<string, object?> { [nameof(RenameDialog.ProjectId)] = p.Id })">Rename…</button>
                 <a class="btn quiet" href="@($"download/project/{p.Id}")" target="_blank" rel="noopener" data-testid="project-download">Download</a>
-                @if (p.Id != open)
+                @if (p.Id != open && p.Id != followed)
                 {
                     <button type="button" class="btn quiet danger" @onclick="() => Delete(p)">Delete</button>
                 }

@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using Cccc.Domain;
+using Cccc.Domain.Editing;
 using Cccc.Domain.Model;
 using Cccc.Domain.Rules;
 using Old = CCCCScheduler.Models;
@@ -142,6 +143,42 @@ public class ImportTests
 
         // And the registers came across onto the right weeks' sessions.
         Assert.Equal(p.Building.Sessions.Sum(s => s.Attendance.Count), t.Registers.Count);
+    }
+
+    /// <summary>
+    /// Following the current app reads its file again after every save there, so one file must come in as
+    /// one timetable every time, ids and all, whatever the date: an id made up afresh on each read would
+    /// make every save look like the whole timetable deleted and added again.
+    /// </summary>
+    [Fact]
+    public void TheSameFileComesInAsTheSameTimetableEveryTime()
+    {
+        var p = OldProject();
+        var b = p.Building;
+        var branch = new Old.Branch { Name = "Aerial" };
+        b.Branches.Add(branch);
+        b.Disciplines.Add(new Old.Discipline { Name = "Trapeze", BranchId = branch.Id });
+        var area = new Old.Area { Name = "Physical" };
+        b.Areas.Add(area);
+        var acro = new Old.ClassEntry { Name = "Acro", AreaId = area.Id };
+        b.Classes.Add(acro);
+        b.TimeRules.Add(new Old.TimeRule { Name = "Preparation", ClassIds = [acro.Id] });
+        b.Strands.Add(new Old.Strand { Name = "BA" });
+        p.Events.Add(new Old.SchoolEvent { Title = "Show", Date = ThisMonday.AddDays(3) });
+        var bytes = CCCCScheduler.Services.ProjectPackage.SaveToBytes(p, savedBy: "test");
+
+        var (t, _) = LegacyImport.FromBytes(bytes, Today);
+        var again = LegacyImport.FromBytes(bytes, Today.AddDays(9)).Timetable;
+        Assert.Equal(ModelJson.Serialise(t), ModelJson.Serialise(again));
+        // Every kind came across, so the comparison above was about each of them.
+        Assert.All(new (string Kind, int Count)[]
+        {
+            ("sessions", t.Sessions.Count), ("registers", t.Registers.Count), ("semesters", t.Semesters.Count),
+            ("closures", t.Closures.Count), ("absences", t.Absences.Count), ("events", t.Events.Count),
+            ("classes", t.Classes.Count), ("time rules", t.TimeRules.Count), ("areas", t.Areas.Count),
+            ("disciplines", t.Disciplines.Count), ("branches", t.Branches.Count), ("programmes", t.Programmes.Count),
+            ("groups", t.Groups.Count), ("students", t.Students.Count), ("facilitators", t.Facilitators.Count), ("rooms", t.Rooms.Count),
+        }, k => Assert.True(k.Count > 0, $"No {k.Kind} came across."));
     }
 
     private static Old.ProjectFile OldProject()

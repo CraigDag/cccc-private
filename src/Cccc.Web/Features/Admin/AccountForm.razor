@@ -1,6 +1,6 @@
 @inject AccountDirectory Accounts
 @inject Dialogs D
-<DialogFrame Title="@(_old is null ? "Add an account" : _old.Display)" OnOk="Save" OkEnabled="@(_why is null)">
+<DialogFrame ChangesTheTimetable="false" Title="@(_old is null ? "Add an account" : _old.Display)" OnOk="Save" OkEnabled="@(_why is null)">
     <ChildContent>
         @if (_old is null)
         {

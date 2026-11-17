@@ -78,6 +78,45 @@ public class ProjectFileTests
         Assert.Equal(t.Students.Count, after.Students.Count);   // the id stays, so counts still add up
     }
 
+    /// <summary>
+    /// Somebody taken off the timetable is still named in the stored changes for 30 days, so erasure has to
+    /// be able to reach them; somebody still on it, or already erased, is not "taken off".
+    /// </summary>
+    [Fact]
+    public void ThePeopleTakenOffButStillNamedInTheHistoryAreFoundForErasure()
+    {
+        var t = SampleSchool.Create(Day, Day);
+        var students = t.Students.OrderBy(s => s.Surname, Cccc.Domain.NameOrder.Comparer).ToList();
+        var (gone, erased) = (students[0], students[1]);
+        var coach = t.Facilitators.OrderBy(f => f.Name, Cccc.Domain.NameOrder.Comparer).First();
+        var history = new List<Change>();
+        var now = t;
+        foreach (var build in new Func<Timetable, Batch>[]
+        {
+            x => Edits.RemoveStudent(x, gone.Id, Day),
+            x => Edits.RemoveFacilitator(x, coach.Id, Day),
+            x => Edits.RemoveStudent(x, erased.Id, Day),
+        })
+        {
+            var batch = build(now);
+            history.Add(new Change(history.Count + 1, "admin", DateTimeOffset.UnixEpoch, batch));
+            now = Apply.Batch(now, batch);
+        }
+        // The third change as it is stored after erasing that student.
+        var scrub = ProjectFiles.Eraser(erased.Id);
+        history[2] = history[2] with
+        {
+            Batch = history[2].Batch with { Ops = [.. history[2].Batch.Ops.Select(o => o with { Before = o.Before is null ? null : System.Text.Json.Nodes.JsonNode.Parse(scrub(o.Before.ToJsonString())) })] },
+        };
+
+        var found = FormerPeople.In(history, now);
+
+        Assert.Equal(new[] { (true, gone.Id, gone.Name), (false, coach.Id, coach.Name) }.OrderBy(x => x.Item3, Cccc.Domain.NameOrder.Comparer),
+            found.Select(f => (f.Student, f.Id, f.Name)));
+        // Put back on the timetable, they are listed with everybody on it instead.
+        Assert.DoesNotContain(FormerPeople.In(history, now with { Students = now.Students.Put(gone) }), f => f.Id == gone.Id);
+    }
+
     [Fact]
     public void TheEraserLeavesAFileWithoutThePersonByteForByte()
     {

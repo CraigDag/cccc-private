@@ -54,5 +54,8 @@ were stamped from the pattern, and anything that could not be placed — by coun
 - The old app's test fixtures for schema migrations are copied with the legacy code.
 - **A round-trip test**: build a project in the old model, import it, and check every week's running
   sessions, clashes, hours and registers match what the old resolver gives for the same week.
+- **One file comes in as one timetable every time**, ids and all, whatever the date: following the
+  current app reads its file again after every save, and an id made up afresh on each read would make
+  every save look like the whole timetable deleted and added again.
 - **The upgrade trial on the live file is Craig's**, in a scratch folder on his machine, never in this
   repository.

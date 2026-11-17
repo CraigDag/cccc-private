@@ -179,6 +179,7 @@ body:has(.shell, .loading:not(.boot)) .boot { display: none; }
     border-top: 1px solid var(--divider); font-size: 12px; color: var(--text-muted); overflow: hidden; background: var(--window);
 }
 .status-item { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status-item.warn { color: var(--warning); font-weight: 600; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--text-quiet); }
 .dot.live { background: var(--accent); }
 

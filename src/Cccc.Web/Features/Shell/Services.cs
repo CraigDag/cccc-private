@@ -82,6 +82,8 @@ public sealed class Workspace(Access access, LiveProject? project, SchoolClock c
     /// <summary>The name a person reads for whoever made a change (changes are recorded by login).</summary>
     public string NameOf(string by)
     {
+        // Before any account is looked up: a sign-in name is trimmed, and this one starts with a space.
+        if (by == Follower.By) return Follower.Display;
         if (string.Equals(by, Access.By, StringComparison.OrdinalIgnoreCase)) return "you";
         return accounts.FindByLogin(by)?.Display ?? by;
     }
@@ -92,7 +94,9 @@ public sealed class Workspace(Access access, LiveProject? project, SchoolClock c
     /// </summary>
     public bool Commit(Func<Timetable, Batch> build, bool announce = true)
     {
-        if (Project is null || !Access.MayEditSomething) return false;
+        if (Project is null) return false;
+        if (Access.Following) { toasts.Warn(FollowWords.Refusal); return false; }
+        if (!Access.MayEditSomething) return false;
         try
         {
             var c = Project.Commit(t => Permitted(build(t)), Access.By);

@@ -14,6 +14,7 @@ else
         <h1>People &amp; places</h1>
         <TypedText @key="k.Slug" Value="@_search" ValueChanged="s => _search = s" Placeholder="Find…" Label="Find in this list" Class="find" data-testid="data-search" />
     </div>
+    <FollowingNotice />
     <nav class="tabs" aria-label="Kinds of data">
         @foreach (var kind in Kinds.All)
         {

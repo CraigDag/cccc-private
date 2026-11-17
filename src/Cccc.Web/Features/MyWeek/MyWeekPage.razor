@@ -24,6 +24,7 @@ else
     <WeekNav Monday="_view.Monday" Today="W.Today" Title="@("My week, " + Me.Name)" Go="d => _view.GoTo(d)">
         <a class="btn" href="@Prints.Link("mine", _view, W.Access, Me.Id)" target="_blank" rel="noopener">Print my week</a>
     </WeekNav>
+    <FollowingNotice OnlyWhenBehind="true" />
     <div class="cards">
         <div class="card @(Me.MaxWeeklyHours is { } max && split.Total > max ? "warn" : "")">
             <small>Hours this week</small><b>@Cccc.Domain.Week.Duration(split.Total)</b>

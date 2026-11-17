@@ -1,0 +1,19 @@
+[Unit]
+Description=Copy the current CCCC Scheduler's timetable file, read only, for the rebuild to follow
+After=local-fs.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/cccc-next-follow.env
+ExecStart=/usr/local/bin/cccc-next-follow.sh
+Restart=always
+RestartSec=30
+# Everything on disk is read-only to it except the rebuild's own folder, so nothing it does can write
+# to the current app's files, whatever the script says.
+ProtectSystem=strict
+ReadWritePaths=/srv/cccc-next
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

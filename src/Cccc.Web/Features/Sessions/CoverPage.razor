@@ -20,6 +20,7 @@
         .OrderBy(x => x.Name, NameOrder.Comparer).ToList();
 }
 <WeekNav Monday="V.Monday" Today="W.Today" Title="Cover" Go="d => V.GoTo(d)" />
+<FollowingNotice />
 <p class="hint">A class needs cover when every facilitator on it is away. Cover stands in for whoever is away and leaves a co-teacher on it. Press a name to give them the class; Undo takes it back.</p>
 
 <h2 class="now-section">Needs cover · @needed.Count</h2>

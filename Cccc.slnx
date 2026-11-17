@@ -5,6 +5,9 @@
     <Project Path="src/Cccc.Store/Cccc.Store.csproj" />
     <Project Path="src/Cccc.Web/Cccc.Web.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/OldFormatSchool/OldFormatSchool.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Cccc.Domain.Tests/Cccc.Domain.Tests.csproj" />
     <Project Path="tests/Cccc.Legacy.Tests/Cccc.Legacy.Tests.csproj" />
