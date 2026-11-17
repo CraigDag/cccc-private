@@ -40,6 +40,7 @@ else
     private Workspace? _ws;
     private LiveProject? _subscribed;
     private Timer? _presence;
+    private Timer? _minute;
 
     private bool IsAdministrationPage => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("admin", StringComparison.Ordinal);
 
@@ -49,6 +50,18 @@ else
         Choice.Moved += OnProjectMoved;
         await BuildAsync();
         _presence = new Timer(_ => InvokeAsync(() => { if (_ws is { Project: { } p }) p.Here(_ws.Access.Display); }), null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
+        _minute = new Timer(_ => InvokeAsync(() => { StateHasChanged(); ArmMinute(); }), null, Timeout.Infinite, Timeout.Infinite);
+        ArmMinute();
+    }
+
+    // What is on now is worked out on the server, so every page is drawn again as each minute turns: a
+    // screen left open all day keeps up with the clock beside it, and with the date after midnight.
+    // Copenhagen is a whole number of hours from UTC, so its minutes turn when UTC's do.
+    private void ArmMinute()
+    {
+        var into = TimeSpan.FromTicks(Clock.Now.UtcTicks % TimeSpan.TicksPerMinute);
+        try { _minute?.Change(TimeSpan.FromMinutes(1) - into + TimeSpan.FromMilliseconds(250), Timeout.InfiniteTimeSpan); }
+        catch (ObjectDisposedException) { }
     }
 
     private async Task BuildAsync()
@@ -87,6 +100,7 @@ else
         Choice.Moved -= OnProjectMoved;
         if (_subscribed is not null) _subscribed.ChangedEvent -= OnChanged;
         _presence?.Dispose();
+        _minute?.Dispose();
         if (_ws is { Project: { } p }) p.Left(_ws.Access.Display);
     }
 }

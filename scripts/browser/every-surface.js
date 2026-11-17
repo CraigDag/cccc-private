@@ -151,6 +151,10 @@ const log = (...a) => console.log(...a);
     await page.keyboard.press('Enter');
     await page.waitForSelector('[data-testid=focus-chip]');
     log('     ', await page.locator('[data-testid=plan-title]').textContent(), '·', await page.locator('[data-testid=timeline] [data-testid=row]').count(), 'rows');
+    // On this week the line under the name says where they are this minute, whatever the hour it runs at.
+    const now = (await page.locator('[data-testid=focus-now]').textContent({ timeout: 4000 })).replace(/\s+/g, ' ').trim();
+    if (!/^Now(Away|Free until \d\d:\d\d|Nothing more today|.+ until \d\d:\d\d)/.test(now)) throw new Error('the line under the name reads "' + now + '"');
+    log('     ', now);
     await page.click('[data-testid=focus-chip] button');
     await page.waitForSelector('[data-testid=focus-chip]', { state: 'detached' });
   });

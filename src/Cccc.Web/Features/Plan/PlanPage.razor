@@ -30,6 +30,10 @@
                     <span class="badge" title="A week that has ended does not change, except its registers" data-testid="locked">Ended · read only</span>
                 }
             </div>
+            @if (V.Focus is { } focused && Cccc.Domain.Week.MondayOf(W.Today) == V.Monday)
+            {
+                <FocusNow Focus="focused" Choose="Choose" />
+            }
         </div>
         <div class="plan-tools">
             @if (editable)

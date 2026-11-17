@@ -1,5 +1,6 @@
 // A coach's day: what Now says they owe, My week agreeing with it, everybody's registers one untick
-// away, a class whose facilitator is away saying so, and the pages that are not theirs saying that.
+// away, a class whose facilitator is away saying so, the pages that are not theirs saying that, and a
+// Now left open in another tab keeping up with the clock.
 const { chromium } = require('playwright');
 const B = process.env.CCCC_PREVIEW || 'http://127.0.0.1:5299';
 let failed = 0;
@@ -15,6 +16,14 @@ async function step(what, fn) { try { await fn(); log('OK   ' + what); } catch (
   await page.fill('[data-testid=signin-passphrase]', 'northlight coach');
   await page.click('[data-testid=signin-submit]');
   await page.waitForSelector('[data-testid=now-page]');
+  // A second tab left on Now from the start, as a screen on the office wall would be. By the end it must
+  // have been drawn again for a later minute without being reloaded.
+  const wall = await page.context().newPage();
+  await wall.goto(B + '/');
+  await wall.waitForSelector('[data-testid=now-page]');
+  const drawnAt = await wall.getAttribute('[data-testid=now-page]', 'data-minute');
+  await wall.evaluate(() => { window.__leftOpen = true; });
+  const openedAt = Date.now();
 
   await step('Now says how many registers from earlier days are theirs, and My week lists the same', async () => {
     const text = await page.locator('[data-testid=need-earlier]').textContent({ timeout: 8000 });
@@ -52,6 +61,12 @@ async function step(what, fn) { try { await fn(); log('OK   ' + what); } catch (
     await page.waitForSelector('text=Only an administrator can change');
     await page.goto(B + '/reports');
     await page.waitForSelector('text=Reports are for administrators');
+  });
+
+  await step('a Now left open is drawn again as the minute turns, without a reload', async () => {
+    await wall.waitForFunction(m => document.querySelector('[data-testid=now-page]')?.dataset.minute !== m, drawnAt, { timeout: Math.max(2000, 75000 - (Date.now() - openedAt)) });
+    if (!(await wall.evaluate(() => window.__leftOpen === true))) throw new Error('the tab was reloaded rather than drawn again');
+    log('     ', 'drawn for', drawnAt, 'then', await wall.getAttribute('[data-testid=now-page]', 'data-minute'));
   });
 
   log('errors', JSON.stringify(errors));

@@ -9,8 +9,7 @@
 @using Cccc.Web.Features.Events
 @if (F.IsOpen)
 {
-    var hits = FindIndex.Search(W.T, _q, W.Access.MayEdit, W.Access.MayUseAdminTools);
-    _hits = hits;
+    var hits = Hits();
     if (_at >= hits.Count) _at = Math.Max(0, hits.Count - 1);
     <div class="find-backdrop" @onclick="F.Close" data-testid="find-backdrop"></div>
     <section class="finder" role="dialog" aria-modal="true" aria-label="Find" data-testid="find" @ref="_panel">
@@ -45,7 +44,6 @@
     [CascadingParameter] public Workspace W { get; set; } = default!;
     private string _q = "";
     private int _at;
-    private IReadOnlyList<FindHit> _hits = [];
     private ElementReference _panel;
     private bool _trap;
 
@@ -72,11 +70,17 @@
         _at = 0;
     }
 
+    // The keys act on what has been typed, never on the list last drawn: typing quickly can run ahead of
+    // the screen, and Enter straight after "Studio B" opened Studio A, which led the list for "Studio".
+    private IReadOnlyList<FindHit> Hits() => FindIndex.Search(W.T, _q, W.Access.MayEdit, W.Access.MayUseAdminTools);
+
     private void OnKey(KeyboardEventArgs e)
     {
-        if (e.Key == "ArrowDown") _at = Math.Min(_at + 1, Math.Max(0, _hits.Count - 1));
+        if (e.Key is not ("ArrowDown" or "ArrowUp" or "Enter")) return;
+        var hits = Hits();
+        if (e.Key == "ArrowDown") _at = Math.Min(_at + 1, Math.Max(0, hits.Count - 1));
         else if (e.Key == "ArrowUp") _at = Math.Max(0, _at - 1);
-        else if (e.Key == "Enter" && _at < _hits.Count) Go(_hits[_at]);
+        else if (_at < hits.Count) Go(hits[_at]);
     }
 
     private static string Badge(FindHit h) => h.Kind switch

@@ -31,7 +31,7 @@
     int day1 = Math.Max(18 * 60, happening.Select(o => (PlanModel.Minutes(o.End) + 59) / 60 * 60).DefaultIfEmpty(18 * 60).Max());
 }
 
-<div class="now" data-testid="now-page">
+<div class="now" data-testid="now-page" data-minute="@Cccc.Domain.Week.Hm(new TimeOnly(local.Hour, local.Minute))">
     <header class="now-head">
         <h1 class="display"><span>@PlanPage.Long(today)</span> <span class="now-clock" data-now-clock>@Cccc.Domain.Week.Hm(new TimeOnly(local.Hour, local.Minute))</span></h1>
         <div class="muted">Week @Cccc.Domain.Week.IsoNumber(today) · @(semester?.Name ?? "Outside every semester")

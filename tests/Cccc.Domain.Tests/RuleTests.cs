@@ -482,3 +482,82 @@ public class TeachingTests
         Assert.Empty(Teaching.At(b.T, Monday.AddDays(1), new TimeOnly(9, 0), new TimeOnly(17, 0)));
     }
 }
+
+public class WhereaboutsTests
+{
+    private static TimeOnly At(string hm) => TimeOnly.Parse(hm);
+
+    [Fact]
+    public void AStudentIsInTheClassTheyAreOnUntilItEndsAndThenFreeUntilTheNext()
+    {
+        var b = new Build();
+        var g = b.Group("BA");
+        var other = b.Group("Prep");
+        var ana = b.Student("Ana", g);
+        var hall = b.Room("Hall");
+        var morning = b.Session(Monday, "09:00", "11:00", Audience.ForGroup(g.Id), hall);
+        b.Session(Monday, "12:00", "13:00", Audience.Everyone);                                    // lunch: on for everybody, nobody's class
+        var afternoon = b.Session(Monday, "13:00", "14:00", Audience.ForGroup(g.Id));
+        b.Session(Monday, "10:00", "11:00", Audience.ForGroup(other.Id));                          // not hers
+        var cancelled = b.Session(Monday, "11:00", "12:00", Audience.ForGroup(g.Id));
+        b.Put(cancelled with { Cancelled = true });
+
+        var w = Where.Student(b.T, ana.Id, Monday, At("10:30"));
+        Assert.Equal(morning.Id, w.Now?.O.Session.Id);
+        Assert.Equal(afternoon.Id, w.Next?.O.Session.Id);   // the cancelled class and lunch in between are not hers
+        Assert.False(w.Away);
+        var gap = Where.Student(b.T, ana.Id, Monday, At("11:00"));   // a class ending at the moment is over
+        Assert.Null(gap.Now);
+        Assert.Equal(afternoon.Id, gap.Next?.O.Session.Id);
+        Assert.Null(Where.Student(b.T, ana.Id, Monday, At("12:15")).Now);   // her week has no lunch on it either
+        var after = Where.Student(b.T, ana.Id, Monday, At("14:00"));
+        Assert.Null(after.Now);
+        Assert.Null(after.Next);
+        Assert.Null(Where.Student(b.T, ana.Id, Monday.AddDays(1), At("10:30")).Now);
+
+        b.T = b.T with { Absences = b.T.Absences.Put(new Absence { Person = AbsentPerson.Student, PersonId = ana.Id, From = Monday, To = Monday, StartTime = At("08:00"), EndTime = At("10:30") }) };
+        Assert.True(Where.Student(b.T, ana.Id, Monday, At("10:29")).Away);
+        Assert.False(Where.Student(b.T, ana.Id, Monday, At("10:30")).Away);   // an absence ending at the moment is over
+    }
+
+    [Fact]
+    public void AFacilitatorIsWhereTheyAreInTheRoomForTheirPartAndNowhereWhenAway()
+    {
+        var b = new Build();
+        var ada = b.Facilitator("Ada");
+        var bo = b.Facilitator("Bo");
+        var cleo = b.Facilitator("Cleo");
+        var shared = b.Session(Monday, "09:00", "12:00", null, null, null, In(ada, from: "10:00", until: "11:00"), In(bo));
+        b.Put(shared with { CoverIds = [cleo.Id] });
+        b.Away(bo, Monday);
+
+        var early = Where.Facilitator(b.T, ada.Id, Monday, At("09:30"));
+        Assert.Null(early.Now);
+        Assert.Equal(At("10:00"), early.Next?.From);   // her part, not the class's start
+        var during = Where.Facilitator(b.T, ada.Id, Monday, At("10:30"));
+        Assert.Equal(shared.Id, during.Now?.O.Session.Id);
+        Assert.Equal(At("11:00"), during.Now?.Until);
+        Assert.Null(Where.Facilitator(b.T, ada.Id, Monday, At("11:30")).Now);
+
+        var away = Where.Facilitator(b.T, bo.Id, Monday, At("09:30"));
+        Assert.True(away.Away);
+        Assert.Null(away.Now);
+        Assert.Equal(shared.Id, Where.Facilitator(b.T, cleo.Id, Monday, At("09:30")).Now?.O.Session.Id);   // cover stands in for Bo
+    }
+
+    [Fact]
+    public void AGroupIsInEveryClassOnForItAndASpaceHoldsWhatIsInIt()
+    {
+        var b = new Build();
+        var g = b.Group("BA");
+        var hall = b.Room("Hall");
+        var gym = b.Room("Gym");
+        var lunch = b.Session(Monday, "12:00", "13:00", Audience.Everyone, gym);
+        var morning = b.Session(Monday, "09:00", "11:00", Audience.ForGroup(g.Id), hall);
+
+        Assert.Equal(lunch.Id, Where.Group(b.T, g.Id, Monday, At("12:15")).Now?.O.Session.Id);   // a whole-building class is on for every group
+        Assert.Equal(morning.Id, Where.Space(b.T, hall.Id, Monday, At("09:00")).Now?.O.Session.Id);
+        Assert.Null(Where.Space(b.T, hall.Id, Monday, At("12:15")).Now);
+        Assert.Equal(lunch.Id, Where.Space(b.T, gym.Id, Monday, At("09:00")).Next?.O.Session.Id);
+    }
+}

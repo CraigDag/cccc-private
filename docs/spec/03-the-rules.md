@@ -46,6 +46,16 @@ old app has a class that carries the reasoning, it is named in brackets so the h
 - **A filed register keeps the roster it was taken against**, so moving a student between groups
   later cannot rewrite who was absent.
 
+## Where somebody is now (`Where`)
+
+- **One question, one implementation**: for a student, facilitator, group or space at a moment, the
+  class they are in and the next one that day, and whether the person is recorded away. Each kind says
+  what is theirs the way the rest of the app does: a student by the roster (so an Everyone class is
+  nobody's), a facilitator by being in the room for their own part (cover included, away not), a
+  group by the class being for it (a whole-building class is), a space by the class being in it.
+- Only classes that happen count, and a class ending as the moment starts is over. A student who is
+  away but on a class's roster is *away from* it, not simply absent from the answer.
+
 ## Registers
 
 - **Three marks**: Present, Excused (away and the school knew), Absent (the default, by saying

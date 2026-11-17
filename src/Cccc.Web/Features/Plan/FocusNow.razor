@@ -1,0 +1,65 @@
+@using Cccc.Web.Features.Week
+@* Where the person, group or space the plan is narrowed to is right now, and what comes next today. It
+   is Where's answer, the one the app has for WHO is in what SPACE and WHEN, so it cannot disagree with
+   the board on Now. Pressing a class chooses it, as pressing its block does. *@
+@{
+    var t = W.T;
+    var local = W.Clock.Local(W.Clock.Now);
+    var at = new TimeOnly(local.Hour, local.Minute);
+    var w = Focus.Kind switch
+    {
+        "student" => Where.Student(t, Focus.Id, W.Today, at),
+        "facilitator" => Where.Facilitator(t, Focus.Id, W.Today, at),
+        "group" => Where.Group(t, Focus.Id, W.Today, at),
+        "room" => Where.Space(t, Focus.Id, W.Today, at),
+        _ => null,
+    };
+}
+@if (w is not null)
+{
+    @* Each part reads on its own, because on a phone the second wraps onto a line of its own. *@
+    <div class="focus-now" data-testid="focus-now">
+        <span class="fn-label">Now</span>
+        @if (w.Now is { } n)
+        {
+            @if (w.Away)
+            {
+                <b class="fn-away">Away from</b>
+            }
+            <button type="button" class="fn-class" style="--c:@(Looks.ColourOf(t, n.O.Session) ?? "var(--rule)")" @onclick="() => Choose.InvokeAsync(n.O.Session.Id)" data-testid="focus-now-class">
+                <b>@Looks.Title(t, n.O.Session)</b>@Place(n) until @Cccc.Domain.Week.Hm(n.Until)
+            </button>
+        }
+        else if (w.Away)
+        {
+            <b class="fn-away">Away</b>
+        }
+        else if (w.Next is { } first)
+        {
+            <span data-testid="focus-now-free">Free until @Cccc.Domain.Week.Hm(first.From)</span>
+        }
+        else
+        {
+            <span data-testid="focus-now-free">@(Focus.Kind == "room" ? "Free for the rest of the day" : "Nothing more today")</span>
+        }
+        @if (w.Next is { } x)
+        {
+            <span class="fn-next" data-testid="focus-now-next">then
+                <button type="button" class="link" @onclick="() => Choose.InvokeAsync(x.O.Session.Id)">@Looks.Title(t, x.O.Session)</button>@(w.Now is null && !w.Away ? "" : " at " + Cccc.Domain.Week.Hm(x.From))@Place(x)</span>
+        }
+        else if (w.Now is not null)
+        {
+            <span class="fn-next">then nothing more today</span>
+        }
+    </div>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter, EditorRequired] public Focus Focus { get; set; } = default!;
+    [Parameter] public EventCallback<Guid> Choose { get; set; }
+
+    // A space says who the class is for; anything else says where it is.
+    private string Place(Stint s) => Focus.Kind == "room"
+        ? " for " + Looks.Audience(W.T, s.O.Session)
+        : Looks.Room(W.T, s.O.Session) is { Length: > 0 } r ? " in " + r : "";
+}

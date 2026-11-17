@@ -42,6 +42,10 @@ Nothing depends on a web font: the laptop may be offline.
 - **On a phone** the places move to a bar along the bottom (Now, Plan, Registers, Find, More).
 - **A quiet foot line**: who else is here and the last change. The version is in the person's menu.
 - **One drawer at a time**, focus trapped, Escape closes, OK before Cancel.
+- **Every page is drawn again as each minute turns**, so a screen left open all day (Now on the office
+  wall) keeps up with the clock beside it, and with the date after midnight.
+- **Find's keys act on what has been typed**, never on the list last drawn: Enter straight after the
+  last letter opens the top match for all of it.
 - **Nothing behind sign-in is drawn until its connection is up** (no prerendering): the page says
   *Opening the timetable…* for that moment. Drawn on the server first, a page looked ready before it
   was, and Plan pressed in that moment on a cold server left Now on the screen at `/plan`.
@@ -78,7 +82,10 @@ is still to come.
 - **Narrowed to one** person, space or group (from Find, or a card on Now), the day timeline's rows
   become that one's days: *Cleo Marchetti's week*, Monday to Friday down the side. The chosen day is
   marked; dragging a class onto another day's row moves it to that day. The chip beside the lens shows
-  who it is narrowed to, and × goes back to everybody.
+  who it is narrowed to, and × goes back to everybody. On this week, a **Now line** under the title
+  says where they are this minute and what is next (*Creation lab in Studio B until 16:00, then
+  nothing more today*; a space says who the class is for; *Free until 15:00, then Aerial*; *Away
+  from …*), from `Where`. Pressing a class there chooses it.
 - The **week grid**: the same rows against days, each cell its classes as short chips; click a day
   heading to open that day.
 - **Issues** (a count beside the lens): clashes, cover needed and missing registers for what is on

@@ -68,6 +68,15 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   takes the whole import back.
 - **Reports download as spreadsheets** (Hours, and Attendance) for whatever weeks are chosen, with
   each time rule in its own column and Æ Ø Å intact in Excel.
+- **Finding somebody says where they are now**: under their name on the plan, the class they are in
+  and until when, then what is next today (*Free until 15:00, then Aerial in Studio A*), or *Away*.
+  A space says what is in it and who for; a group, its class. Press the class to look at it.
+- **A page left open keeps up with the day**: Now on a screen in the office moves on by itself as
+  classes start and end, and turns to the next day after midnight.
+- **Find opens what you typed**, even when Enter comes straight after the last letter (typing *Studio
+  B* quickly used to open Studio A).
+- **Register marks are thumb-sized on a phone**, and a long name no longer pushes them onto a line of
+  their own.
 - **The line at "now"** moves by itself through the day, runs beneath the classes so it never crosses
   their names, and the time sits on the ruler above it.
 - **Bring in a file…** reads the current app's `.cccc` (every version) and says what came across.

@@ -75,6 +75,21 @@ async function check(what, fn) { try { await fn(); ok(what); } catch (e) { bad(w
     await page.waitForFunction(n => document.querySelector('[data-testid=focus-chip]')?.textContent.includes(n), second, { timeout: 4000 });
     console.log('     narrowed to', second, '·', await page.locator('[data-testid=plan-title]').textContent());
   });
+  await check('Enter straight after the last letter opens what was typed', async () => {
+    // No wait between typing and Enter, deliberately: on 17 November "Studio B" then Enter opened Studio A
+    // four times in four, because Enter took the top of the list last drawn, which was still for "Studio".
+    // The narrowing is cleared first so the chip cannot already say Studio B from the step before.
+    await page.click('[data-testid=focus-chip] button');
+    await page.waitForSelector('[data-testid=focus-chip]', { state: 'detached', timeout: 4000 });
+    await page.keyboard.press('Control+k');
+    await page.waitForFunction(() => document.activeElement?.getAttribute('data-testid') === 'find-input', null, { timeout: 2000 });
+    await page.keyboard.type('Studio B');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-testid=find]', { state: 'detached', timeout: 4000 });
+    await page.waitForSelector('[data-testid=focus-chip]', { timeout: 4000 });
+    const chip = (await page.locator('[data-testid=focus-chip]').textContent()).replace('×', '').trim();
+    if (chip !== 'Studio B') throw new Error('typed "Studio B" and Enter, and the plan narrowed to ' + chip);
+  });
   await check('/ opens Find, Escape closes it', async () => {
     await page.click('[data-testid=plan-title]');
     await page.keyboard.press('/');
