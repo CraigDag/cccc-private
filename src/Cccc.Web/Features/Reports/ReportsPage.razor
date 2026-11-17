@@ -130,8 +130,9 @@ else
     [SupplyParameterFromQuery(Name = "from")] public string? FromWeek { get; set; }
     [SupplyParameterFromQuery(Name = "to")] public string? ToWeek { get; set; }
 
+    // The timetable this tab shows, by id: a tab looking at next year downloads next year's.
     private string Csv(string kind) =>
-        $"reports/csv/{kind}?from={DomainWeek.MondayOf(_from):yyyy-MM-dd}&to={DomainWeek.MondayOf(_to).AddDays(6):yyyy-MM-dd}";
+        $"reports/csv/{kind}?project={W.Project?.Id}&from={DomainWeek.MondayOf(_from):yyyy-MM-dd}&to={DomainWeek.MondayOf(_to).AddDays(6):yyyy-MM-dd}";
     private DateOnly _from, _to;
 
     private static readonly (string, string)[] Tabs =

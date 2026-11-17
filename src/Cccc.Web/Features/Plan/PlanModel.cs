@@ -32,8 +32,6 @@ public sealed class PlanView
     /// <summary>Open training is shown until somebody switches it off; it is the class's question, not the audience's.</summary>
     public bool ShowOpen { get; set; } = true;
     public bool IssuesOpen { get; set; }
-    /// <summary>Whether the tab's remembered day has been put back after a reload.</summary>
-    public bool Restored { get; set; }
 
     public event Action? Moved;
 

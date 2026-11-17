@@ -71,7 +71,7 @@
 
     private void Erase()
     {
-        if (W.Project is not { } project || !Guid.TryParse(_who[2..], out var id)) return;
+        if (W.Project is null || !Guid.TryParse(_who[2..], out var id)) return;
         bool student = _who[0] == 's';
         // Somebody still on the timetable is taken off first; somebody taken off already has only history left.
         bool onTimetable = student ? W.T.Students.Contains(id) : W.T.Facilitators.Contains(id);
@@ -79,14 +79,10 @@
         if (!student && W.Access.Account is { } me)
             foreach (var a in Accounts.All().Where(a => a.FacilitatorId == id))
                 Accounts.Update(me.Id, a.Id, a.Display, a.Role, a.Tags, null, a.Suspended);
-        // Every copy held in memory is written down first (a settle writes a snapshot), and only then is
-        // the store rewritten, so nothing writes the name back afterwards.
-        var all = Store.List(includeDeleted: true);
-        foreach (var p in all.Where(p => p.Id != project.Id)) Live.Forget(p.Id);
-        project.Settle();
-        int changed = 0;
-        foreach (var p in all) changed += Store.Rewrite(p.Id, ProjectFiles.Eraser(id));
-        project.ForgetUndo();
+        // Every timetable, deleted ones too, is rewritten through its one live copy under its lock, which then
+        // holds the rewritten history: a tab looking at another timetable keeps the copy it has, and nothing
+        // is left in memory to write the name back.
+        int changed = Live.RewriteEverywhere(ProjectFiles.Eraser(id));
         _formerAt = null;
         OnParametersSet();
         Log.LogWarning("A person was erased; {Count} stored records were rewritten.", changed);

@@ -296,12 +296,11 @@
         if (!first) return;
         _keys = DotNetObjectReference.Create(_gestures);
         await JS.InvokeVoidAsync("ccccShell.keys", _keys);
-        if (!V.Restored)
-        {
-            V.Restored = true;
-            var remembered = await JS.InvokeAsync<string?>("ccccShell.recall", "cccc.day");
-            if (DateOnly.TryParse(remembered, out var d) && V.Day == W.Today && !Cccc.Domain.Week.IsScratch(d)) V.GoTo(d);
-        }
+        // The layout put back the tab's day when the circuit started. The day the plan opens on is what a reload
+        // comes back to, before anything here moves it: looking at another timetable moves the plan before this
+        // page is drawn.
+        try { await JS.InvokeVoidAsync("ccccShell.remember", "cccc.day", V.RealDay.ToString("yyyy-MM-dd")); }
+        catch (JSDisconnectedException) { }
     }
 
     private Task Do(Action a)
@@ -455,7 +454,7 @@
             case { Kind: "facilitator" } f: view.Facilitators.Add(f.Id); break;
             case { Kind: "student" } f: view.Students.Add(f.Id); break;
         }
-        return Prints.Link(kind, view, W.Access);
+        return Prints.Link(kind, view, W);
     }
 
     public void Dispose()

@@ -290,7 +290,6 @@
     private void OpenPlan(DateOnly day, Focus? focus, Guid? chosen)
     {
         V.Start(W.Today);
-        V.Restored = true;
         V.Scale = Scale.Day;
         V.FocusOn(focus);
         if (focus is null) V.Lens = Lens.Spaces;

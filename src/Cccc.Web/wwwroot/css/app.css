@@ -125,8 +125,19 @@ input[type=time] { min-width: 6.5rem; }
 body:has(.shell, .loading:not(.boot)) .boot { display: none; }
 
 .shell { display: grid; grid-template-rows: var(--top) minmax(0, 1fr); height: 100vh; height: 100dvh; }
-.shell-main { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
+.shell-main { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
+/* Rows are placed by name, so the page keeps the middle row whether or not the band is drawn. */
+.shell-main > .looking { grid-row: 1; }
+.shell-main > .shell-page { grid-row: 2; }
+.shell-main > .status { grid-row: 3; }
 .shell-page { overflow: auto; padding: 22px 28px 40px; min-width: 0; }
+/* The tab is looking at a timetable that is not open for everybody (LookingBand). */
+.looking {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 28px;
+    background: var(--accent-soft); border-bottom: 1px solid var(--accent); color: var(--text);
+}
+.looking-text { flex: 1 1 320px; min-width: 0; overflow-wrap: anywhere; }
+.looking .btn { flex: none; max-width: 100%; white-space: normal; text-align: left; }
 
 .top {
     display: flex; align-items: center; gap: 18px; padding: 0 16px 0 18px; min-width: 0;
@@ -794,6 +805,7 @@ details.field summary { cursor: pointer; font-size: 13px; }
     body { font-size: 15px; }
     .shell { grid-template-rows: var(--top) minmax(0, 1fr); }
     .shell-page { padding: 14px 16px 92px; }
+    .looking { padding: 8px 16px; font-size: 14px; }
     .places, .top-right .undo span { display: none; }
     .top { gap: 10px; padding: 0 12px; }
     .find-open { margin-left: auto; }

@@ -203,6 +203,45 @@ public class ProjectStoreTests
     }
 
     [Fact]
+    public void ARewriteThroughTheLiveCopiesLeavesNothingInMemoryToWriteTheOldWordsBack()
+    {
+        using var s = new Scratch();
+        var store = s.Open();
+        var id = store.Create("Year", Timetable.Empty, "ada", s.Now);
+        var gone = store.Create("Gone", Timetable.Empty, "ada", s.Now);
+        var projects = new LiveProjects(store, () => s.Now, () => s.Today);
+        var student = new Student { FirstName = "Zebedee", Surname = "Unique" };
+        // A tab has this one open and keeps hold of it: an administrator looking at it while another erases.
+        var held = projects.Get(id);
+        held.Commit(new Draft(held.State).Put(Collections.Students, student).ToBatch("Added"), "ada");
+        var g = projects.Get(gone);
+        g.Commit(new Draft(g.State).Put(Collections.Students, student).ToBatch("Added"), "ada");
+        store.Delete(gone, s.Now);
+        projects.Forget(gone);
+        Changed? told = null;
+        held.ChangedEvent += c => told = c;
+
+        int changed = projects.RewriteEverywhere(json => json.Replace("Zebedee", "[erased]"));
+
+        // The tab's copy is still the one copy, it says what the store says, and the tab was told.
+        Assert.Same(held, projects.Get(id));
+        Assert.Equal("[erased]", held.State.Students.Single().FirstName);
+        Assert.NotNull(told);
+        Assert.False(held.CanUndo("ada"));
+        // Its next change and snapshot carry none of the old words.
+        held.Commit(new Draft(held.State).Put(Collections.Rooms, new Room { Name = "Studio" }).ToBatch("Added a room"), "ada");
+        held.Settle();
+        Assert.Equal("[erased]", store.Load(id).State.Students.Single().FirstName);
+        var stored = string.Concat(store.ChangesSince(id, 0).SelectMany(c => c.Batch.Ops).Select(o => o.Before?.ToJsonString() + o.After?.ToJsonString()));
+        Assert.Contains("[erased]", stored);
+        Assert.DoesNotContain("Zebedee", stored);
+        Assert.True(changed >= 4, $"{changed} stored values changed");
+        // The deleted one was rewritten too, and let go after.
+        Assert.Null(projects.Loaded(gone));
+        Assert.Equal("[erased]", store.Load(gone).State.Students.Single().FirstName);
+    }
+
+    [Fact]
     public void AStoreOfTheFirstFormatOpensAndOneFromANewerVersionIsRefused()
     {
         using var s = new Scratch();

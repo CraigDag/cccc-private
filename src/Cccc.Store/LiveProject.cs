@@ -244,6 +244,31 @@ public sealed class LiveProject
         }
     }
 
+    /// <summary>
+    /// Rewrites this project's stored history through <paramref name="scrub"/> while nobody can change it,
+    /// and then holds what the rewritten store says, with every undo and redo step dropped (they carry whole
+    /// entities). The copy every tab already holds stays the one copy, so nothing is left in memory to write
+    /// the old words back on the next snapshot. Erasing a person needs it. Returns how many stored values changed.
+    /// </summary>
+    public int Rewrite(Func<string, string> scrub)
+    {
+        int changed;
+        Changed result;
+        lock (_gate)
+        {
+            _store.Snapshot(Id, Sequence, State, _clock());
+            changed = _store.Rewrite(Id, scrub);
+            (State, Sequence) = _store.Load(Id);
+            _undo.Clear();
+            _redo.Clear();
+            LastChange = null;
+            _recent = null;
+            result = new Changed(State, Sequence, "", "", []);
+        }
+        ChangedEvent?.Invoke(result);
+        return changed;
+    }
+
     /// <summary>Writes a snapshot so the next load replays nothing.</summary>
     public void Settle()
     {
@@ -288,10 +313,30 @@ public sealed class LiveProjects(ProjectStore store, Func<DateTimeOffset> clock,
     public LiveProject Get(Guid id) =>
         _open.GetOrAdd(id, key => new Lazy<LiveProject>(() => new LiveProject(store, key, clock, today))).Value;
 
-    /// <summary>Forgets a project's live copy, e.g. after it was deleted or its history rewritten.</summary>
+    /// <summary>The live copy if somebody has it open already; never loads one.</summary>
+    public LiveProject? Loaded(Guid id) => _open.TryGetValue(id, out var p) && p.IsValueCreated ? p.Value : null;
+
+    /// <summary>Forgets a project's live copy, e.g. after it was deleted.</summary>
     public void Forget(Guid id)
     {
         if (_open.TryRemove(id, out var p) && p.IsValueCreated) p.Value.Settle();
+    }
+
+    /// <summary>
+    /// Rewrites every project's stored history, deleted ones too, each through its one live copy and under
+    /// its lock (<see cref="LiveProject.Rewrite"/>). Forgetting a copy and rewriting the store behind it is
+    /// not the same: a tab still holding that copy (an administrator looking at another timetable) would
+    /// write the old words back with its next change. A deleted one is loaded only for this, and let go after.
+    /// </summary>
+    public int RewriteEverywhere(Func<string, string> scrub)
+    {
+        int changed = 0;
+        foreach (var p in store.List(includeDeleted: true))
+        {
+            changed += Get(p.Id).Rewrite(scrub);
+            if (p.Deleted is not null) Forget(p.Id);
+        }
+        return changed;
     }
 
     public void SettleAll()

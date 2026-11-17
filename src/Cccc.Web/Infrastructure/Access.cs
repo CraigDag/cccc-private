@@ -44,6 +44,13 @@ public sealed record Access(Account? Account)
 
     public bool MayManageProjects => Role is Role.Administrator;
 
+    /// <summary>
+    /// May look at, and prepare, a timetable that is not the one open for everybody, in a tab of their own
+    /// (<see cref="ProjectChoice.ShownId"/>): next year's, or a file just brought in. An administrator's, as
+    /// choosing which one is open is; everybody else only ever sees the open one.
+    /// </summary>
+    public bool MayLookAtOtherTimetables => Role is Role.Administrator;
+
     public bool SeesAdministratorsEvents => Role is Role.Administrator;
 
     /// <summary>

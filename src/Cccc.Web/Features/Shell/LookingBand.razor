@@ -1,0 +1,30 @@
+@inject ProjectChoice Choice
+@inject ProjectStore Store
+@inject TabTimetable Tab
+@* Across the top of every page while this tab looks at a timetable that is not the one open for
+   everybody (TabTimetable), so nobody prepares next year believing it is this year, or the other way
+   round. It names both, because "not the open one" is only useful beside which one is. *@
+@if (W is { LookingAway: true })
+{
+    var open = Choice.OpenId() is { } o ? Store.Find(o)?.Name : null;
+    // A file brought in from the open timetable arrives with its name: two names alike say so, rather than
+    // naming the same words twice as if they were two different things.
+    bool alike = open is not null && string.Equals(open.Trim(), W.ProjectName.Trim(), StringComparison.Ordinal);
+    <div class="looking" role="status" data-testid="looking">
+        @if (alike)
+        {
+            <span class="looking-text">This tab is looking at <b>another timetable called <span data-testid="looking-name">@W.ProjectName</span></b>, not the one open for everybody: what changes here stays in it.</span>
+        }
+        else
+        {
+            <span class="looking-text">This tab is looking at <b data-testid="looking-name">@W.ProjectName</b>, which is not open for everybody: what changes here stays in it.@if (open is not null)
+                {
+                    <text> Everybody else is on <b data-testid="looking-open">@open</b>.</text>
+                }</span>
+        }
+        <button type="button" class="btn" @onclick="Tab.Back" data-testid="looking-back">Back to @(open is null || alike ? "the open timetable" : open)</button>
+    </div>
+}
+@code {
+    [CascadingParameter] public Workspace? W { get; set; }
+}

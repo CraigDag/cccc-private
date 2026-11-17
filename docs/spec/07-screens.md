@@ -175,7 +175,26 @@ and curriculum number.
 form is the list, not the button: each semester's week number this year and next (the same, and a line
 saying so when a semester moves 53 weeks to keep it), what carries over, what stays with this year, the
 closures as a tick left off, and the groups arriving as they are. *Make next year* puts the new year in
-the list beside this one, which stays open for everybody until somebody opens the new one ([`03`](03-the-rules.md)).
+the list beside this one, which stays open for everybody until somebody opens the new one ([`03`](03-the-rules.md)),
+and a line above the list offers to look at it.
+
+**Look at it** is on every timetable in Administration ▸ Projects but the one the tab shows. It opens
+that timetable **in this tab only** (`Shell/TabTimetable`; an administrator's, `Access.MayLookAtOtherTimetables`)
+and goes to the plan, moved to where its classes are when the week on screen has none
+(`TabTimetable.Landing`), so next year's opens on next year's first week; what the plan and the week were
+narrowed to is let go, being another timetable's. Everybody else, and the administrator's other tabs,
+stay where they are. **A band across every page** (`Shell/LookingBand`) names the timetable looked at and
+the one everybody else is on, with *Back to …*, which returns to the day the tab was on. The tab's
+sessionStorage keeps the look over a reload, with the day it came from; the plan's own day is put back as
+the tab starts, before anything moves it. Two timetables of one name (a copy of the open one, brought in)
+are told apart: *another timetable called …*, *Back to the open timetable*. Which timetable a tab shows is `ProjectChoice.ShownId`,
+asked whenever the tab's workspace is built, and the tab lets go of the look when the timetable is
+deleted (with a warning, the deletion going through `ProjectChoice.Delete` so every tab hears of it),
+when it becomes the open one (so opening another later never sends the tab back to it), or when the
+account may no longer look away. Printing and the Reports spreadsheets are of the timetable the tab
+shows. The list marks the one this tab is looking at, offers no Delete on it, and says who else is in a
+timetable that is not open (*In it now*). *Bring in a file…* offers *Look at it first* beside *Open it
+for everybody*.
 
 ## Following the current app
 

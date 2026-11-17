@@ -134,6 +134,12 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   every other week, this year's events and absences). Closures are a tick, off by default. **Every
   semester starts in the same week number next year**: the current app moves everything 52 weeks on,
   which after 2026 (a year with a week 53) would start next autumn a week early.
+- **Look at a timetable without opening it for everybody**: *Look at it* in Administration ▸ Projects
+  opens next year's, or a file just brought in, in your own tab, while everybody else stays on the
+  timetable open for everybody. A band across every page says which one you are looking at and which
+  one everybody else is on, with *Back*. The plan goes to where its classes are, so next year's opens on
+  next year's first week; what you change, print or download there is that timetable's; a reload keeps
+  it. Making next year and bringing in a file offer it straight away. Administrators only.
 - **Typing straight after Ctrl+K is no longer lost**: the first letters of a name typed the moment Find
   was asked for could vanish before its box appeared, more often from home than in the building.
 - **Copying a week again no longer takes a class out of another week**: if a copied class had since been

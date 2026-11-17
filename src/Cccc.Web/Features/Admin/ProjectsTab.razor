@@ -4,6 +4,8 @@
 @inject Dialogs D
 @inject IJSRuntime JS
 @inject FollowStatus Follow
+@inject TabTimetable Tab
+@inject NavigationManager Nav
 @using Cccc.Legacy
 @using Cccc.Domain.Sample
 @using Cccc.Web.Features.Week
@@ -11,6 +13,7 @@
     var projects = Store.List();
     var deleted = Store.List(includeDeleted: true).Where(p => p.Deleted is not null).ToList();
     var open = Choice.OpenId();
+    var shown = W.Project?.Id;
     var followed = Follow.On ? Follower.FollowedId(Store) : null;
 }
 <div class="section">
@@ -41,31 +44,49 @@
                     <li>@line</li>
                 }
             </ul>
-            <button type="button" class="btn" @onclick="() => { Choice.Choose(_imported.Value); _imported = null; }">Open it for everybody</button>
+            <button type="button" class="btn" @onclick="() => LookAt(_imported.Value)" data-testid="import-look">Look at it first</button>
+            <button type="button" class="btn quiet" @onclick="() => { Choice.Choose(_imported.Value); _imported = null; }">Open it for everybody</button>
+        </div>
+    }
+    @if (_made is { } made && Store.Find(made) is { Deleted: null } next)
+    {
+        <div class="notice" data-testid="next-year-made">
+            <b>Made @next.Name</b>, a timetable of its own beside the one open for everybody. Look at it here to prepare its first weeks; open it for everybody when the year starts.
+            <div class="bar" style="margin:8px 0 0"><button type="button" class="btn" @onclick="() => LookAt(made)" data-testid="next-year-look">Look at it</button></div>
         </div>
     }
 </div>
 
 <div class="section">
     <h2>Timetables</h2>
-    <p class="hint">Everybody sees the one marked open. Signing in opens it.@(followed is null ? "" : " The one that follows the current app is changed there, and is the same here within a minute.")</p>
+    <p class="hint">Everybody sees the one marked open. Signing in opens it. <b>Look at it</b> opens another in this tab only, to prepare next year or check a file brought in, while everybody else stays where they are.@(followed is null ? "" : " The one that follows the current app is changed there, and is the same here within a minute.")</p>
     <ul class="list" data-testid="projects">
         @foreach (var p in projects)
         {
-            <li class="list-row" style="cursor:default; flex-wrap:wrap">
-                <span class="name"><b>@p.Name</b> @if (p.Id == open) { <span class="badge" style="border-color:var(--accent);color:var(--accent)">Open for everybody</span> }@if (p.Id == followed) { <span class="badge" data-testid="project-following">Follows the current app</span> }<br />
-                    <small class="muted">Last changed @W.Clock.Describe(p.LastChanged) by @W.NameOf(p.LastChangedBy)</small></span>
+            // Who else is in a timetable that is not the open one: somebody preparing it, before it is deleted.
+            var others = p.Id == open ? [] : Live.Loaded(p.Id)?.Present(TimeSpan.FromMinutes(2)).Where(n => n != W.Access.Display).ToList() ?? [];
+            <li class="list-row" style="cursor:default; flex-wrap:wrap" data-testid="project-row">
+                <span class="name"><b>@p.Name</b> @if (p.Id == open) { <span class="badge" style="border-color:var(--accent);color:var(--accent)">Open for everybody</span> }@if (p.Id == followed) { <span class="badge" data-testid="project-following">Follows the current app</span> }@if (W.LookingAway && p.Id == shown) { <span class="badge" data-testid="project-looking">This tab is looking at it</span> }<br />
+                    <small class="muted">Last changed @W.Clock.Describe(p.LastChanged) by @W.NameOf(p.LastChangedBy)</small>
+                    @if (others.Count > 0)
+                    {
+                        <br /><small class="muted" data-testid="project-present">In it now: @string.Join(", ", others)</small>
+                    }</span>
+                @if (p.Id != shown)
+                {
+                    <button type="button" class="btn" @onclick="() => LookAt(p.Id)" data-testid="project-look">Look at it</button>
+                }
                 @if (p.Id != open)
                 {
-                    <button type="button" class="btn" @onclick="() => Choice.Choose(p.Id)" data-testid="project-open">Open for everybody</button>
+                    <button type="button" class="btn quiet" @onclick="() => Choice.Choose(p.Id)" data-testid="project-open">Open for everybody</button>
                 }
                 <button type="button" class="btn quiet" @onclick="() => D.Show<HistoryDialog>(new Dictionary<string, object?> { [nameof(HistoryDialog.ProjectId)] = p.Id })">History…</button>
                 <button type="button" class="btn quiet" @onclick="() => D.Show<RenameDialog>(new Dictionary<string, object?> { [nameof(RenameDialog.ProjectId)] = p.Id })">Rename…</button>
                 <button type="button" class="btn quiet" @onclick="() => NextYearOf(p.Id)" data-testid="project-next-year">Start next year…</button>
                 <a class="btn quiet" href="@($"download/project/{p.Id}")" target="_blank" rel="noopener" data-testid="project-download">Download</a>
-                @if (p.Id != open && p.Id != followed)
+                @if (p.Id != open && p.Id != followed && p.Id != shown)
                 {
-                    <button type="button" class="btn quiet danger" @onclick="() => Delete(p)">Delete</button>
+                    <button type="button" class="btn quiet danger" @onclick="() => Delete(p)" data-testid="project-delete">Delete</button>
                 }
             </li>
         }
@@ -92,6 +113,7 @@
     private bool _busy;
     private string? _error;
     private Guid? _imported;
+    private Guid? _made;
     private IReadOnlyList<string> _report = [];
     private const long MaxFile = 64 * 1024 * 1024;
 
@@ -138,13 +160,26 @@
     private void NextYearOf(Guid id) => D.Show<NextYearForm>(new Dictionary<string, object?>
     {
         [nameof(NextYearForm.ProjectId)] = id,
-        [nameof(NextYearForm.Made)] = (Action<Guid>)(made => _ = InvokeAsync(StateHasChanged)),
+        [nameof(NextYearForm.Made)] = (Action<Guid>)(made => _ = InvokeAsync(() => { _made = made; StateHasChanged(); })),
     });
+
+    /// <summary>Looks at a timetable in this tab only, and goes to the plan to see it; the open one is going back.</summary>
+    private void LookAt(Guid id)
+    {
+        _imported = null;
+        _made = null;
+        if (id == Choice.OpenId()) Tab.Back(); else Tab.LookAt(id);
+        Nav.NavigateTo("plan");
+    }
 
     private void Delete(ProjectInfo p)
     {
-        Store.Delete(p.Id, W.Clock.Now);
-        Live.Forget(p.Id);
-        W.Say($"Deleted {p.Name}. It can be brought back for 30 days.");
+        try
+        {
+            // Through the choice, so a tab elsewhere that is looking at it goes back to the open one.
+            Choice.Delete(p.Id, W.Clock.Now);
+            W.Say($"Deleted {p.Name}. It can be brought back for 30 days.");
+        }
+        catch (InvalidOperationException e) { W.Warn(e.Message); }
     }
 }

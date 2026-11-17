@@ -113,7 +113,8 @@ else
             var next = NextYear.Make(Live.Get(ProjectId).State, name, _closures);
             var id = Store.Create(name, next, W.Access.By, W.Clock.Now);
             D.Close();
-            W.Say($"Made {name}, a timetable beside this one. Open it for everybody when the year starts.");
+            // The list says it with the way to look at it; said here only when nothing else will.
+            if (Made is null) W.Say($"Made {name}, a timetable beside this one. Open it for everybody when the year starts.");
             Made?.Invoke(id);
         }
         catch (EditRefused e) { W.Say(e.Message); }

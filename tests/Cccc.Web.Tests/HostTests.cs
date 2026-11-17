@@ -137,10 +137,11 @@ public class HostTests : IClassFixture<Host>
         if (store.List().Count == 0)
             store.Create("Test", Cccc.Domain.Sample.SampleSchool.Create(new DateOnly(2030, 3, 6), new DateOnly(2030, 3, 6)), "test", DateTimeOffset.UtcNow);
         var prints = _host.Services.GetRequiredService<Cccc.Web.Features.Print.PrintRequests>();
+        var open = _host.Services.GetRequiredService<Cccc.Web.Infrastructure.ProjectChoice>().OpenId()!.Value;
         var view = new Cccc.Web.Features.Week.WeekView();
         view.Start(new DateOnly(2030, 3, 4), null);
-        var someoneElses = prints.Link("week", view, new Cccc.Web.Infrastructure.Access(admin with { Id = Guid.NewGuid() }));
-        var mine = prints.Link("week", view, new Cccc.Web.Infrastructure.Access(admin));
+        var someoneElses = prints.Link("week", view, new Cccc.Web.Infrastructure.Access(admin with { Id = Guid.NewGuid() }), open);
+        var mine = prints.Link("week", view, new Cccc.Web.Infrastructure.Access(admin), open);
 
         var c = _host.Client();
         await Host.SignIn(c, "admin", Host.AdminPassphrase);
@@ -153,13 +154,101 @@ public class HostTests : IClassFixture<Host>
     }
 }
 
+public class LookingAwayTests : IClassFixture<Host>
+{
+    private readonly Host _host;
+    public LookingAwayTests(Host host) => _host = host;
+
+    private static readonly DateOnly Day = new(2030, 3, 6);
+
+    private (Guid School, Guid Next) TwoTimetables()
+    {
+        var store = _host.Services.GetRequiredService<ProjectStore>();
+        var choice = _host.Services.GetRequiredService<Cccc.Web.Infrastructure.ProjectChoice>();
+        var school = store.Create("School", Cccc.Domain.Sample.SampleSchool.Create(Day, Day), "test", DateTimeOffset.UtcNow);
+        // Next year's, being prepared: one facilitator nobody else has, and no classes yet.
+        var next = store.Create("Next", Cccc.Domain.Model.Timetable.Empty with
+        {
+            Facilitators = Cccc.Domain.Model.EntitySet<Cccc.Domain.Model.Facilitator>.Of([new Cccc.Domain.Model.Facilitator { Name = "Zara Onlynextyear" }]),
+        }, "test", DateTimeOffset.UtcNow.AddMinutes(1));
+        choice.Choose(school);
+        return (school, next);
+    }
+
+    private Account Viewer()
+    {
+        var accounts = _host.Services.GetRequiredService<AccountDirectory>();
+        var viewer = accounts.All().FirstOrDefault(a => a.Login == "look-viewer")
+                     ?? accounts.Add(_host.Admin().Id, "look-viewer", "Test Viewer", Role.Viewer, "a viewer's passphrase");
+        accounts.ClearMustChange(viewer.Id);
+        return viewer;
+    }
+
+    [Fact]
+    public async Task APrintLinkIsOfTheTimetableItWasMadeInAndOnlyAnAdministratorPrintsOneThatIsNotOpen()
+    {
+        var admin = _host.Admin();
+        var viewer = Viewer();
+        var (school, next) = TwoTimetables();
+        var prints = _host.Services.GetRequiredService<Cccc.Web.Features.Print.PrintRequests>();
+        var view = new Cccc.Web.Features.Week.WeekView();
+        view.Start(Day, null);
+        var ofSchool = prints.Link("week", view, new Cccc.Web.Infrastructure.Access(admin), school);
+        var ofNext = prints.Link("week", view, new Cccc.Web.Infrastructure.Access(admin), next);
+        // Two tabs with the same filters on two timetables are two sheets, not one link sent to whichever asked last.
+        Assert.NotEqual(ofSchool, ofNext);
+
+        var a = _host.Client();
+        await Host.SignIn(a, "admin", Host.AdminPassphrase);
+        var schoolSheet = await (await a.GetAsync(ofSchool)).Content.ReadAsByteArrayAsync();
+        var r = await a.GetAsync(ofNext);
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        var nextSheet = await r.Content.ReadAsByteArrayAsync();
+        Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(nextSheet[..4]));
+        // Next year's week has no classes, the school's has dozens: the sheet is drawn from the timetable the link names.
+        Assert.True(nextSheet.Length * 3 < schoolSheet.Length * 2, $"next year's sheet is {nextSheet.Length} bytes, the school's {schoolSheet.Length}");
+
+        // A viewer's link to a timetable that is not open prints nothing; to the open one it prints.
+        var v = _host.Client();
+        await Host.SignIn(v, "look-viewer", "a viewer's passphrase");
+        var vAccess = new Cccc.Web.Infrastructure.Access(viewer);
+        Assert.Equal(HttpStatusCode.Gone, (await v.GetAsync(prints.Link("week", view, vAccess, next))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await v.GetAsync(prints.Link("week", view, vAccess, school))).StatusCode);
+
+        // Once deleted, it prints for nobody.
+        _host.Services.GetRequiredService<Cccc.Web.Infrastructure.ProjectChoice>().Delete(next, DateTimeOffset.UtcNow);
+        Assert.Equal(HttpStatusCode.Gone, (await a.GetAsync(ofNext)).StatusCode);
+    }
+
+    [Fact]
+    public async Task ASpreadsheetIsOfTheTimetableItsLinkNamesAndNeverOneTheAccountMayNotSee()
+    {
+        _host.Admin();
+        var (school, next) = TwoTimetables();
+        var a = _host.Client();
+        await Host.SignIn(a, "admin", Host.AdminPassphrase);
+        string Url(Guid project) => $"/reports/csv/hours?project={project}&from=2030-02-04&to=2030-03-10";
+
+        var ofNext = await a.GetStringAsync(Url(next));
+        var ofSchool = await a.GetStringAsync(Url(school));
+        Assert.Contains("Zara Onlynextyear", ofNext);
+        Assert.DoesNotContain("Zara Onlynextyear", ofSchool);
+        Assert.Contains("Facilitator,Teaching", ofSchool);
+        // A link that names no timetable, or one that is not there, downloads nothing rather than the open one.
+        Assert.Equal(HttpStatusCode.BadRequest, (await a.GetAsync("/reports/csv/hours?from=2030-02-04&to=2030-03-10")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await a.GetAsync(Url(Guid.NewGuid()))).StatusCode);
+        _host.Services.GetRequiredService<Cccc.Web.Infrastructure.ProjectChoice>().Delete(next, DateTimeOffset.UtcNow);
+        Assert.Equal(HttpStatusCode.NotFound, (await a.GetAsync(Url(next))).StatusCode);
+    }
+}
+
 public class ReportCsvTests : IClassFixture<Host>
 {
     private readonly Host _host;
     public ReportCsvTests(Host host) => _host = host;
 
     [Fact]
-    public async Task TheSpreadsheetsAreAnAdministratorsAndCarryOnlyDatesInTheirAddress()
+    public async Task TheSpreadsheetsAreAnAdministratorsAndTheirAddressCarriesDatesAndAnIdButNoName()
     {
         var admin = _host.Admin();
         var accounts = _host.Services.GetRequiredService<AccountDirectory>();
@@ -169,7 +258,7 @@ public class ReportCsvTests : IClassFixture<Host>
         var store = _host.Services.GetRequiredService<ProjectStore>();
         var day = new DateOnly(2030, 3, 6);
         if (store.List().Count == 0) store.Create("Test", Cccc.Domain.Sample.SampleSchool.Create(day, day), "test", DateTimeOffset.UtcNow);
-        const string url = "/reports/csv/hours?from=2030-02-04&to=2030-03-10";
+        var url = $"/reports/csv/hours?project={_host.Services.GetRequiredService<Cccc.Web.Infrastructure.ProjectChoice>().OpenId()}&from=2030-02-04&to=2030-03-10";
 
         var e = _host.Client();
         await Host.SignIn(e, "csv-editor", "an editor passphrase");

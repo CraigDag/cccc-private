@@ -11,16 +11,18 @@ public static class Downloads
     public static void MapDownloads(this WebApplication app)
     {
         app.MapGet("/print/{token}", (string token, HttpContext ctx, PrintRequests prints, ProjectChoice choice,
-            AccountDirectory accounts, PdfGate gate, SchoolClock clock) =>
+            LiveProjects live, AccountDirectory accounts, PdfGate gate, SchoolClock clock) =>
         {
             var account = AccountClaims.Current(ctx.User, accounts);
             if (account is null) return Results.Unauthorized();
             var access = new Access(account);
             var r = prints.Find(token, account.Id);
             if (r is null) return Results.Text("This print link has expired. Press Print again on the week.", statusCode: 410);
-            var project = choice.Open();
-            if (project is null) return Results.NotFound();
-            var t = project.State;
+            // The timetable the link was made in, asked again now: another may have been opened for
+            // everybody since, or the one looked at deleted, and a viewer only ever sees the open one.
+            if (!choice.MaySee(r.ProjectId, access))
+                return Results.Text("This print link is for a timetable that is no longer open. Press Print again on the week.", statusCode: 410);
+            var t = live.Get(r.ProjectId).State;
             var view = r.ToView();
             ctx.Response.Headers.CacheControl = "no-store";
 

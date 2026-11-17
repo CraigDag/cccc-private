@@ -89,6 +89,7 @@ builder.Services.AddScoped<Cccc.Web.Features.Shell.Dialogs>();
 builder.Services.AddScoped<Cccc.Web.Features.Shell.Toasts>();
 builder.Services.AddScoped<Cccc.Web.Features.Week.WeekView>();
 builder.Services.AddScoped<Cccc.Web.Features.Plan.PlanView>();
+builder.Services.AddScoped<Cccc.Web.Features.Shell.TabTimetable>();
 builder.Services.AddScoped<Cccc.Web.Features.Find.Finder>();
 builder.Services.AddHttpContextAccessor();
 

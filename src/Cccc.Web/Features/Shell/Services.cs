@@ -77,6 +77,12 @@ public sealed class Workspace(Access access, LiveProject? project, SchoolClock c
 
     /// <summary>The project's name as the store has it. Shown inside the app only: never on paper, in a tab title or a URL.</summary>
     public string ProjectName => Project is null ? "" : Project.Name;
+
+    /// <summary>
+    /// The tab is looking at a timetable that is not the one open for everybody (<see cref="TabTimetable"/>):
+    /// what changes here stays in it, and a band across every page says so.
+    /// </summary>
+    public bool LookingAway { get; init; }
     public DateOnly Today => Clock.Today;
 
     /// <summary>The name a person reads for whoever made a change (changes are recorded by login).</summary>

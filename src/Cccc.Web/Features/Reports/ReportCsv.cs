@@ -13,7 +13,9 @@ using Week = Cccc.Domain.Week;
 /// <summary>
 /// The reports as spreadsheets: comma-separated, UTF-8 with a byte-order mark so Excel reads Æ Ø Å,
 /// hours as decimal numbers so a column can be summed. Every number comes from the same sums the
-/// screen shows (<see cref="ReportMath"/>, <see cref="Hours"/>). The address carries only dates.
+/// screen shows (<see cref="ReportMath"/>, <see cref="Hours"/>). The address carries dates and the id of
+/// the timetable the tab shows (<see cref="ProjectChoice.ShownId"/>), never its name: a link made in a tab
+/// looking at next year downloads next year's.
 /// </summary>
 public static class ReportCsv
 {
@@ -71,16 +73,18 @@ public static class ReportCsv
     }
 
     public static void MapReportCsv(this WebApplication app) =>
-        app.MapGet("/reports/csv/{kind}", (string kind, DateOnly from, DateOnly to, HttpContext ctx,
-            AccountDirectory accounts, ProjectChoice choice) =>
+        app.MapGet("/reports/csv/{kind}", (string kind, Guid project, DateOnly from, DateOnly to, HttpContext ctx,
+            AccountDirectory accounts, ProjectChoice choice, LiveProjects live) =>
         {
             var account = AccountClaims.Current(ctx.User, accounts);
             if (account is null) return Results.Unauthorized();
+            var access = new Access(account);
             // Reports are an administrator's, and the attendance sheet names every student.
-            if (!new Access(account).MayUseAdminTools) return Results.Forbid();
+            if (!access.MayUseAdminTools) return Results.Forbid();
             if (to < from || to.DayNumber - from.DayNumber > 400) return Results.BadRequest("Choose up to a year of weeks.");
-            if (choice.Open() is not { } project) return Results.NotFound();
-            var t = project.State;
+            // The timetable is named by the link, never assumed to be the open one.
+            if (!choice.MaySee(project, access)) return Results.NotFound();
+            var t = live.Get(project).State;
             var (text, name) = kind switch
             {
                 "hours" => (Hours(t, from, to), "Hours"),

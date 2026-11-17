@@ -17,6 +17,10 @@ it. `README.md` says what this is; `docs/spec/` says why each part is shaped the
 - **A rule has one implementation, in `Cccc.Domain`**: who is on a class (`Roster`), what happens
   (`Occurrences`), clashes, hours, registers. The screen, the paper and the reports all ask it.
 - **A week that has wholly ended is locked except for registers**, and Undo cannot unlock it.
+- **Which timetable a tab shows is `ProjectChoice.ShownId`**: an administrator's tab may look at one that
+  is not open for everybody (`TabTimetable`). So a route that serves a tab (print, spreadsheet) takes the
+  timetable's id from its link and asks `ProjectChoice.MaySee`, never `ProjectChoice.Open()`, which is
+  only for what belongs to the school as a whole (the reminder email, following).
 - **Every change goes through `Workspace.Commit`**, which refuses a timetable that follows the current
   app (`Access.Following`, `Follower`): the next save over there would undo it. A path that commits to a
   `LiveProject` directly (History's put-back) checks `Follower.FollowedId` itself.

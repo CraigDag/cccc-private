@@ -3,6 +3,10 @@
 @inject AuthenticationStateProvider Auth
 @inject AccountDirectory Accounts
 @inject ProjectChoice Choice
+@inject TabTimetable Tab
+@inject Cccc.Web.Features.Plan.PlanView Plan
+@inject LiveProjects Live
+@inject IJSRuntime JS
 @inject SchoolClock Clock
 @inject Toasts ToastList
 @inject NavigationManager Nav
@@ -19,6 +23,7 @@ else
         <div class="shell" data-testid="shell">
             <TopBar />
             <div class="shell-main">
+                <LookingBand />
                 <main class="shell-page">
                     @if (_ws.Project is null && !IsAdministrationPage)
                     {
@@ -46,10 +51,31 @@ else
 
     private bool IsAdministrationPage => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("admin", StringComparison.Ordinal);
 
+    // What sessionStorage holds for the tab, so it is written only when the tab's look changes.
+    private string? _remembered;
+    private const string LookingKey = "cccc.looking";
+
     protected override async Task OnInitializedAsync()
     {
         Auth.AuthenticationStateChanged += OnAuthChanged;
         Choice.Moved += OnProjectMoved;
+        Tab.Moved += OnProjectMoved;
+        // A reload keeps the timetable the tab was looking at, and the plan's day. Nothing is drawn before the
+        // circuit is connected (App.razor), so the tab's own storage can be read before the first workspace is
+        // built, and anything that moves the plan from here on starts from the day the tab was really on.
+        try
+        {
+            var day = await JS.InvokeAsync<string?>("ccccShell.recall", "cccc.day");
+            Plan.Start(Clock.Today);
+            if (DateOnly.TryParseExact(day, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d)
+                && !Cccc.Domain.Week.IsScratch(d)) Plan.GoTo(d);
+            _remembered = await JS.InvokeAsync<string?>("ccccShell.recall", LookingKey);
+            // "id" or "id|day before", as RememberAsync wrote it.
+            var parts = (_remembered ?? "").Split('|');
+            if (Guid.TryParse(parts[0], out var looking))
+                Tab.Restore(looking, parts.Length > 1 && DateOnly.TryParseExact(parts[1], "yyyy-MM-dd", out var before) ? before : null);
+        }
+        catch (Exception e) when (e is JSException or JSDisconnectedException or TaskCanceledException) { }
         await BuildAsync();
         _presence = new Timer(_ => InvokeAsync(() => { if (_ws is { Project: { } p }) p.Here(_ws.Access.Display); }), null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
         _minute = new Timer(_ => InvokeAsync(() => { StateHasChanged(); ArmMinute(); }), null, Timeout.Infinite, Timeout.Infinite);
@@ -75,17 +101,44 @@ else
             Nav.NavigateTo("/signin", forceLoad: true);
             return;
         }
-        var project = Choice.Open();
+        var access = new Access(account);
+        // Which timetable this tab shows is one rule (ProjectChoice.ShownId): the one it is looking at while
+        // its account may see it, otherwise the one open for everybody.
+        var openId = Choice.OpenId();
+        var shownId = Choice.ShownId(Tab.LookingAt, access);
+        // Let go of it once it cannot be shown (deleted, or the account may no longer look away) and once it
+        // is the open one, so opening another for everybody later never sends this tab back to it.
+        if (Tab.LookingAt is { } looking && (looking != shownId || looking == openId))
+        {
+            Tab.Drop();
+            if (looking != openId && Store.Find(looking) is not { Deleted: null })
+                ToastList.Warn("The timetable this tab was looking at has been deleted, so the tab is back on the one open for everybody.");
+        }
+        var project = shownId is { } id ? Live.Get(id) : null;
         if (!ReferenceEquals(project, _subscribed))
         {
-            if (_subscribed is not null) _subscribed.ChangedEvent -= OnChanged;
+            if (_subscribed is not null)
+            {
+                _subscribed.ChangedEvent -= OnChanged;
+                _subscribed.Left(account.Display);
+            }
             if (project is not null) project.ChangedEvent += OnChanged;
             _subscribed = project;
         }
         // The timetable kept the same as the current app's is changed there, never here (Access.Following).
         bool following = Follow.On && project is not null && Follower.FollowedId(Store) == project.Id;
-        _ws = new Workspace(new Access(account) { Following = following }, project, Clock, ToastList, Accounts);
+        bool away = project is not null && project.Id != openId;
+        _ws = new Workspace(access with { Following = following }, project, Clock, ToastList, Accounts) { LookingAway = away };
         project?.Here(account.Display);
+        await RememberAsync(!away ? "" : Tab.DayBefore is { } before ? $"{project!.Id}|{before:yyyy-MM-dd}" : project!.Id.ToString());
+    }
+
+    private async Task RememberAsync(string value)
+    {
+        if ((_remembered ?? "") == value) return;
+        _remembered = value;
+        try { await JS.InvokeVoidAsync("ccccShell.remember", LookingKey, value); }
+        catch (Exception e) when (e is JSException or JSDisconnectedException or TaskCanceledException) { }
     }
 
     private void OnChanged(Changed c) => _ = InvokeAsync(StateHasChanged);
@@ -102,6 +155,7 @@ else
     {
         Auth.AuthenticationStateChanged -= OnAuthChanged;
         Choice.Moved -= OnProjectMoved;
+        Tab.Moved -= OnProjectMoved;
         if (_subscribed is not null) _subscribed.ChangedEvent -= OnChanged;
         _presence?.Dispose();
         _minute?.Dispose();

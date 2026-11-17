@@ -27,6 +27,7 @@ Capabilities are **named**, never `role >= Editor`:
 | `MayUseAdminTools` (Data, Reports, the dock, whole-project export) | Administrator |
 | `MayManageAccounts` | Administrator |
 | `MayManageProjects` (new, import, rename, delete, choose which project is open, history) | Administrator |
+| `MayLookAtOtherTimetables` (look at, and prepare, a timetable that is not open for everybody, in your own tab) | Administrator |
 | `SeesAdministratorsEvents` | Administrator |
 | `MayTakeEveryRegister` | Administrator |
 | `MaySeeSystem` (backups, the nightly update) | Administrator |
@@ -49,6 +50,12 @@ suspends themself.
 
 - **Signing in opens the school's timetable** — the project most recently changed — rather than a
   picker. Which project is open is an administrator's choice.
+- **An administrator may look at another timetable in their own tab** (next year's, a file just brought
+  in) while everybody else stays on the open one. Which timetable a tab shows is one rule,
+  `ProjectChoice.ShownId`; everybody but an administrator only ever sees the open one. A print link and a
+  spreadsheet link carry the timetable's id, never its name, and their routes ask `ProjectChoice.MaySee`
+  again when they are opened, so a link cannot show a timetable to somebody who may not see it, or one
+  deleted since.
 - **Who may print whose week**: an administrator anybody's; everybody else only their own, through
   their link. The PDF route refuses too, not only the button.
 - **Downloads of data about every student are administrators' only.**
@@ -65,7 +72,10 @@ The live file has held real students since 2026-10-29, so all of this applies to
   rewrites every stored operation and snapshot that names them** (their name and email replaced, their
   id kept so counts still add up). This is the one sanctioned rewrite of the log, and it is logged as
   "a person was erased" with no name. The off-site backup keeps old copies for 90 days; the erasure
-  page says so and names the step on Drive, as the current runbook does.
+  page says so and names the step on Drive, as the current runbook does. **Every timetable is rewritten
+  through its one live copy, under its lock** (`LiveProjects.RewriteEverywhere`), which then holds the
+  rewritten history: forgetting a copy and rewriting the store behind it would leave a tab that still
+  holds it (an administrator looking at another timetable) to write the name back with its next change.
 - **Erasure also reaches somebody taken off the timetable in the last 30 days**, because the stored
   changes still name them until they are folded away (`FormerPeople`). While following the current app,
   a person is erased there first; their removal comes across; then they are erased here from the

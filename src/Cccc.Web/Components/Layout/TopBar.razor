@@ -35,7 +35,7 @@
                 <div class="me-who" data-testid="signed-in-as"><b>@W.Access.Display</b><small>@RoleName</small></div>
                 @if (W.Project is not null)
                 {
-                    <div class="me-project" title="The timetable everybody is looking at">@W.ProjectName</div>
+                    <div class="me-project" title="@(W.LookingAway ? "The timetable this tab is looking at. It is not open for everybody." : "The timetable everybody is looking at")">@W.ProjectName</div>
                 }
                 <label class="me-theme"><span>Look</span>
                     <select data-theme-picker aria-label="Look">

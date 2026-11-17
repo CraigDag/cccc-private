@@ -34,4 +34,31 @@ public sealed class ProjectChoice(ProjectStore store, LiveProjects live)
         store.SetMeta(Key, id.ToString());
         Moved?.Invoke();
     }
+
+    /// <summary>
+    /// Whether this account may see that timetable: anybody signed in the one open for everybody, and an
+    /// administrator any other that has not been deleted. A page, a printed sheet and a spreadsheet all ask
+    /// this, so a link made in one tab cannot show a timetable to somebody who may not see it.
+    /// </summary>
+    public bool MaySee(Guid id, Access access) =>
+        access.SignedIn && (id == OpenId() || (access.MayLookAtOtherTimetables && store.Find(id) is { Deleted: null }));
+
+    /// <summary>
+    /// The timetable a tab shows: the one it is looking at (<paramref name="lookingAt"/>, held by the tab
+    /// in <c>TabTimetable</c>) while its account may see it, otherwise the one open for everybody.
+    /// </summary>
+    public Guid? ShownId(Guid? lookingAt, Access access) =>
+        lookingAt is { } id && MaySee(id, access) ? id : OpenId();
+
+    /// <summary>
+    /// Deletes a timetable, which comes back for 30 days. Never the one open for everybody: another is
+    /// opened first. Every tab is told, so one that was looking at it goes back to the open one.
+    /// </summary>
+    public void Delete(Guid id, DateTimeOffset at)
+    {
+        if (id == OpenId()) throw new InvalidOperationException("The timetable open for everybody cannot be deleted. Open another for everybody first.");
+        store.Delete(id, at);
+        live.Forget(id);
+        Moved?.Invoke();
+    }
 }
