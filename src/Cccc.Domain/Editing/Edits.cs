@@ -192,6 +192,31 @@ public static class Edits
     public static bool HoldsRegisters(Timetable t, DateOnly anyDateInWeek) =>
         t.SessionsInWeek(anyDateInWeek).Any(s => t.Registers.Contains(s.Id));
 
+    /// <summary>
+    /// Records or changes an absence. For a student it also carries late news to registers already
+    /// filed (somebody phones in at eleven): every register the absence covers moves that student from
+    /// Absent (no word) to Excused. Present is never touched — somebody in the room saw them — and only
+    /// a student on the list the register was taken against. Removing the absence later moves nothing
+    /// back. This is the one change a filed register takes without being re-filed, and it only ever
+    /// turns "we do not know why" into "we know why".
+    /// </summary>
+    public static Batch PutAbsence(Timetable t, Absence a)
+    {
+        var d = new Draft(t);
+        bool isNew = !t.Absences.Contains(a.Id);
+        d.Put(Collections.Absences, a);
+        int excused = 0;
+        if (a.Person == AbsentPerson.Student)
+            foreach (var s in t.Sessions.Where(s => s.Date >= a.From && s.Date <= a.To && a.Covers(s.Date, s.Start, s.End)))
+                if (t.Registers[s.Id] is { } r && r.RosterIds.Contains(a.PersonId) && r.MarkFor(a.PersonId) == Mark.Absent)
+                {
+                    d.Put(Collections.Registers, r with { ExcusedIds = r.ExcusedIds.Add(a.PersonId) });
+                    excused++;
+                }
+        var label = isNew ? "Recorded an absence" : "Changed an absence";
+        return d.ToBatch(excused == 0 ? label : $"{label}, and excused it on {excused} register{(excused == 1 ? "" : "s")} already taken");
+    }
+
     /// <summary>Copy day APPENDS to the destination day.</summary>
     public static Batch CopyDay(Timetable t, DateOnly from, DateOnly to)
     {

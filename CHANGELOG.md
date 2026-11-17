@@ -19,7 +19,12 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   night.
 - **Erasing a person** (Administration ▸ Erase a person) removes their name from every timetable and
   every stored copy, keeps the counts adding up, and unlinks any account linked to them.
+- **The morning register is here**: Data ▸ Absences opens with today's students. Tap who is away,
+  planned or unplanned, and pick a reason; their registers open with them excused, and a register
+  already taken changes them from absent to excused (never from present).
+- **The line at "now"** on today's column moves by itself through the day.
 - **Bring in a file…** reads the current app's `.cccc` (every version) and says what came across.
 
-Not carried over: Google sign-in (the school uses its own accounts), the floor plan (off the screen
+Not carried over yet: the end-of-day register reminder email (off by default in the current app; it
+needs the school's mail settings). Not carried over: Google sign-in (the school uses its own accounts), the floor plan (off the screen
 since 1.31.0), and the old desktop apps.

@@ -1,0 +1,75 @@
+@inject Dialogs D
+@{
+    var t = W.T;
+    var day = W.Today;
+    var today = Occurrences.Between(t, day, day).Where(o => o.Happens).ToList();
+    var students = today.SelectMany(o => Roster.For(t, o.Session)).Distinct()
+        .Select(id => t.Students[id]).Where(s => s is not null).Select(s => s!)
+        .OrderBy(s => t.Groups[s.GroupId ?? Guid.Empty]?.Name ?? "~", NameOrder.Comparer).ThenBy(s => s.Name, NameOrder.Comparer).ToList();
+    var awayCount = students.Count(s => AwayToday(t, s.Id) is not null);
+}
+<section class="today-list" data-testid="today-list">
+    <h2>Today, @Looks.DayHeading(day)</h2>
+    @if (students.Count == 0)
+    {
+        <p class="hint">Nobody has a class today.</p>
+    }
+    else
+    {
+        <p class="hint">
+            Everybody with a class today. Tap who is away: their registers today open with them already excused,
+            and a register already taken changes them from absent to excused. @(awayCount == 0 ? "" : $"{awayCount} away so far.")
+        </p>
+        <ul class="today-rows">
+            @foreach (var s in students)
+            {
+                var a = AwayToday(t, s.Id);
+                <li class="today-row @(a is null ? "" : "away")" data-testid="today-row">
+                    <span class="today-name"><b>@s.Name</b> <small>@(t.Groups[s.GroupId ?? Guid.Empty]?.Name ?? "No group")</small></span>
+                    @if (a is null)
+                    {
+                        <button type="button" class="btn" @onclick="() => Away(s.Id, AbsenceNotice.Planned)" data-testid="today-planned">Away, planned</button>
+                        <button type="button" class="btn" @onclick="() => Away(s.Id, AbsenceNotice.Unplanned)" data-testid="today-unplanned">Away, unplanned</button>
+                    }
+                    else
+                    {
+                        <span class="today-state">Away@(a.Notice is { } n ? " · " + (n == AbsenceNotice.Planned ? "planned" : "unplanned") : "")</span>
+                        <select aria-label="Why @s.Name is away" value="@(a.Cause?.ToString() ?? "")" @onchange="e => SetCause(a, e.Value as string)" data-testid="today-cause">
+                            <option value="">Reason not said</option>
+                            <option value="Illness">Illness</option>
+                            <option value="Personal">Personal</option>
+                            <option value="ApprovedLeave">Approved leave</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        @if (a.From == day && a.To == day && a.StartTime is null)
+                        {
+                            <button type="button" class="btn quiet" @onclick="() => NotAway(a)" data-testid="today-back">Not away</button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn quiet" @onclick="() => D.Show<AbsenceForm>(new Dictionary<string, object?> { [nameof(AbsenceForm.Id)] = a.Id })">Change…</button>
+                        }
+                    }
+                </li>
+            }
+        </ul>
+    }
+</section>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+
+    private Absence? AwayToday(Timetable t, Guid studentId) =>
+        t.Absences.Where(a => a.Is(AbsentPerson.Student, studentId) && a.CoversDate(W.Today))
+            .OrderBy(a => a.StartTime is null ? 0 : 1).FirstOrDefault();
+
+    private void Away(Guid studentId, AbsenceNotice notice) =>
+        W.Commit(t => Edits.PutAbsence(t, new Absence { Person = AbsentPerson.Student, PersonId = studentId, From = W.Today, To = W.Today, Notice = notice }));
+
+    private void SetCause(Absence a, string? value) =>
+        W.Commit(t => Edits.PutAbsence(t, a with { Cause = Enum.TryParse<AbsenceCause>(value, out var c) ? c : null }), announce: false);
+
+    // Taking back a mark made by mistake: registers already moved to excused stay excused, which an
+    // administrator can change in the register itself.
+    private void NotAway(Absence a) =>
+        W.Commit(t => new DraftOf(t).Remove(Collections.Absences, a.Id).ToBatch("Removed an absence"));
+}

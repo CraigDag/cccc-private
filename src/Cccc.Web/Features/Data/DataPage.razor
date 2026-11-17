@@ -74,6 +74,8 @@ else
             <Rows Items="@Filter(t.Closures.OrderBy(c => c.From).Select(c => Row.Of(c.Id, c.Name, null, DomainWeek.ShortDate(c.From) + (c.To != c.From ? " – " + DomainWeek.ShortDate(c.To) : "") + (c.Scope == ClosureScope.Groups ? (c.GroupIds.Count == 0 ? " · closes nothing (no groups chosen)" : " · " + string.Join(", ", c.GroupIds.Select(g => t.Groups[g]?.Name ?? "?"))) : " · whole building"))), sorted: false)" OnOpen="id => Show<ClosureForm>(id)" />
             break;
         case "absences":
+            <TodayList />
+            <h2>Every absence</h2>
             <p class="hint">An absence decides who needs cover and pre-fills registers. A facilitator is away for a whole day unless a time is given.</p>
             <AddBar Kind="k" OnAdd="() => Show<AbsenceForm>(null)" />
             <Rows Items="@Filter(t.Absences.OrderByDescending(a => a.From).Select(a => Row.Of(a.Id, (a.Person == AbsentPerson.Facilitator ? t.Facilitators[a.PersonId]?.Name : t.Students[a.PersonId]?.Name) ?? "Removed", null, (a.Person == AbsentPerson.Facilitator ? "Facilitator · " : "Student · ") + DomainWeek.ShortDate(a.From) + (a.To != a.From ? " – " + DomainWeek.ShortDate(a.To) : "") + (a.StartTime is { } st && a.EndTime is { } en ? $", {DomainWeek.Hm(st)}–{DomainWeek.Hm(en)}" : ""))), sorted: false)" OnOpen="id => Show<AbsenceForm>(id)" />

@@ -152,5 +152,20 @@
         return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
     }
 
+    // The line at "now" walks down the day by itself, once a minute, in the school's own time; the
+    // server draws it where it was at the last render and nothing else would move it.
+    const schoolTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Copenhagen', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    setInterval(() => {
+        const [h, m] = schoolTime.format(new Date()).split(':').map(Number);
+        const now = h * 60 + m;
+        document.querySelectorAll('.wk-body').forEach(root => {
+            const start = +root.dataset.start, end = +root.dataset.end, hour = +root.dataset.hour;
+            root.querySelectorAll('.wk-now').forEach(line => {
+                line.hidden = now < start || now > end;
+                line.style.top = ((now - start) / 60 * hour) + 'px';
+            });
+        });
+    }, 60000);
+
     window.ccccWeek = { attach };
 })();

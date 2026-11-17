@@ -93,7 +93,7 @@
             Notice = Enum.TryParse<AbsenceNotice>(_notice, out var n) ? n : null,
             Cause = Enum.TryParse<AbsenceCause>(_cause, out var c) ? c : null,
         };
-        if (W.Commit(t => new DraftOf(t).Put(Collections.Absences, a).ToBatch(_old is null ? "Recorded an absence" : "Changed an absence"))) D.Close();
+        if (W.Commit(t => Edits.PutAbsence(t, a))) D.Close();
     }
 
     private void Delete()

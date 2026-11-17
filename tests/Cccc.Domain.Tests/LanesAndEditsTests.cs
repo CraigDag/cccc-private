@@ -100,3 +100,31 @@ public class EditDecisionTests
         Assert.Equal(OccurrenceState.NeedsCover, Occurrences.Resolve(t, t.Sessions[s.Id]!).State);
     }
 }
+
+public class LateNewsTests
+{
+    [Fact]
+    public void AStudentAbsenceRecordedAfterTheRegisterExcusesTheAbsentAndNeverThePresent()
+    {
+        var b = new Build();
+        var g = b.Group("BA 1");
+        var ada = b.Student("Ada", g);
+        var bo = b.Student("Bo", g);
+        var cleo = b.Student("Cleo", g);
+        var s = b.Session(Monday, "09:00", "10:00", Audience.ForGroup(g.Id));
+        var other = b.Session(Monday.AddDays(1), "09:00", "10:00", Audience.ForGroup(g.Id));
+        b.T = b.T with
+        {
+            Registers = b.T.Registers.Put(new Register { Id = s.Id, RosterIds = [ada.Id, bo.Id], PresentIds = [bo.Id] })
+                                     .Put(new Register { Id = other.Id, RosterIds = [ada.Id, bo.Id], PresentIds = [] }),
+        };
+        Absence Away(Student who) => new() { Person = AbsentPerson.Student, PersonId = who.Id, From = Monday, To = Monday };
+        var t = Apply.Batch(b.T, Edits.PutAbsence(b.T, Away(ada)));
+        Assert.Equal(Mark.Excused, t.Registers[s.Id]!.MarkFor(ada.Id));
+        Assert.Equal(Mark.Absent, t.Registers[other.Id]!.MarkFor(ada.Id));      // Tuesday: not covered
+        t = Apply.Batch(t, Edits.PutAbsence(t, Away(bo)));
+        Assert.Equal(Mark.Present, t.Registers[s.Id]!.MarkFor(bo.Id));           // seen in the room
+        t = Apply.Batch(t, Edits.PutAbsence(t, Away(cleo)));
+        Assert.DoesNotContain(cleo.Id, t.Registers[s.Id]!.ExcusedIds);          // not on the list it was taken against
+    }
+}

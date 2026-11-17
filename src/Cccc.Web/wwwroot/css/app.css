@@ -401,6 +401,18 @@ details.field summary { cursor: pointer; font-size: 13px; }
 
 /* ---- Narrow widths: the media queries come last, so they override the rules above. ------------ */
 
+/* The morning Today list on Data ▸ Absences */
+.today-list { margin: 0 0 20px; padding: 12px 14px; border: 1px solid var(--divider); border-radius: 8px; background: var(--well); }
+.today-list h2 { margin: 0 0 4px; font-size: 15px; }
+.today-rows { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; }
+.today-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 6px 0; border-top: 1px solid var(--divider); }
+.today-row:first-child { border-top: 0; }
+.today-name { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
+.today-name small { color: var(--text-muted); margin-left: 6px; }
+.today-row.away .today-name b { color: var(--warning); }
+.today-state { color: var(--warning); font-size: 13px; }
+.today-row .btn, .today-row select { min-height: 28px; padding: 2px 10px; font-size: 13px; }
+
 @media (max-width: 900px) {
     .shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
     .rail { border-right: 0; border-bottom: 1px solid var(--divider); }
