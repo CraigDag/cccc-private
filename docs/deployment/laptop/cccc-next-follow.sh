@@ -22,16 +22,29 @@ install -d -o 1654 -g 1654 -m 700 "$DIR"
 said=""
 say() { [ "$1" = "$said" ] || { echo "$1"; said="$1"; }; }
 
+# And after every look, one line beside the copy for the rebuild to read: how the look went (ok,
+# missing or failed) and when. Without it a copier that had stopped, or could no longer find the file,
+# would leave the last copy in place and the rebuild calling a stale timetable up to date.
+note() {
+  printf '%s %s\n' "$1" "$(date +%s)" > "$DIR/copier.part" && chown 1654:1654 "$DIR/copier.part" \
+    && chmod 600 "$DIR/copier.part" && mv -f "$DIR/copier.part" "$DIR/copier"
+}
+
 while :; do
   if [ ! -f "$SRC" ]; then
     say "The current app's file is not there. Was its timetable renamed? /etc/cccc-next-follow.env names it."
+    note missing
   elif ! cmp -s "$SRC" "$DST"; then
     if cp -p "$SRC" "$DST.part" && chown 1654:1654 "$DST.part" && chmod 600 "$DST.part" && mv -f "$DST.part" "$DST"; then
       say "Copying the current app's file."
+      note ok
     else
       rm -f "$DST.part"
       say "Could not copy the current app's file."
+      note failed
     fi
+  else
+    note ok
   fi
   sleep 15
 done

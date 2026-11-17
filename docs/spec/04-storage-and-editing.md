@@ -106,7 +106,9 @@ as the current app's own `.cccc`, so the two can be used side by side with nothi
   there would undo it.
 - On the laptop the file is a copy made by a root script that only reads the current app's folder,
   which is root's alone; the copy is renamed into place whole, as the current app saves (the runbook's
-  step 8).
+  step 8). After every look the script leaves a note beside the copy (`ok`, `missing` or `failed`, and
+  when), and the note is asked before the copy: a copier that has stopped or lost the file leaves a
+  copy that reads perfectly well, so without it a stale timetable would be called up to date.
 
 ## The clock
 

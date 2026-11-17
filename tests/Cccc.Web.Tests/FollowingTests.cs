@@ -226,6 +226,58 @@ public sealed class FollowingTests : IDisposable
         Assert.Equal(new TimeOnly(10, 0), project.State.Sessions[acro.Id]!.Start);
     }
 
+    [Fact]
+    public void TheLaptopsCopierIsAskedFirstSoAStaleCopyIsNeverCalledUpToDate()
+    {
+        var note = Path.Combine(Path.GetDirectoryName(_file)!, Follower.CopierNote);
+        void Note(string state, DateTimeOffset at) => File.WriteAllText(note, $"{state} {at.ToUnixTimeSeconds()}\n");
+        var (p, acro, _) = School();
+        Save(p);
+        var follower = Make();
+
+        // Following a file directly there is no note, and nothing is asked of one.
+        follower.Check();
+        Assert.Null(_status.Problem);
+        var project = _live.Get(Followed());
+
+        Note("ok", _now);
+        _now += TimeSpan.FromSeconds(30);
+        follower.Check();
+        Assert.Null(_status.Problem);
+        var good = _status.Checked;
+
+        // The copier cannot find the file: its last copy is still there and reads perfectly well, but the
+        // timetable is not called up to date, and a change in that copy waits until the copier is right.
+        acro.Start = new(10, 0);
+        Save(p);
+        Note("missing", _now);
+        _now += TimeSpan.FromSeconds(30);
+        follower.Check();
+        Assert.Contains("cannot find the current app's file", _status.Problem);
+        Assert.Equal(good, _status.Checked);
+        Assert.NotEqual(new TimeOnly(10, 0), project.State.Sessions[acro.Id]!.Start);
+
+        Note("failed", _now);
+        follower.Check();
+        Assert.Contains("could not copy", _status.Problem);
+
+        // A copier that has stopped writes no note at all: an "ok" more than three minutes old says so.
+        Note("ok", _now - Follower.CopierQuiet - TimeSpan.FromSeconds(1));
+        follower.Check();
+        Assert.Contains("has not looked", _status.Problem);
+
+        Note("nonsense", _now);
+        follower.Check();
+        Assert.Contains("not one this app understands", _status.Problem);
+
+        // Put right, and what waited comes across.
+        Note("ok", _now);
+        _now += TimeSpan.FromSeconds(30);
+        follower.Check();
+        Assert.Null(_status.Problem);
+        Assert.Equal(new TimeOnly(10, 0), project.State.Sessions[acro.Id]!.Start);
+    }
+
     [Theory]
     [InlineData(Role.Viewer)]
     [InlineData(Role.Editor)]

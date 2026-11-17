@@ -50,6 +50,16 @@ public sealed class Follower(string file, ProjectStore store, LiveProjects live,
 
     private const string ProjectKey = "follow_project";
     private const long MaxFile = 64 * 1024 * 1024;
+
+    /// <summary>
+    /// The note the laptop's copier (laptop/cccc-next-follow.sh) leaves beside its copy after every look:
+    /// <c>ok</c>, <c>missing</c> or <c>failed</c>, and when, in seconds. Following a file directly, as the
+    /// preview does, there is none and nothing is asked of it.
+    /// </summary>
+    public const string CopierNote = "copier";
+
+    /// <summary>The copier looks every fifteen seconds; a note older than this means it has stopped.</summary>
+    public static readonly TimeSpan CopierQuiet = TimeSpan.FromMinutes(3);
     private (DateTime Written, long Length)? _seen;
 
     /// <summary>The timetable kept the same as the current app's, if there is one yet.</summary>
@@ -64,6 +74,10 @@ public sealed class Follower(string file, ProjectStore store, LiveProjects live,
     public void Check()
     {
         var now = clock();
+        // A copier that has stopped, or cannot find the current app's file, leaves its last copy in place,
+        // and that copy reads perfectly well: so its own note is asked first, or a stale timetable would be
+        // called up to date.
+        if (CopierProblem(now) is { } copier) { Fail(now, copier); return; }
         FileInfo info;
         try
         {
@@ -121,6 +135,33 @@ public sealed class Follower(string file, ProjectStore store, LiveProjects live,
             status.LastChanges = changed.Touched.Count;
             log.LogInformation("Brought in {Count} changes from the current app.", changed.Touched.Count);
         }
+    }
+
+    private string? CopierProblem(DateTimeOffset now)
+    {
+        string text;
+        try
+        {
+            var note = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(file)) ?? ".", CopierNote);
+            if (!File.Exists(note)) return null;
+            text = File.ReadAllText(note).Trim();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or System.Security.SecurityException)
+        {
+            return "The copier's note beside the copy could not be read: this app may not be allowed to.";
+        }
+        var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2 || !long.TryParse(parts[1], out var seconds))
+            return "The copier's note beside the copy is not one this app understands.";
+        if (now - DateTimeOffset.FromUnixTimeSeconds(seconds) > CopierQuiet)
+            return "The copier on the laptop has not looked at the current app's file for more than three minutes: is it running? (sudo systemctl status cccc-next-follow)";
+        return parts[0] switch
+        {
+            "ok" => null,
+            "missing" => "The copier on the laptop cannot find the current app's file. Was its timetable renamed? Step 8 of the runbook says what to change.",
+            "failed" => "The copier on the laptop could not copy the current app's file.",
+            _ => "The copier's note beside the copy is not one this app understands.",
+        };
     }
 
     private LiveProject Project(Timetable t, DateTimeOffset now)

@@ -179,7 +179,9 @@ ssh -t cccc-ts "sudo docker rm -f cccc-next; sudo docker run -d --name cccc-next
 The first look brings the timetable in as a new one called *The current app's timetable* and opens it
 for everybody. Administration ▸ System's *Following the current app* card says when it last looked and
 what came across; if the file cannot be read it turns amber and says why, and the timetable stays as it
-was until it can. If the current app's timetable is ever renamed, its file's name changes with it:
+was until it can. The copier leaves a one-line note beside its copy after every look, and the rebuild
+reads it first: if the copier has stopped, or cannot find the current app's file, the card says that
+too, and everybody sees *Behind the current app* instead of a stale timetable called up to date. If the current app's timetable is ever renamed, its file's name changes with it:
 change `/etc/cccc-next-follow.env` and run `ssh -t cccc-ts "sudo systemctl restart cccc-next-follow.service"`.
 
 **The followed timetable holds the school's real data, students included**, like one brought in at
@@ -190,7 +192,7 @@ To stop following, stop the copier, delete its copy, and recreate the container 
 `-e Follow__File=…`. The timetable stays, as an ordinary one that can be changed here:
 
 ```powershell
-ssh -t cccc-ts "sudo systemctl disable --now cccc-next-follow.service; sudo rm -f /srv/cccc-next/follow/current.cccc /etc/cccc-next-follow.env"
+ssh -t cccc-ts "sudo systemctl disable --now cccc-next-follow.service; sudo rm -f /srv/cccc-next/follow/current.cccc /srv/cccc-next/follow/copier /etc/cccc-next-follow.env"
 ```
 
 ## 9. Let other people reach it (optional, and Craig's decision)
