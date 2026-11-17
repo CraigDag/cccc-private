@@ -32,7 +32,7 @@ else
         </div>
         <div class="card @(missing.Count > 0 ? "warn" : "")">
             <small>Registers to take</small><b data-testid="still-to-take-count">@missing.Count</b>
-            <small>From the last eight weeks</small>
+            <small>From the last eight weeks@(W.Access.Following ? ", taken in the current app" : "")</small>
         </div>
     </div>
     @if (missing.Count > 0)
