@@ -1,0 +1,8 @@
+[Unit]
+Description=Back up the rebuilt CCCC Scheduler's store
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/cccc-next-backup.sh

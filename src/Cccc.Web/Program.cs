@@ -12,9 +12,26 @@ if (args is ["backup", var target, ..])
     var config = new ConfigurationBuilder().AddJsonFile("appsettings.json", optional: true)
         .AddEnvironmentVariables().Build();
     var folder = config["Store:Path"] ?? throw new InvalidOperationException("Store__Path is not set.");
-    ProjectStore.Open(folder).Backup(target);
+    try { ProjectStore.Open(folder).Backup(target); }
+    catch (Exception e) when (e is StoreRefused or IOException)
+    {
+        Console.Error.WriteLine("Backup failed: " + e.Message);
+        return 1;
+    }
     Console.WriteLine("Backed up.");
-    return;
+    return 0;
+}
+
+// `cccc health`: the container's health check (the runtime image has no curl).
+if (args is ["health", ..])
+{
+    try
+    {
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(4) };
+        var ok = await http.GetStringAsync("http://127.0.0.1:8080/healthz") == "ok";
+        return ok ? 0 : 1;
+    }
+    catch (Exception) { return 1; }
 }
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,7 +40,17 @@ var builder = WebApplication.CreateBuilder(args);
 // "accept it anyway" switch: a store that takes every change and is empty after a reboot looks exactly
 // like the app forgetting a term.
 var storePath = builder.Configuration["Store:Path"];
-var store = ProjectStore.Open(storePath ?? "", create: builder.Configuration.GetValue<bool>("Store:Create"));
+ProjectStore store;
+try
+{
+    store = ProjectStore.Open(storePath ?? "", create: builder.Configuration.GetValue<bool>("Store:Create"));
+}
+catch (StoreRefused e)
+{
+    // Said plainly and alone, so it is the one line in the log rather than the top of a stack trace.
+    Console.Error.WriteLine("The app will not start: " + e.Message);
+    return 2;
+}
 
 builder.Services.AddSingleton(store);
 builder.Services.AddSingleton<SchoolClock>();
@@ -92,5 +119,6 @@ app.MapProjectDownload();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode(o => o.ContentSecurityFrameAncestorsPolicy = null);
 
 app.Run();
+return 0;
 
 public partial class Program;

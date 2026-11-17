@@ -74,8 +74,12 @@ public sealed class ProjectStore
         }
         var path = Path.Combine(full, "cccc.db");
         bool exists = File.Exists(path);
-        if (!exists && !create && Directory.EnumerateFileSystemEntries(full).Any())
-            throw new StoreRefused($"The store folder {full} has files in it but no cccc.db. Refusing to start a new store over them.");
+        // An EMPTY folder is refused too: Docker creates a missing bind-mount folder empty, so a volume
+        // that went away arrives looking exactly like a first start. Only Store__Create starts a store.
+        if (!exists && !create)
+            throw new StoreRefused(Directory.EnumerateFileSystemEntries(full).Any()
+                ? $"The store folder {full} has files in it but no cccc.db. Refusing to start a new store over them."
+                : $"The store folder {full} is empty. If this is the first start, start once with Store__Create=true. If it is not, the volume holding the store has gone: do not create it, find it.");
         var create_cs = new SqliteConnectionStringBuilder { DataSource = path, Mode = SqliteOpenMode.ReadWriteCreate }.ToString();
         using (var c = new SqliteConnection(create_cs))
         {

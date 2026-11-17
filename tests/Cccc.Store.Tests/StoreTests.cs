@@ -35,6 +35,16 @@ public class ProjectStoreTests
     }
 
     [Fact]
+    public void AnEmptyFolderIsNotTakenForAFirstStart()
+    {
+        using var s = new Scratch();
+        Directory.CreateDirectory(s.Folder);   // what Docker leaves when a bind mount's folder has gone
+        var e = Assert.Throws<StoreRefused>(() => ProjectStore.Open(s.Folder));
+        Assert.Contains("is empty", e.Message);
+        Assert.False(File.Exists(Path.Combine(s.Folder, "cccc.db")));
+    }
+
+    [Fact]
     public void AFolderWithFilesButNoDatabaseIsNotStartedOver()
     {
         using var s = new Scratch();
