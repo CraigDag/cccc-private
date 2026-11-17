@@ -234,6 +234,22 @@ public class LookingAwayTests : IClassFixture<Host>
         Assert.Contains("Zara Onlynextyear", ofNext);
         Assert.DoesNotContain("Zara Onlynextyear", ofSchool);
         Assert.Contains("Facilitator,Teaching", ofSchool);
+        // Each facilitator's average week and weeks over are the report's own (Hours.OverWeeks), in the columns named for them.
+        var lines = ofSchool.Split("\r\n");
+        var head = lines.First(l => l.StartsWith("Facilitator,Teaching", StringComparison.Ordinal)).Split(',');
+        int averageAt = Array.IndexOf(head, "A week"), overAt = Array.IndexOf(head, "Weeks over the limit");
+        Assert.True(averageAt > 0 && overAt == averageAt + 1 && head[averageAt - 1] == "Total", string.Join("|", head));
+        var spread = Cccc.Domain.Rules.Hours.OverWeeks(_host.Services.GetRequiredService<ProjectStore>().Load(school).State,
+            Cccc.Web.Features.Reports.ReportMath.Mondays(new DateOnly(2030, 2, 4), new DateOnly(2030, 3, 10)));
+        int withHours = 0;
+        foreach (var p in spread.Where(p => !p.Person.IsGuest))
+        {
+            var row = lines.Single(l => l.StartsWith(p.Person.Name + ",", StringComparison.Ordinal)).Split(',');
+            Assert.Equal(p.Average is { } x ? x.TotalHours.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "", row[averageAt]);
+            Assert.Equal(p.Person.MaxWeeklyHours is null ? "" : p.WeeksOver.ToString(System.Globalization.CultureInfo.InvariantCulture), row[overAt]);
+            if (p.Average > TimeSpan.Zero) withHours++;
+        }
+        Assert.True(withHours > 0, $"no facilitator had hours in these weeks ({spread.Count} listed), so nothing was compared");
         // A link that names no timetable, or one that is not there, downloads nothing rather than the open one.
         Assert.Equal(HttpStatusCode.BadRequest, (await a.GetAsync("/reports/csv/hours?from=2030-02-04&to=2030-03-10")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await a.GetAsync(Url(Guid.NewGuid()))).StatusCode);

@@ -158,6 +158,15 @@ the plan is narrowed to them, and *How it adds up* on My week. The drawer lists 
 rule a day at a time (a week heading each when several weeks were asked for), with the total and their
 limit at the top; *Classes*, *Cover* and *Time rules* narrow it and say how much of the total that is.
 
+**Reports ▸ Facilitator hours narrows, sorts and spreads** (`Reports/FacilitatorHours`; every number is
+`Hours.OverWeeks`, which the spreadsheet reads too). A name box, *Only those over their limit* and
+*Guests* narrow the list; any heading sorts by it, a figure biggest first and a name A to Å with guests
+after, and pressing it again turns it round (`aria-sort` says which). *A week* is the average over the
+weeks the school ran: a week in which no class happened anywhere (closed, or not timetabled yet) is left
+out of it, drawn muted, and is never anybody's quietest, while a week the school ran and they had
+nothing is. Breakdown adds the limit, the weeks over it, and the quietest and busiest week, each opening
+that week's lines.
+
 **A student's hours are Reports ▸ Student hours** (`Reports/StudentHours`): every student under their
 group (and *In no group*), the hours that count week by week, a total, and *A week*, the average over
 the weeks something of theirs counted in. A week short of the target is amber, with how many of their

@@ -1,85 +1,249 @@
+@* Reports ▸ Facilitator hours: every facilitator over the weeks chosen, in two views. Week by week is each
+   week's figure, the total and the average week; Breakdown is what the total is made of (teaching and each
+   time rule) and how it spreads (the average week, the weeks over the limit, the quietest and the busiest).
+   Every figure is Hours.OverWeeks, which the spreadsheet reads too, and every figure opens the lines that make
+   it up. The list can be narrowed by a name, to those over their limit, or without guests, and any heading
+   sorts it: biggest first, and again for the other way round. *@
 @using DomainWeek = Cccc.Domain.Week
+@using Looks = Cccc.Web.Features.Week.Looks
 @inject Dialogs D
 @{
     var t = W.T;
-    var byWeek = Weeks.ToDictionary(m => m, m => Hours.ByFacilitator(t, Occurrences.HappeningInWeek(t, m)));
-    var people = t.Facilitators.OrderBy(f => f.IsGuest).ThenBy(f => f.Name, NameOrder.Comparer).ToList();
-    var ruleNames = t.TimeRules.OrderBy(r => r.DisplayName, NameOrder.Comparer).ToList();
+    var everybody = Everybody(t);
+    var rules = t.TimeRules.OrderBy(r => r.DisplayName, NameOrder.Comparer).ToList();
+    int ran = everybody.Count == 0 ? 0 : everybody[0].WeeksRan;
+    bool anyGuests = everybody.Any(p => p.Person.IsGuest);
+    bool anyLimits = everybody.Any(p => p.Person.MaxWeeklyHours is not null);
+    var q = _find.Trim();
+    var shown = Sorted(everybody
+        .Where(p => _guests || !p.Person.IsGuest)
+        .Where(p => !_overOnly || p.WeeksOver > 0)
+        .Where(p => q.Length == 0 || p.Person.Name.Contains(q, StringComparison.CurrentCultureIgnoreCase))).ToList();
 }
-<div class="seg" role="group" style="margin-bottom:12px">
-    <button type="button" class="@(_breakdown ? "" : "on")" @onclick="() => _breakdown = false">Week by week</button>
-    <button type="button" class="@(_breakdown ? "on" : "")" @onclick="() => _breakdown = true">Breakdown</button>
+<div class="report-tools">
+    <div class="seg" role="group" aria-label="Which view">
+        <button type="button" class="@(_breakdown ? "" : "on")" @onclick="() => View(false)" data-testid="hours-view-weeks">Week by week</button>
+        <button type="button" class="@(_breakdown ? "on" : "")" @onclick="() => View(true)" data-testid="hours-view-breakdown">Breakdown</button>
+    </div>
+    <TypedText Value="@_find" ValueChanged="s => _find = s" Type="search" Placeholder="Find a facilitator…" Label="Find a facilitator" Class="find" data-testid="hours-find" />
+    @if (anyLimits)
+    {
+        <label class="check"><input type="checkbox" @bind="_overOnly" data-testid="hours-over-only" /> Only those over their limit</label>
+    }
+    @if (anyGuests)
+    {
+        <label class="check"><input type="checkbox" @bind="_guests" data-testid="hours-guests" /> Guests</label>
+    }
 </div>
-@if (!_breakdown)
+@if (shown.Count == 0)
+{
+    <p class="muted" data-testid="hours-nobody">@(everybody.Count == 0 ? "No facilitators yet. People & places ▸ Facilitators adds them." : _overOnly && q.Length == 0 ? "Nobody went over their limit in these weeks." : "Nobody here matches.")</p>
+}
+else if (!_breakdown)
 {
     <div class="table-wrap">
-        <table class="grid-table static" data-testid="hours-by-week">
+        <table class="grid-table static" data-testid="hours-by-week" data-sort="@SortName">
             <thead>
-                <tr><th>Facilitator</th>@foreach (var m in Weeks) { <th class="num">Wk @DomainWeek.IsoNumber(m)</th> }<th class="num">Total</th></tr>
+                <tr>
+                    @Head(Key.Name, "Facilitator", number: false)
+                    @foreach (var m in shown[0].Weeks.Select(w => w.Monday))
+                    {
+                        @Head(Key.Week(m), "Wk " + DomainWeek.IsoNumber(m))
+                    }
+                    @Head(Key.Total, "Total")
+                    @Head(Key.Average, "A week", "Their average over the weeks the school ran")
+                </tr>
             </thead>
             <tbody>
-                @foreach (var f in people)
+                @foreach (var p in shown)
                 {
-                    var total = TimeSpan.Zero;
-                    <tr>
+                    var f = p.Person;
+                    <tr data-testid="hours-row" data-name="@f.Name">
                         <td><span class="spine" style="--c:@f.Colour"></span>@f.Name@(f.IsGuest ? " (guest)" : "")</td>
-                        @foreach (var m in Weeks)
+                        @foreach (var w in p.Weeks)
                         {
-                            var h = byWeek[m].GetValueOrDefault(f.Id)?.Total ?? TimeSpan.Zero;
-                            total += h;
-                            bool over = f.MaxWeeklyHours is { } max && h > max;
-                            <td class="num" style="@(over ? "color:var(--warning);font-weight:700" : "")" title="@(over ? "Over their limit of " + DomainWeek.Duration(f.MaxWeeklyHours!.Value) : "")">
-                                @if (h == TimeSpan.Zero)
+                            bool over = f.MaxWeeklyHours is { } max && w.Total > max;
+                            <td class="num @(over ? "over" : "") @(w.SchoolRan ? "" : "not-run")" data-ran="@(w.SchoolRan ? "1" : "0")"
+                                title="@(over ? "Over their limit of " + DomainWeek.Duration(f.MaxWeeklyHours!.Value) : w.SchoolRan ? "" : "No class happened anywhere this week, so it is not in the average")">
+                                @if (w.Total == TimeSpan.Zero)
                                 {
                                     <span>–</span>
                                 }
                                 else
                                 {
-                                    <button type="button" class="link" title="@("What makes up " + f.Name + "’s " + DomainWeek.Duration(h) + " in week " + DomainWeek.IsoNumber(m))" @onclick="() => Explain(f.Id, [m])" data-testid="hours-cell">@DomainWeek.Duration(h)</button>
+                                    <button type="button" class="link" title="@("What makes up " + f.Name + "’s " + DomainWeek.Duration(w.Total) + " in week " + DomainWeek.IsoNumber(w.Monday))" @onclick="() => Explain(f.Id, [w.Monday])" data-testid="hours-cell">@DomainWeek.Duration(w.Total)</button>
                                 }
                             </td>
                         }
-                        <td class="num"><button type="button" class="link" title="@("Every line of " + f.Name + "’s hours in these weeks")" @onclick="() => Explain(f.Id, Weeks)" data-testid="hours-total"><b>@DomainWeek.Duration(total)</b></button></td>
+                        <td class="num"><button type="button" class="link" title="@("Every line of " + f.Name + "’s hours in these weeks")" @onclick="() => Explain(f.Id, Weeks)" data-testid="hours-total"><b>@DomainWeek.Duration(p.Total)</b></button></td>
+                        <td class="num" data-testid="hours-average">@Hm(p.Average)</td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
-    <p class="hint">Teaching plus every time rule. Cover counts for whoever was in the room; a class still waiting for cover counts for nobody. Over a limit is shown, never refused. Press a figure to see every class and time rule that makes it up.</p>
+    <p class="hint">Teaching plus every time rule. Cover counts for whoever was in the room; a class still waiting for cover counts for nobody. Over a limit is shown, never refused. <i>A week</i> is the average over the @Looks.Count(ran, "week") the school ran: a week in which no class happened anywhere (closed, or not timetabled yet) is left out. Press a figure to see every class and time rule that makes it up.</p>
 }
 else
 {
     <div class="table-wrap">
-        <table class="grid-table static" data-testid="hours-breakdown">
+        <table class="grid-table static" data-testid="hours-breakdown" data-sort="@SortName">
             <thead>
-                <tr><th>Facilitator</th><th class="num">Teaching</th>@foreach (var r in ruleNames) { <th class="num">@r.DisplayName</th> }<th class="num">Total</th><th class="num">Limit over these weeks</th></tr>
+                <tr>
+                    @Head(Key.Name, "Facilitator", number: false)
+                    @Head(Key.Teaching, "Teaching")
+                    @foreach (var r in rules)
+                    {
+                        @Head(Key.Rule(r.Id), r.DisplayName)
+                    }
+                    @Head(Key.Total, "Total")
+                    @Head(Key.Average, "A week", "Their average over the weeks the school ran")
+                    @if (anyLimits)
+                    {
+                        @Head(Key.Limit, "Limit")
+                        @Head(Key.Over, "Weeks over")
+                    }
+                    @if (ran > 1)
+                    {
+                        @Head(Key.Quietest, "Quietest", "Their lightest week the school ran")
+                        @Head(Key.Busiest, "Busiest", "Their heaviest week")
+                    }
+                </tr>
             </thead>
             <tbody>
-                @foreach (var f in people)
+                @foreach (var p in shown)
                 {
-                    var splits = Weeks.Select(m => byWeek[m].GetValueOrDefault(f.Id) ?? HoursSplit.None).ToList();
-                    var teaching = splits.Aggregate(TimeSpan.Zero, (a, s) => a + s.Teaching);
-                    var total = splits.Aggregate(TimeSpan.Zero, (a, s) => a + s.Total);
-                    <tr>
-                        <td><span class="spine" style="--c:@f.Colour"></span>@f.Name</td>
-                        <td class="num">@DomainWeek.Duration(teaching)</td>
-                        @foreach (var r in ruleNames)
+                    var f = p.Person;
+                    <tr data-testid="breakdown-row" data-name="@f.Name">
+                        <td><span class="spine" style="--c:@f.Colour"></span>@f.Name@(f.IsGuest ? " (guest)" : "")</td>
+                        <td class="num">@Hm(p.Teaching)</td>
+                        @foreach (var r in rules)
                         {
-                            var x = splits.SelectMany(s => s.Rules).Where(rt => rt.RuleId == r.Id).Aggregate(TimeSpan.Zero, (a, rt) => a + rt.Time);
-                            <td class="num">@(x == TimeSpan.Zero ? "–" : DomainWeek.Duration(x))</td>
+                            <td class="num">@Hm(p.ForRule(r.Id))</td>
                         }
-                        <td class="num"><button type="button" class="link" @onclick="() => Explain(f.Id, Weeks)" data-testid="breakdown-total"><b>@DomainWeek.Duration(total)</b></button></td>
-                        <td class="num">@(f.MaxWeeklyHours is { } max ? DomainWeek.Duration(max * Weeks.Count) : "")</td>
+                        <td class="num"><button type="button" class="link" @onclick="() => Explain(f.Id, Weeks)" data-testid="breakdown-total"><b>@DomainWeek.Duration(p.Total)</b></button></td>
+                        <td class="num" data-testid="breakdown-average">@Hm(p.Average)</td>
+                        @if (anyLimits)
+                        {
+                            <td class="num">@(f.MaxWeeklyHours is { } max ? DomainWeek.Duration(max) : "")</td>
+                            <td class="num @(p.WeeksOver > 0 ? "over" : "")" data-testid="breakdown-over">@(f.MaxWeeklyHours is null ? "" : p.WeeksOver.ToString(System.Globalization.CultureInfo.InvariantCulture))</td>
+                        }
+                        @if (ran > 1)
+                        {
+                            if (p.Busiest is null)
+                            {
+                                <td class="num">–</td><td class="num">–</td>
+                            }
+                            else if (p.Quietest is { } lo && lo.Total == p.Busiest.Total)
+                            {
+                                // The same every week the school ran: one figure, not the earliest week twice.
+                                <td class="num" colspan="2" data-testid="breakdown-even">@DomainWeek.Duration(lo.Total) each week</td>
+                            }
+                            else
+                            {
+                                <td class="num">@WeekLink(f, p.Quietest, "breakdown-quietest")</td>
+                                <td class="num">@WeekLink(f, p.Busiest, "breakdown-busiest")</td>
+                            }
+                        }
                     </tr>
                 }
             </tbody>
         </table>
     </div>
+    <p class="hint">What each total is made of, and how it spreads. <i>A week</i> is the average over the @Looks.Count(ran, "week") the school ran. @(anyLimits ? "Weeks over counts the weeks above that person's limit: shown, never refused. " : "")@(ran > 1 ? "The quietest is their lightest week the school ran, never a week it was closed; press a week to see its lines." : "")</p>
 }
 @code {
     [CascadingParameter] public Workspace W { get; set; } = default!;
     [Parameter, EditorRequired] public IReadOnlyList<DateOnly> Weeks { get; set; } = [];
-    private bool _breakdown;
+    private bool _breakdown, _overOnly, _guests = true;
+    private (Timetable? T, DateOnly[] Weeks, IReadOnlyList<FacilitatorWeeks> Rows) _figures = (null, [], []);
+    private string _find = "";
+    private Key _sort = Key.Name;
+    private bool _desc;
+
+    /// <summary>What the list is sorted by: a column, and for a week or a time rule, which one.</summary>
+    private sealed record Key(string Kind, DateOnly Monday = default, Guid RuleId = default)
+    {
+        public static readonly Key Name = new("name"), Total = new("total"), Average = new("average"), Teaching = new("teaching"),
+            Limit = new("limit"), Over = new("over"), Quietest = new("quietest"), Busiest = new("busiest");
+        public static Key Week(DateOnly monday) => new("week", monday);
+        public static Key Rule(Guid id) => new("rule", RuleId: id);
+        public string Slug => Kind switch
+        {
+            "week" => "week-" + Monday.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            "rule" => "rule-" + RuleId,
+            _ => Kind,
+        };
+    }
+
+    private string SortName => _sort.Slug + (_desc ? "-down" : "-up");
+
+    // A name sorts A to Å first; a figure biggest first. Pressing the same heading again turns it round.
+    private void SortBy(Key key)
+    {
+        if (_sort == key) _desc = !_desc;
+        else { _sort = key; _desc = key != Key.Name; }
+    }
+
+    // What both views have keeps its order across a switch; a column the other view does not draw goes back to names.
+    private void View(bool breakdown)
+    {
+        if (_breakdown == breakdown) return;
+        _breakdown = breakdown;
+        if (_sort != Key.Name && _sort != Key.Total && _sort != Key.Average) { _sort = Key.Name; _desc = false; }
+    }
+
+    private IEnumerable<FacilitatorWeeks> Sorted(IEnumerable<FacilitatorWeeks> rows)
+    {
+        if (_sort == Key.Name)
+        {
+            var guestsLast = rows.OrderBy(p => p.Person.IsGuest);
+            return _desc ? guestsLast.ThenByDescending(p => p.Person.Name, NameOrder.Comparer) : guestsLast.ThenBy(p => p.Person.Name, NameOrder.Comparer);
+        }
+        Func<FacilitatorWeeks, double> by = _sort.Kind switch
+        {
+            "week" => p => p.Weeks.FirstOrDefault(w => w.Monday == _sort.Monday)?.Total.TotalMinutes ?? 0,
+            "rule" => p => p.ForRule(_sort.RuleId).TotalMinutes,
+            "teaching" => p => p.Teaching.TotalMinutes,
+            "average" => p => p.Average?.TotalMinutes ?? -1,
+            "limit" => p => p.Person.MaxWeeklyHours?.TotalMinutes ?? -1,
+            "over" => p => p.Person.MaxWeeklyHours is null ? -1 : p.WeeksOver,
+            "quietest" => p => p.Quietest?.Total.TotalMinutes ?? -1,
+            "busiest" => p => p.Busiest?.Total.TotalMinutes ?? -1,
+            _ => p => p.Total.TotalMinutes,
+        };
+        return (_desc ? rows.OrderByDescending(by) : rows.OrderBy(by)).ThenBy(p => p.Person.Name, NameOrder.Comparer);
+    }
+
+    private RenderFragment Head(Key key, string label, string? title = null, bool number = true) => __builder =>
+    {
+        <th class="@(number ? "num" : null)" aria-sort="@(_sort == key ? (_desc ? "descending" : "ascending") : "none")" title="@title">
+            <button type="button" @onclick="() => SortBy(key)" data-testid="hours-sort" data-key="@key.Slug">@label</button>
+        </th>
+    };
+
+    private RenderFragment WeekLink(Facilitator f, WeekHours? w, string testId) => __builder =>
+    {
+        if (w is null)
+        {
+            <span>–</span>
+        }
+        else
+        {
+            <button type="button" class="link" title="@("What makes up " + f.Name + "’s week " + DomainWeek.IsoNumber(w.Monday))" @onclick="() => Explain(f.Id, [w.Monday])" data-testid="@testId" data-week="@DomainWeek.IsoNumber(w.Monday)">Wk @DomainWeek.IsoNumber(w.Monday) · @(w.Total > TimeSpan.Zero ? DomainWeek.Duration(w.Total) : "none")</button>
+        }
+    };
+
+    // Every week chosen is the page's whole cost (a year is about fifty weeks); finding, ticking and sorting
+    // draw the same figures again, so they are worked out only when the timetable or the weeks change.
+    private IReadOnlyList<FacilitatorWeeks> Everybody(Timetable t)
+    {
+        if (!ReferenceEquals(_figures.T, t) || !_figures.Weeks.SequenceEqual(Weeks))
+            _figures = (t, Weeks.ToArray(), Hours.OverWeeks(t, Weeks));
+        return _figures.Rows;
+    }
+
+    private static string Hm(TimeSpan? x) => x is { } v && v > TimeSpan.Zero ? DomainWeek.Duration(v) : "–";
 
     private void Explain(Guid facilitatorId, IReadOnlyList<DateOnly> weeks) =>
         D.Show<HoursLines>(new Dictionary<string, object?> { [nameof(HoursLines.FacilitatorId)] = facilitatorId, [nameof(HoursLines.Weeks)] = weeks });

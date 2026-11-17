@@ -204,6 +204,21 @@ public static class Hours
         return ids.ToDictionary(id => id, id => new HoursSplit(Teaching(occurrences, id), ByRule(t, credits[id])));
     }
 
+    /// <summary>
+    /// Every facilitator's hours over the given weeks (any date in each), the school's own before guests, each
+    /// in name order. Each week is counted as it runs, exactly as <see cref="ByFacilitator"/> counts it.
+    /// </summary>
+    public static IReadOnlyList<FacilitatorWeeks> OverWeeks(Timetable t, IEnumerable<DateOnly> weeks)
+    {
+        var each = weeks.Select(Week.MondayOf).Distinct().Order()
+            .Select(m => (Monday: m, Happening: Occurrences.HappeningInWeek(t, m)))
+            .Select(w => (w.Monday, Ran: w.Happening.Count > 0, By: ByFacilitator(t, w.Happening)))
+            .ToList();
+        return t.Facilitators.OrderBy(f => f.IsGuest).ThenBy(f => f.Name, NameOrder.Comparer)
+            .Select(f => new FacilitatorWeeks(f, each.Select(w => new WeekHours(w.Monday, w.By.GetValueOrDefault(f.Id) ?? HoursSplit.None, w.Ran)).ToList()))
+            .ToList();
+    }
+
     private static ImmutableList<RuleTime> ByRule(Timetable t, IEnumerable<Credit> credits)
     {
         var sums = new Dictionary<Guid, TimeSpan>();

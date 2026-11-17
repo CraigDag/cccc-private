@@ -43,17 +43,21 @@ public static class ReportCsv
         // Every time rule is its own column whether or not it added anything, so a formula can be built
         // against the sheet; Teaching plus the rule columns is Total on every row.
         var rules = t.TimeRules.OrderBy(r => r.DisplayName, NameOrder.Comparer).ToList();
-        var byWeek = weeks.ToDictionary(m => m, m => Cccc.Domain.Rules.Hours.ByFacilitator(t, Occurrences.HappeningInWeek(t, m)));
-        Row(new[] { "Facilitator", "Teaching" }.Concat(rules.Select(r => r.DisplayName)).Append("Total").Concat(weeks.Select(m => "Wk " + Week.IsoNumber(m))).ToArray());
-        foreach (var f in t.Facilitators.OrderBy(f => f.IsGuest).ThenBy(f => f.Name, NameOrder.Comparer))
+        // The same spread as Reports ▸ Facilitator hours (Hours.OverWeeks), so the sheet's average is the screen's.
+        Row(new[] { "Facilitator", "Teaching" }.Concat(rules.Select(r => r.DisplayName)).Append("Total").Append("A week").Append("Weeks over the limit")
+            .Concat(weeks.Select(m => "Wk " + Week.IsoNumber(m))).ToArray());
+        foreach (var p in Cccc.Domain.Rules.Hours.OverWeeks(t, weeks))
         {
-            var splits = weeks.Select(m => byWeek[m].GetValueOrDefault(f.Id) ?? HoursSplit.None).ToList();
-            Row(new[] { f.Name + (f.IsGuest ? " (guest)" : ""), N(Sum(splits.Select(s => s.Teaching))) }
-                .Concat(rules.Select(r => N(Sum(splits.SelectMany(s => s.Rules).Where(x => x.RuleId == r.Id).Select(x => x.Time)))))
-                .Append(N(Sum(splits.Select(s => s.Total))))
-                .Concat(splits.Select(s => N(s.Total))).ToArray());
+            var f = p.Person;
+            Row(new[] { f.Name + (f.IsGuest ? " (guest)" : ""), N(p.Teaching) }
+                .Concat(rules.Select(r => N(p.ForRule(r.Id))))
+                .Append(N(p.Total))
+                .Append(p.Average is { } a ? N(a) : "")
+                .Append(f.MaxWeeklyHours is null ? "" : p.WeeksOver.ToString(CultureInfo.InvariantCulture))
+                .Concat(p.Weeks.Select(w => N(w.Total))).ToArray());
         }
         Row("Cover counts for whoever was in the room; a class still waiting for cover counts for nobody.");
+        Row("A week is the average over the weeks the school ran: a week in which no class happened anywhere (closed, or not timetabled yet) is left out.");
         return sb.ToString();
     }
 
@@ -100,8 +104,6 @@ public static class ReportCsv
 
     private static string Span(DateOnly from, DateOnly to) =>
         $"{Week.ShortDate(Week.MondayOf(from))} to {Week.ShortDate(Week.MondayOf(to).AddDays(6))}";
-
-    private static TimeSpan Sum(IEnumerable<TimeSpan> xs) => xs.Aggregate(TimeSpan.Zero, (a, b) => a + b);
 
     private static string N(TimeSpan h) => h.TotalHours.ToString("0.##", CultureInfo.InvariantCulture);
 

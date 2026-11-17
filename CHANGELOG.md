@@ -118,6 +118,13 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   part of a class, a class they covered (saying who they covered), and each time rule's credit, adding
   up to the figure pressed. *Classes*, *Cover* and *Time rules* show one kind and how much of the total
   it is. A coach sees their own; an administrator anybody's.
+- **Facilitator hours can be searched, narrowed and sorted.** Type part of a name, tick *Only those
+  over their limit*, or untick *Guests* to leave out visiting facilitators. Press any heading to sort by
+  it, biggest first, and again to turn it round. Every person has *A week*: their average over the weeks
+  the school ran, so a week the building was closed, or one nobody has timetabled yet, is left out (and
+  shown greyed) rather than dragging the average down. *Breakdown* adds their limit, how many weeks went
+  over it, and their quietest and busiest week; press either for what made that week up. The
+  spreadsheet carries the average and the weeks over too.
 - **A student's hours, against the weekly target**: Reports ▸ Student hours lists every student under
   their group with the hours that count week by week, a total and their average week. The weekly target
   in People & places ▸ Settings (kept in the current app for its week tally) now measures each
