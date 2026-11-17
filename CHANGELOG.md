@@ -22,7 +22,14 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
 - **A class opens beside the plan**, not over it: when, where, who it is for and how many, who teaches
   and who is away, what is wrong with it, and Edit, Register, Cover, Cancel, Duplicate and Delete.
   Forms slide in from the right, so the plan stays in sight.
-- **Registers start with today's classes as big cards**, made to be tapped on a phone in the room.
+- **Cover in one press.** Beside every class that needs cover, on the Cover page and in the class's
+  side panel on the plan, are the three people best placed to take it (free first, then the lightest
+  week), each saying whether they are free and how many hours they have that week. Press a name and
+  they have the class; Undo takes it back. Everybody else, and a note, are one more press away.
+- **Adding or changing a class says who is busy**: a facilitator teaching another class then, or away,
+  says so beside their name, the same way a busy space does.
+- **Registers start with today's classes as big cards**, made to be tapped on a phone in the room. A
+  class that ended earlier today says *not taken yet* rather than *to come*.
 - **Two looks**: Paper (light, like a printed programme) and Night (dark), following the device unless
   you choose one in your menu.
 - **"Space" and "class" everywhere** a person reads, rather than "room" and "session": a Big Top is

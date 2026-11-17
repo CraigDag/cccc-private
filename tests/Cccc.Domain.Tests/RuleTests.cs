@@ -418,3 +418,42 @@ public class SpacesTests
         Assert.Empty(Spaces.InUse(b.T, Monday.AddDays(1), new TimeOnly(9, 0), new TimeOnly(17, 0)));
     }
 }
+
+public class TeachingTests
+{
+    [Fact]
+    public void SomebodyIsTeachingOnlyWhenTheyAreInTheRoomForThatTime()
+    {
+        var b = new Build();
+        var ada = b.Facilitator("Ada");
+        var bo = b.Facilitator("Bo");
+        var cleo = b.Facilitator("Cleo");
+        var dag = b.Facilitator("Dag");
+        var esme = b.Facilitator("Esme");
+        var finn = b.Facilitator("Finn");
+        var guests = b.Programme("Visitors", guest: true);
+        var visiting = b.Group("Visiting troupe", guests);
+        var morning = b.Session(Monday, "09:00", "11:00", null, null, null, In(ada));
+        var shared = b.Session(Monday, "09:00", "12:00", null, null, null, In(bo), In(dag, from: "11:00"));
+        b.Put(shared with { CoverIds = [esme.Id] });
+        b.Away(bo, Monday);
+        var cancelled = b.Session(Monday, "09:00", "11:00", null, null, null, In(cleo));
+        b.Put(cancelled with { Cancelled = true });
+        b.Session(Monday, "10:00", "11:00", Audience.ForGroup(visiting.Id), null, null, In(finn));
+
+        var at10 = Teaching.At(b.T, Monday, new TimeOnly(10, 0), new TimeOnly(10, 30));
+        Assert.Equal(morning.Id, at10[ada.Id].Session.Id);
+        Assert.False(at10.ContainsKey(bo.Id), "somebody away is not in the room");
+        Assert.True(at10.ContainsKey(esme.Id), "cover is in the room");
+        Assert.False(at10.ContainsKey(dag.Id), "somebody in only part of a class is free outside their part");
+        Assert.False(at10.ContainsKey(cleo.Id), "a cancelled class keeps nobody busy");
+        Assert.True(at10.ContainsKey(finn.Id), "a guest class still counts: hiding is drawing, never counting");
+
+        Assert.True(Teaching.At(b.T, Monday, new TimeOnly(11, 0), new TimeOnly(11, 30)).ContainsKey(dag.Id));
+        Assert.False(Teaching.At(b.T, Monday, new TimeOnly(10, 0), new TimeOnly(11, 0)).ContainsKey(dag.Id), "a part starting as the time ends does not overlap it");
+        // Ending as another starts is not an overlap, and the class being covered or edited never counts.
+        Assert.False(Teaching.At(b.T, Monday, new TimeOnly(11, 0), new TimeOnly(12, 0)).ContainsKey(ada.Id));
+        Assert.False(Teaching.At(b.T, Monday, new TimeOnly(9, 0), new TimeOnly(10, 0), except: morning.Id).ContainsKey(ada.Id));
+        Assert.Empty(Teaching.At(b.T, Monday.AddDays(1), new TimeOnly(9, 0), new TimeOnly(17, 0)));
+    }
+}

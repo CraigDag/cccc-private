@@ -115,7 +115,8 @@ public static class Edits
         var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");
         var ids = coverIds.Distinct().ToImmutableList();
         return PutSession(t, s with { CoverIds = ids, CoverNote = ids.IsEmpty ? null : note },
-            ids.IsEmpty ? $"Took the cover off {s.DisplayTitle}" : $"Assigned cover for {s.DisplayTitle}");
+            ids.IsEmpty ? $"Took the cover off {s.DisplayTitle}"
+                        : $"{string.Join(" and ", ids.Select(id => t.Facilitators[id]?.Name ?? "somebody"))} covering {s.DisplayTitle}");
     }
 
     public static TimeOnly Snap(TimeOnly t)

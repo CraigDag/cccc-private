@@ -68,6 +68,10 @@
         @if (o.NeedsCover)
         {
             <div class="insp-note warn">Everybody teaching it is away, so it needs cover.</div>
+            @if (Editable)
+            {
+                <CoverPicks Gap="o" />
+            }
         }
         @foreach (var n in notes)
         {

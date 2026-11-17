@@ -10,6 +10,8 @@
         .Where(o => Roster.For(t, o.Session).Count > 0 || t.Registers.Contains(o.Session.Id))
         .Where(o => !_mine || Registers.MayChange(W.Access.Registers, o.Session))
         .ToList();
+    var local = W.Clock.Local(W.Clock.Now);
+    var now = new TimeOnly(local.Hour, local.Minute);
 }
 <WeekNav Monday="V.Monday" Today="W.Today" Title="Registers" Go="d => V.GoTo(d)">
     @if (W.Access.FacilitatorId is not null && W.Access.MayTakeEveryRegister)
@@ -19,8 +21,6 @@
 </WeekNav>
 @if (Cccc.Domain.Week.MondayOf(W.Today) == V.Monday && rows.Where(o => o.Date == W.Today && o.Happens).ToList() is { Count: > 0 } today)
 {
-    var local = W.Clock.Local(W.Clock.Now);
-    var now = new TimeOnly(local.Hour, local.Minute);
     <h2 class="now-section">Today</h2>
     <div class="reg-cards" data-testid="registers-today">
         @foreach (var o in today)
@@ -83,6 +83,10 @@ else
                                     break;
                                 case RegisterState.Missing:
                                     <span class="form-error">Missing</span>
+                                    break;
+                                case RegisterState.ToCome when o.Date == W.Today && o.End <= now:
+                                    @* Ended earlier today: not missing until the day has passed, but not still to come either. *@
+                                    <span class="due-text">Not taken yet</span>
                                     break;
                                 case RegisterState.ToCome:
                                     <span class="muted">To come</span>

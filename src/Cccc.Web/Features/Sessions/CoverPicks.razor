@@ -1,0 +1,38 @@
+@* Who could take a class that needs cover, as buttons: one press assigns them, as one change Undo
+   takes back. The order is Cover.Ranked's (free first, then the lightest week, guests last), so these
+   buttons and the Cover form never disagree about who comes first. Busy people are still offered:
+   busy is advice, never a refusal. *@
+@inject Dialogs D
+@if (W.Access.MayEdit && !DomainWeek.HasEnded(Gap.Date, W.Today))
+{
+    var t = W.T;
+    var ranked = Cover.Ranked(t, Gap);
+    <div class="cover-picks" data-testid="cover-picks">
+        <span class="cp-label">Could take it</span>
+        @if (ranked.Count == 0)
+        {
+            <span class="muted">Everybody else is away then.</span>
+        }
+        @foreach (var c in ranked.Take(Count))
+        {
+            <button type="button" class="cover-pick @(c.IsFree ? "free" : "busy")" @onclick="() => Assign(c.Person.Id)"
+                    data-testid="cover-pick" aria-label="@($"{c.Person.Name} covers it")">
+                <span class="disc" style="--c:@c.Person.Colour">@c.Person.Initials</span>
+                <span class="cp-who">
+                    <span class="cp-name">@c.Person.Name@(c.Person.IsGuest ? " (guest)" : "")</span>
+                    <small>@(c.TeachingThen is { } o ? "Teaching " + Looks.Title(t, o.Session) + " then" : "Free") · @DomainWeek.Duration(c.Week.Total) this week@(c.IsOverLimit ? " · over their limit" : "")</small>
+                </span>
+            </button>
+        }
+        <button type="button" class="btn quiet cp-more" @onclick="More" data-testid="cover-more">@(ranked.Count > Count ? $"All {ranked.Count}…" : "With a note…")</button>
+    </div>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter, EditorRequired] public Occurrence Gap { get; set; } = default!;
+    [Parameter] public int Count { get; set; } = 3;
+
+    private void Assign(Guid id) => W.Commit(t => Edits.SetCover(t, Gap.Session.Id, [id], null));
+
+    private void More() => D.Show<CoverForm>(new Dictionary<string, object?> { [nameof(CoverForm.SessionId)] = Gap.Session.Id });
+}

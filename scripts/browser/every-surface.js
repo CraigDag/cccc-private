@@ -189,6 +189,21 @@ const log = (...a) => console.log(...a);
     await page.waitForSelector('[data-testid=dialog]', { state: 'detached' });
   });
 
+  await step('cover in one press, and Undo takes it back', async () => {
+    await page.goto(B + '/cover');
+    await page.waitForSelector('[data-testid=cover-gap] [data-testid=cover-pick]');
+    const before = await page.locator('[data-testid=cover-gap]').count();
+    const who = (await page.locator('[data-testid=cover-gap] [data-testid=cover-pick] .cp-name').first().textContent()).trim();
+    await page.locator('[data-testid=cover-gap] [data-testid=cover-pick]').first().click();
+    // A strict change: one gap fewer, and a covered row naming who was pressed.
+    await page.waitForFunction(n => document.querySelectorAll('[data-testid=cover-gap]').length < n, before);
+    const row = (await page.locator('[data-testid=covered-row]').first().textContent()).replace(/\s+/g, ' ');
+    if (!row.includes(who)) throw new Error(`covered row does not name ${who}: ${row}`);
+    await page.locator('[data-testid=toast] button.link', { hasText: 'Undo' }).last().click();
+    await page.waitForFunction(n => document.querySelectorAll('[data-testid=cover-gap]').length === n, before);
+    log('     ', who, 'covered, then undone');
+  });
+
   await step('download the project', async () => {
     await page.goto(B + '/admin/projects');
     const href = await page.locator('[data-testid=project-download]').first().getAttribute('href');

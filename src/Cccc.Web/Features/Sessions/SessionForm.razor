@@ -153,9 +153,15 @@ else
                 @foreach (var a in _people.ToList())
                 {
                     var f = t.Facilitators[a.Id];
+                    var elsewhere = Elsewhere(a.Id, a.From ?? _start, a.Until ?? _end);
                     <div class="person-row" data-testid="session-facilitator">
                         <span class="disc" style="@(f is null ? "" : $"--c:{f.Colour}")">@f?.Initials</span>
-                        <span class="grow">@(f?.Name ?? "Removed")@(f is { IsGuest: true } ? " (guest)" : "")</span>
+                        <span class="grow">@(f?.Name ?? "Removed")@(f is { IsGuest: true } ? " (guest)" : "")
+                            @if (elsewhere is not null)
+                            {
+                                <small class="person-elsewhere" data-testid="person-elsewhere">@elsewhere</small>
+                            }
+                        </span>
                         <label class="inline"><span>from</span><input type="time" step="900" value="@Hm(a.From)" @onchange="e => SetPart(a, e, true)" aria-label="In the class from" /></label>
                         <label class="inline"><span>until</span><input type="time" step="900" value="@Hm(a.Until)" @onchange="e => SetPart(a, e, false)" aria-label="In the class until" /></label>
                         <button type="button" class="btn quiet" @onclick="() => { _people.Remove(a); Check(); }" aria-label="Remove @f?.Name">Remove</button>
@@ -165,7 +171,7 @@ else
                     <option value="" selected>Add a facilitator…</option>
                     @foreach (var f in t.Facilitators.Where(f => _people.All(p => p.Id != f.Id)).OrderBy(f => f.IsGuest).ThenBy(f => f.Name, NameOrder.Comparer))
                     {
-                        <option value="@f.Id">@f.Name@(f.IsGuest ? " (guest)" : "")</option>
+                        <option value="@f.Id">@f.Name@(f.IsGuest ? " (guest)" : "")@(Elsewhere(f.Id, _start, _end) is { } e ? " — " + e : "")</option>
                     }
                 </select>
                 <p class="hint">Leave from and until empty for somebody in the whole class.</p>
@@ -307,6 +313,19 @@ else
         .OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer);
 
     private IReadOnlyDictionary<Guid, Occurrence> BusyRooms() => Spaces.InUse(W.T, _date, _start, _end, except: _id);
+
+    /// <summary>
+    /// Where a facilitator is instead, for the stretch they would be in this class: away, or teaching
+    /// another class then (the same rule cover ranks by). Advice beside the name, never a refusal.
+    /// </summary>
+    private string? Elsewhere(Guid id, TimeOnly from, TimeOnly until)
+    {
+        if (until <= from) return null;
+        if (Occurrences.IsAway(W.T, id, _date, from, until)) return "away then";
+        return Teaching.At(W.T, _date, from, until, except: _id).TryGetValue(id, out var o)
+            ? $"teaching {Cccc.Web.Features.Week.Looks.Title(W.T, o.Session)} {Hm(o.Start)}–{Hm(o.End)}"
+            : null;
+    }
 
     private void OnClassChosen()
     {

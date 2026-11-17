@@ -25,21 +25,13 @@ public static class Cover
 
     public static IReadOnlyList<CoverCandidate> Ranked(Timetable t, Occurrence gap)
     {
-        var week = Occurrences.HappeningInWeek(t, gap.Date);
-        var splits = Hours.ByFacilitator(t, week);
-        var sameTime = week.Where(o => o.Date == gap.Date && o.Session.Id != gap.Session.Id
-                                       && o.Start < gap.End && gap.Start < o.End).OrderBy(o => o.Start).ToList();
-        Occurrence? BusyIn(Guid id) => sameTime.FirstOrDefault(o =>
-        {
-            if (!o.InTheRoom.Contains(id)) return false;
-            var (a, b) = TimeWindows.InRoom(o, id);
-            return a < gap.End && gap.Start < b;
-        });
+        var splits = Hours.ByFacilitator(t, Occurrences.HappeningInWeek(t, gap.Date));
+        var teaching = Teaching.At(t, gap.Date, gap.Start, gap.End, except: gap.Session.Id);
         var assigned = gap.Session.FacilitatorIds.ToHashSet();
         return t.Facilitators
             .Where(f => !Occurrences.IsAway(t, f.Id, gap.Date, gap.Start, gap.End))
             .Where(f => !assigned.Contains(f.Id) || !gap.AwayIds.Contains(f.Id))
-            .Select(f => new CoverCandidate(f, BusyIn(f.Id), splits.GetValueOrDefault(f.Id) ?? HoursSplit.None))
+            .Select(f => new CoverCandidate(f, teaching.GetValueOrDefault(f.Id), splits.GetValueOrDefault(f.Id) ?? HoursSplit.None))
             .OrderBy(c => c.Person.IsGuest ? 1 : 0)
             .ThenBy(c => c.IsFree ? 0 : 1)
             .ThenBy(c => c.Week.Total)

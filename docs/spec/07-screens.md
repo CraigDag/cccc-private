@@ -83,6 +83,21 @@ is still to come.
   scrolled to the class somebody came to look at, else an hour before now, else the first class. The
   side panel becomes a sheet from the bottom.
 
+## Cover (`/cover`)
+
+A card a class that needs cover, and under each, **who could take it**: the first three of
+`Cover.Ranked` as buttons (free before busy, lightest week first, guests last), each with the person's
+state then and their hours that week. Pressing one gives them the class at once, one change that Undo
+takes back, because choosing cover is a decision made fifty times a term and a form for each was the
+slow part. *All 6…* opens the full list with a note. The same buttons sit in the plan's side panel for a
+class that needs cover, so it is settled where it was noticed. Below: what is covered (*Change…*,
+*Take it off*), and **away this week** as a grid of days, a name a row, a whole day filled and part of
+a day hatched with its times. Busy people are still offered: busy is advice, never a refusal.
+
+Who is teaching at a time is one rule, `Teaching.At`, beside `Spaces.InUse`: cover ranks by it and the
+class form marks *teaching Juggling 10:45–12:00* or *away then* beside a facilitator's name with it, so
+the two cannot disagree about who is free.
+
 ## Registers, People & places, Reports, Admin, My week
 
 Same jobs as before, restyled: lists are hairline tables, a thing's colour is a spine, buttons are
