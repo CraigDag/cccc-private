@@ -126,6 +126,8 @@ public sealed class ProjectStore
             stamp TEXT NOT NULL, created TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS signins (account TEXT PRIMARY KEY, at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS setup (token TEXT PRIMARY KEY, created TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS calendar_files (
+            project TEXT NOT NULL, person TEXT NOT NULL, held TEXT NOT NULL, PRIMARY KEY (project, person));
         """;
 
     internal SqliteConnection Connect()
@@ -168,6 +170,43 @@ public sealed class ProjectStore
             : "INSERT INTO meta(key,value) VALUES($k,$v) ON CONFLICT(key) DO UPDATE SET value=$v";
         cmd.Parameters.AddWithValue("$k", key);
         if (value is not null) cmd.Parameters.AddWithValue("$v", value);
+        cmd.ExecuteNonQuery();
+    }
+
+    // ---- What a person's calendar file held -------------------------------------------------------
+
+    /// <summary>
+    /// What the downloads of one person's phone calendar have held, as the web's own text: ids and times,
+    /// never a title, so the next download can cancel what has gone since. It goes when its project goes.
+    /// </summary>
+    public string? CalendarHeld(Guid project, Guid person)
+    {
+        using var c = Connect();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT held FROM calendar_files WHERE project=$p AND person=$f";
+        cmd.Parameters.AddWithValue("$p", project.ToString());
+        cmd.Parameters.AddWithValue("$f", person.ToString());
+        return cmd.ExecuteScalar() as string;
+    }
+
+    /// <summary>Forgets what every timetable's downloads of one person's calendar carried: they were erased.</summary>
+    public void ForgetCalendars(Guid person)
+    {
+        using var c = Connect();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "DELETE FROM calendar_files WHERE person=$f";
+        cmd.Parameters.AddWithValue("$f", person.ToString());
+        cmd.ExecuteNonQuery();
+    }
+
+    public void SetCalendarHeld(Guid project, Guid person, string held)
+    {
+        using var c = Connect();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "INSERT INTO calendar_files(project,person,held) VALUES($p,$f,$h) ON CONFLICT(project,person) DO UPDATE SET held=$h";
+        cmd.Parameters.AddWithValue("$p", project.ToString());
+        cmd.Parameters.AddWithValue("$f", person.ToString());
+        cmd.Parameters.AddWithValue("$h", held);
         cmd.ExecuteNonQuery();
     }
 
@@ -412,7 +451,7 @@ public sealed class ProjectStore
     {
         using var c = Connect();
         using var tx = c.BeginTransaction();
-        foreach (var t in new[] { "batches", "snapshots" }) Exec(c, $"DELETE FROM {t} WHERE project='{id}'", tx);
+        foreach (var t in new[] { "batches", "snapshots", "calendar_files" }) Exec(c, $"DELETE FROM {t} WHERE project='{id}'", tx);
         Exec(c, $"DELETE FROM projects WHERE id='{id}'", tx);
         tx.Commit();
     }

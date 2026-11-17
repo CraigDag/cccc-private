@@ -405,6 +405,19 @@ public class GuestAndEventTests
         var weekly = new SchoolEvent { Date = Monday, Repeat = new Repeat { Kind = RepeatKind.Weekly, Days = [DayOfWeek.Monday, DayOfWeek.Thursday], Count = 3 } };
         Assert.Equal([Monday, Monday.AddDays(3), Monday.AddDays(7)], EventSchedule.RuleDates(weekly));
     }
+
+    [Fact]
+    public void ADateSkippedOrClosedIsOffAndKeepsItsNumberSoTheDatesAfterItKeepTheirs()
+    {
+        var b = new Build();
+        b.Closure(new Closure { Name = "Holiday", From = Monday.AddDays(14), To = Monday.AddDays(20) });
+        var e = new SchoolEvent { Date = Monday, Repeat = new Repeat { Kind = RepeatKind.Weekly, Days = [DayOfWeek.Monday], Count = 4 },
+                                  Skipped = [Monday.AddDays(7)], SkipClosures = true };
+        Assert.Equal([(1, true), (2, false), (3, false), (4, true)], EventSchedule.EveryDate(b.T, e).Select(x => (x.Occurrence.Number, x.On)));
+        Assert.Equal([1, 4], EventSchedule.Occurrences(b.T, e).Select(o => o.Number));
+        // Not skipping closures, only the date skipped by hand is off.
+        Assert.Equal([1, 3, 4], EventSchedule.Occurrences(b.T, e with { SkipClosures = false }).Select(o => o.Number));
+    }
 }
 
 public class NameOrderTests

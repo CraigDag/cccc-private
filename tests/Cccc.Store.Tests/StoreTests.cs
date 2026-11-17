@@ -182,9 +182,23 @@ public class ProjectStoreTests
         Assert.Empty(store.List());
         store.Undelete(id);
         Assert.Single(store.List());
+        // What a person's phone calendar carried goes with its timetable, and only with its own.
+        var other = store.Create("Next", Timetable.Empty, "ada", s.Now);
+        var person = Guid.NewGuid();
+        store.SetCalendarHeld(id, person, "[]");
+        store.SetCalendarHeld(other, person, "[1]");
+        store.SetCalendarHeld(other, person, "[2]");
+        Assert.Equal(("[]", "[2]"), (store.CalendarHeld(id, person), store.CalendarHeld(other, person)));
         store.Delete(id, s.Now);
         store.Prune(s.Now.AddDays(31));
         Assert.Null(store.Find(id));
+        Assert.Null(store.CalendarHeld(id, person));
+        Assert.Equal("[2]", store.CalendarHeld(other, person));
+        // Erased, a person's go from every timetable, and nobody else's do.
+        var someoneElse = Guid.NewGuid();
+        store.SetCalendarHeld(other, someoneElse, "[3]");
+        store.ForgetCalendars(person);
+        Assert.Equal(((string?)null, "[3]"), (store.CalendarHeld(other, person), store.CalendarHeld(other, someoneElse)));
     }
 
     [Fact]

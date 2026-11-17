@@ -55,7 +55,8 @@ One SQLite database file, `cccc.db`, in WAL mode:
 | `ops` | batch, index, collection, thing id, `before` JSON, `after` JSON |
 | `snapshots` | project id, sequence, whole state JSON, compressed |
 | `accounts`, `signins` | see [`05-access-and-privacy.md`](05-access-and-privacy.md) |
-| `meta` | the store's own format number: **2** since the Scratch Week. A store at 1 is brought up to 2 as it opens (its timetables simply have an empty Scratch Week); a store of a newer number is refused, so an older build never opens a store whose timetables hold a plan it would drop |
+| `meta` | the store's own format number: **3** since former classes, spaces and facilitators (2 added the Scratch Week). An older store is brought up as it opens (its timetables simply have an empty Scratch Week and nothing former); a store of a newer number is refused, so an older build never opens a store whose timetables hold something it would drop or offer again |
+| `calendar_files` | per timetable and facilitator, what their phone calendar downloads have carried: each entry's id, first and last day and its two time lines, **never a title or a place**, and nothing whose last day has passed. The next download publishes what has gone since as cancelled ([`07`](07-screens.md#registers-people--places-reports-admin-my-week)). Goes with its timetable when that is purged; it needs no format number, since a build that never reads it loses nothing |
 
 - **Loading** a project reads the newest snapshot and replays the batches after it.
 - **A snapshot is written** every 200 batches and when the last person leaves a project, so a load

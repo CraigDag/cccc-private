@@ -36,6 +36,10 @@ it. `README.md` says what this is; `docs/spec/` says why each part is shaped the
 - **Bounds advise, never refuse**: clashes, limits, a closure scoped at nobody are warnings.
 - **`src/Cccc.Legacy` is a frozen copy of the old loader** (1.68.0, schema 24); edit it only to keep it compiling.
   When the current app's format moves on, refresh the copied files whole from its `master`, never by hand.
+- **A phone calendar file is imported over the last one, so nothing is removed by leaving it out**:
+  what is no longer theirs is published cancelled, and what has gone from the timetable is found through
+  `PhoneCalendarFiles` (ids and times only, never a title). Anything kept outside the timetable goes
+  with its project in `ProjectStore.Purge`, and with its person in the erasure (`EraseTab`).
 - **The Scratch Week is a collection of its own** (`Timetable.Scratch`, `ScratchWeek`), never part of
   `Sessions`, so nothing that counts can read it by accident; `Edits.CheckLocks` keeps the two apart.
 

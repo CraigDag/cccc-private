@@ -109,6 +109,11 @@
                         {
                             <a href="@PrintLink("students")" target="_blank" rel="noopener">A calendar per student</a>
                         }
+                        @if (V.Focus is { Kind: "facilitator" } person && W.Access.MayHaveTheWeekOf(person.Id))
+                        {
+                            <div class="menu-label">For their phone</div>
+                            <a href="@PhoneCalendar.Link(W, person.Id, V.Monday)" download title="@PhoneCalendar.Note" data-testid="print-phone">@(person.Name)’s semester</a>
+                        }
                         }
                         <div class="menu-label">Show</div>
                         <button type="button" @onclick="() => { V.ShowOpen = !V.ShowOpen; V.Changed(); }" data-testid="toggle-open">@(V.ShowOpen ? "✓ " : "")Open sessions</button>
@@ -442,7 +447,7 @@
     }
 
     /// <summary>The printed week follows what the plan is narrowed to, through the week view the documents already read.</summary>
-    private string PrintLink(string kind)
+    private string PrintLink(string kind, Guid? person = null)
     {
         var view = new WeekView { ShowGuests = V.ShowGuests, ShowOpen = V.ShowOpen };
         view.Start(V.Monday, null);
@@ -454,7 +459,7 @@
             case { Kind: "facilitator" } f: view.Facilitators.Add(f.Id); break;
             case { Kind: "student" } f: view.Students.Add(f.Id); break;
         }
-        return Prints.Link(kind, view, W);
+        return Prints.Link(kind, view, W, person);
     }
 
     public void Dispose()

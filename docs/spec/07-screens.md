@@ -103,7 +103,8 @@ covering*), who changed it and when, from `Recent`; then today's events and what
   roster count, state tags, the clash or cover note, and its verbs: Edit, Register, Cancel/Restore,
   Cover, Duplicate, Delete.
 - **Copy** (day, week, clear the weeks after), **Print** (the four documents, narrowed as the screen
-  is) and **Show** (open sessions, guest groups) sit in one *More* menu. Guest groups start hidden on
+  is, and a facilitator's semester for their phone when the plan is narrowed to one) and **Show** (open
+  sessions, guest groups) sit in one *More* menu. Guest groups start hidden on
   every visit and a count says how many classes that hides; hiding is drawing, never counting.
 - **The Scratch Week**, for editors and administrators: *Scratch Week · 3* beside *+ Class* opens it on
   the same day of the week, and *Back to week 47* returns. It is the plan with its dates taken away: the
@@ -151,6 +152,22 @@ the school's count on Now instead, which opens Registers outstanding on exactly 
 their own classes with *Only the ones I can take* ticked, and unticking it shows everybody's, because
 everybody reads every register. When nobody is in the room because the facilitator is away, the *In
 the room* column says *Nobody yet: … away* rather than nothing.
+
+**A facilitator's semester goes onto their phone as a calendar file** (`Print/PhoneCalendar`):
+*Add to phone calendar* on My week for their own, and in the plan's *More* menu an administrator's
+*Ada Brightwater’s semester* once the plan is narrowed to that person; `Access.MayHaveTheWeekOf`
+decides both, and the download refuses too. It is a file, not a subscription, because nothing outside
+the school can reach the laptop: the button's note says to download it again after the timetable
+changes. Each class is at that person's own part of it, as the week runs, so cover moves with the
+teaching; the events every facilitator may see are in it, never an administrators-only one. **It is
+made to be imported over the last one**: a class is named by its id and an event date by its event and
+its number in the repeat, and nothing that stops being theirs is left out, since a phone keeps whatever
+a new file does not mention. A class cancelled, closed, or on a day they are away is published as
+cancelled, saying why. A class deleted, cover given to somebody else or an event taken out is found
+through what their earlier downloads carried (`PhoneCalendarFiles`, the store's `calendar_files`) and
+published as cancelled at the times it had, as *No longer on your timetable*, since its title is not
+kept. One still theirs in another semester is left alone: that semester's file moves it, and a
+cancellation here would undo that file if this one were opened after it.
 
 **People & places folds what is former under each list** (`Data/FormerList`): *3 former classes*,
 closed unless a search is on, each row saying since when and how many classes it has before then. A

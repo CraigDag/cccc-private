@@ -82,6 +82,8 @@
         if (!student && W.Access.Account is { } me)
             foreach (var a in Accounts.All().Where(a => a.FacilitatorId == id))
                 Accounts.Update(me.Id, a.Id, a.Display, a.Role, a.Tags, null, a.Suspended);
+        // What their phone calendar downloads carried is ids and times, but it is theirs: it goes too.
+        if (!student) Store.ForgetCalendars(id);
         // Every timetable, deleted ones too, is rewritten through its one live copy under its lock, which then
         // holds the rewritten history: a tab looking at another timetable keeps the copy it has, and nothing
         // is left in memory to write the name back.

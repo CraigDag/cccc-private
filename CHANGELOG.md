@@ -40,6 +40,12 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   down the side and the hours across, made to be pinned up. Printed for one group or person, every
   other class in a space is a grey bar, so a busy space never looks free on paper. A school with many
   spaces gets a second sheet for the day rather than a space left off.
+- **A facilitator's semester on their phone**: *Add to phone calendar* on My week downloads their
+  classes and the school's events for the semester as a calendar file, each class at their own part
+  of it. An administrator can take one for any facilitator from the plan's *More* menu once the plan
+  is narrowed to them. Download it again after the timetable changes and open it over the last one:
+  a class that is cancelled, closed, deleted, covered by somebody else or on a day they are away is
+  taken off their phone, rather than left there for them to turn up to.
 - **A new, empty timetable says where to start**: what to put in, in the order the plan needs it,
   each ticked as it is done, or *Bring in a file…* to fill everything at once.
 - **"Space" and "class" everywhere** a person reads, rather than "room" and "session": a Big Top is

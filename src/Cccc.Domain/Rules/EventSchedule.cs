@@ -87,7 +87,15 @@ public static class EventSchedule
         return d.Month == first.Month ? d : null;
     }
 
-    public static IEnumerable<EventOccurrence> Occurrences(Timetable t, SchoolEvent e)
+    /// <summary>The dates it is on: its repeat, less a date skipped and, if it skips closures, a closed one.</summary>
+    public static IEnumerable<EventOccurrence> Occurrences(Timetable t, SchoolEvent e) =>
+        EveryDate(t, e).Where(x => x.On).Select(x => x.Occurrence);
+
+    /// <summary>
+    /// Every date its repeat gives, numbered in order, and whether it is on. A date that is off keeps its
+    /// number, so the dates after it keep theirs: a phone calendar names an occurrence by it.
+    /// </summary>
+    public static IEnumerable<(EventOccurrence Occurrence, bool On)> EveryDate(Timetable t, SchoolEvent e)
     {
         var skipped = e.Skipped.ToHashSet();
         var closures = e.SkipClosures ? t.Closures.Where(c => c.Scope == ClosureScope.WholeBuilding).ToList() : [];
@@ -95,8 +103,7 @@ public static class EventSchedule
         foreach (var date in RuleDates(e))
         {
             number++;
-            if (skipped.Contains(date) || closures.Any(c => c.Covers(date))) continue;
-            yield return new EventOccurrence(e, date, date.AddDays(span - 1), number);
+            yield return (new EventOccurrence(e, date, date.AddDays(span - 1), number), !skipped.Contains(date) && !closures.Any(c => c.Covers(date)));
         }
     }
 

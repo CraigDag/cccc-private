@@ -23,6 +23,7 @@ else
     var missing = Registers.StillToTake(t, Me.Id, W.Today);
     <WeekNav Monday="_view.Monday" Today="W.Today" Title="@("My week, " + Me.Name)" Go="d => _view.GoTo(d)">
         <a class="btn" href="@Prints.Link("mine", _view, W, Me.Id)" target="_blank" rel="noopener">Print my week</a>
+        <a class="btn" href="@PhoneCalendar.Link(W, Me.Id, _view.Monday)" download title="@PhoneCalendar.Note" data-testid="phone-calendar">Add to phone calendar</a>
     </WeekNav>
     <FollowingNotice OnlyWhenBehind="true" />
     <div class="cards">
@@ -49,6 +50,8 @@ else
         </div>
     }
     <DayList M="m" W="W" OnOpen="OpenSession" OnOpenEvent="OpenEvent" />
+    @* Said on the page as well as on the button: a phone shows no tooltip. *@
+    <p class="muted" data-testid="phone-calendar-note"><i>Add to phone calendar</i> downloads this semester as a calendar file to open on your phone. It does not update itself: download it again after the timetable changes, and open it over the last one.</p>
 }
 @code {
     [CascadingParameter] public Workspace W { get; set; } = default!;

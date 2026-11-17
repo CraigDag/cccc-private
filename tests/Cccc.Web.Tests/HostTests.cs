@@ -152,6 +152,73 @@ public class HostTests : IClassFixture<Host>
         Assert.Equal("application/pdf", r.Content.Headers.ContentType?.MediaType);
         Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString((await r.Content.ReadAsByteArrayAsync())[..4]));
     }
+
+    [Fact]
+    public async Task APhoneCalendarIsAFileOfTheirSemesterForWhoeverMayHaveTheirWeekAndNobodyElse()
+    {
+        var admin = _host.Admin();
+        var store = _host.Services.GetRequiredService<ProjectStore>();
+        if (store.List().Count == 0)
+            store.Create("Test", Cccc.Domain.Sample.SampleSchool.Create(new DateOnly(2030, 3, 6), new DateOnly(2030, 3, 6)), "test", DateTimeOffset.UtcNow);
+        var choice = _host.Services.GetRequiredService<Cccc.Web.Infrastructure.ProjectChoice>();
+        var open = choice.OpenId()!.Value;
+        var t = _host.Services.GetRequiredService<LiveProjects>().Get(open).State;
+        var dag = t.Facilitators.Single(f => f.Name == "Dag Øverlie");
+        var ada = t.Facilitators.Single(f => f.Name == "Ada Brightwater");
+        var week = new DateOnly(2030, 3, 4);
+        string Link(Guid person, Guid? project = null) => Cccc.Web.Features.Print.PhoneCalendar.Link(project ?? open, person, week);
+        var accounts = _host.Services.GetRequiredService<AccountDirectory>();
+        Account Viewer(string login, Guid? linkedTo)
+        {
+            var a = accounts.FindByLogin(login) ?? accounts.Add(admin.Id, login, "Test " + login, Role.Viewer, "a viewer's passphrase");
+            accounts.Update(admin.Id, a.Id, a.Display, Role.Viewer, default, linkedTo, false);
+            accounts.ClearMustChange(a.Id);
+            return accounts.Find(a.Id)!;
+        }
+        async Task<HttpClient> As(string login, string passphrase)
+        {
+            var c = _host.Client();
+            await Host.SignIn(c, login, passphrase);
+            return c;
+        }
+
+        // Nobody signed in gets nothing, not even a refusal that says the person exists.
+        var nobody = await _host.Client().GetAsync(Link(dag.Id));
+        Assert.NotEqual(HttpStatusCode.OK, nobody.StatusCode);
+        Assert.DoesNotContain("BEGIN:VCALENDAR", await nobody.Content.ReadAsStringAsync());
+
+        var a = await As("admin", Host.AdminPassphrase);
+        var r = await a.GetAsync(Link(dag.Id));
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        Assert.Equal("text/calendar", r.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("utf-8", r.Content.Headers.ContentType?.CharSet);
+        Assert.Equal("attachment", r.Content.Headers.ContentDisposition?.DispositionType);
+        Assert.Equal("Dag Øverlie, Autumn semester.ics", r.Content.Headers.ContentDisposition?.FileNameStar);
+        Assert.Equal("no-store", r.Headers.CacheControl?.ToString());
+        var body = await r.Content.ReadAsStringAsync();
+        Assert.StartsWith("BEGIN:VCALENDAR\r\n", body);
+        Assert.Contains("SUMMARY:Circus disciplines\r\n", body);
+        // The link names no person and no timetable by name, only by id.
+        Assert.DoesNotContain("Dag", Link(dag.Id));
+        Assert.Equal(HttpStatusCode.BadRequest, (await a.GetAsync(Link(dag.Id).Replace("2030-03-04", "next-week"))).StatusCode);
+
+        // A coach has their own, and nobody else's; an account linked to nobody has none; and a viewer's
+        // link to a timetable that is not open for everybody is of nothing.
+        Viewer("phone-coach", dag.Id);
+        var coach = await As("phone-coach", "a viewer's passphrase");
+        Assert.Equal(HttpStatusCode.OK, (await coach.GetAsync(Link(dag.Id))).StatusCode);
+        Viewer("phone-nobody", null);
+        var unlinked = await As("phone-nobody", "a viewer's passphrase");
+        var next = store.Create("Next", t, "test", DateTimeOffset.UtcNow.AddMinutes(1));
+        Assert.Equal(open, choice.OpenId());
+        foreach (var refused in new[] { await coach.GetAsync(Link(ada.Id)), await unlinked.GetAsync(Link(dag.Id)), await coach.GetAsync(Link(dag.Id, next)) })
+        {
+            Assert.True(refused.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound or HttpStatusCode.Redirect, $"answered {(int)refused.StatusCode}");
+            Assert.DoesNotContain("BEGIN:VCALENDAR", await refused.Content.ReadAsStringAsync());
+        }
+        // An administrator may have the one not open.
+        Assert.Equal(HttpStatusCode.OK, (await a.GetAsync(Link(dag.Id, next))).StatusCode);
+    }
 }
 
 public class LookingAwayTests : IClassFixture<Host>

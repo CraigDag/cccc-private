@@ -81,6 +81,10 @@ The live file has held real students since 2026-10-29, so all of this applies to
   a person is erased there first; their removal comes across; then they are erased here from the
   history. The follower's copy of the current app's file is personal data like the store, and stays on
   the laptop.
+- **What a facilitator's phone calendar downloads carried** (`calendar_files`) is kept so the next
+  file can cancel what has gone: ids, dates and times, never a title, a place or a note, so nothing a
+  person wrote is copied out of the timetable, where erasure would have to find it. Erasing a
+  facilitator forgets theirs in every timetable.
 - **Absence reasons** are free text an administrator may fill; the form warns not to write health
   details there.
 - Security headers on every response: a content security policy (self only), `X-Content-Type-Options`,

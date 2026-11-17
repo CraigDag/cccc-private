@@ -78,6 +78,7 @@ if (follow.On)
 }
 builder.Services.AddSingleton<PdfGate>();
 builder.Services.AddSingleton<PrintRequests>();
+builder.Services.AddSingleton<PhoneCalendarFiles>();
 builder.Services.AddHostedService<Maintenance>();
 // Mail is an extra, and the end-of-day reminder is off unless Reminders__Mode says otherwise.
 var mailSettings = Cccc.Web.Features.Mail.MailSettings.Read(builder.Configuration);

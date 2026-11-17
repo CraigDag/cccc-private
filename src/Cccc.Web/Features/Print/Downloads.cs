@@ -10,6 +10,23 @@ public static class Downloads
 {
     public static void MapDownloads(this WebApplication app)
     {
+        // A facilitator's semester for their phone (PhoneCalendar.Link): named by ids, so no token. Who may
+        // have it is asked here, not only by the button that is not drawn, and the timetable is the one the
+        // link names, asked again now.
+        app.MapGet("/calendar/phone", (Guid project, Guid person, DateOnly week, HttpContext ctx, ProjectChoice choice,
+            LiveProjects live, AccountDirectory accounts, SchoolClock clock, PhoneCalendarFiles phones) =>
+        {
+            var account = AccountClaims.Current(ctx.User, accounts);
+            if (account is null) return Results.Unauthorized();
+            var access = new Access(account);
+            if (!choice.MaySee(project, access)) return Results.NotFound();
+            var t = live.Get(project).State;
+            if (t.Facilitators[person] is null || !access.MayHaveTheWeekOf(person)) return Results.Forbid();
+            ctx.Response.Headers.CacheControl = "no-store";
+            var (file, fileName) = phones.Make(project, t, person, week, clock.Now, clock.Today);
+            return Results.File(file, "text/calendar; charset=utf-8", fileName);
+        });
+
         app.MapGet("/print/{token}", (string token, HttpContext ctx, PrintRequests prints, ProjectChoice choice,
             LiveProjects live, AccountDirectory accounts, PdfGate gate, SchoolClock clock) =>
         {
@@ -17,7 +34,7 @@ public static class Downloads
             if (account is null) return Results.Unauthorized();
             var access = new Access(account);
             var r = prints.Find(token, account.Id);
-            if (r is null) return Results.Text("This print link has expired. Press Print again on the week.", statusCode: 410);
+            if (r is null) return Results.Text("This link has expired. Go back to the page it was on and press the button again.", statusCode: 410);
             // The timetable the link was made in, asked again now: another may have been opened for
             // everybody since, or the one looked at deleted, and a viewer only ever sees the open one.
             if (!choice.MaySee(r.ProjectId, access))
