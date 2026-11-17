@@ -7,6 +7,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MailKit" Version="4.18.2" />
+    <!-- Pinned above what MimeKit asks for: 10.0.0 carries two advisories. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
     <PackageReference Include="QuestPDF" Version="2026.9.2" />
   </ItemGroup>
 

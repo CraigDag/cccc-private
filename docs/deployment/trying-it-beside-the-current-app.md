@@ -84,6 +84,46 @@ the script for Craig to fill in with the same encrypted remote the current backu
 ssh -t cccc-ts "sudo install -m 755 /opt/cccc-next-src/docs/deployment/laptop/cccc-next-backup.sh /usr/local/bin/; sudo install -m 644 /opt/cccc-next-src/docs/deployment/laptop/cccc-next-backup.service /opt/cccc-next-src/docs/deployment/laptop/cccc-next-backup.timer /etc/systemd/system/; sudo systemctl daemon-reload; sudo systemctl enable --now cccc-next-backup.timer; systemctl list-timers 'cccc-*'"
 ```
 
+## 7. The end-of-day register reminder (optional, off unless switched on)
+
+At 18:00 Copenhagen the app can email each facilitator whose class that day is still without a
+register. **While the current app is still the school's, leave this Off or on Preview**: if both apps
+were set to On, every facilitator would get two emails a night. Preview sends every reminder to one
+address instead, with who it was meant for written at the top, so a week of real evenings can be read
+first. Administration ▸ System says which mode it is in and when it last ran.
+
+The mail settings carry a password, so they live in a file only root can read, never in this
+repository. The names are the same as the current app's:
+
+```powershell
+ssh -t cccc-ts "sudo install -m 600 /dev/null /srv/cccc-next/mail.env; sudo nano /srv/cccc-next/mail.env"
+```
+
+and in that file, one per line (fill in the parts in capitals):
+
+```
+Smtp__Host=smtp.zoho.eu
+Smtp__Port=587
+Smtp__Security=StartTls
+Smtp__User=info@cccc.dk
+Smtp__Password=THE APP PASSWORD
+Smtp__From=info@cccc.dk
+Smtp__FromName=CCCC timetable
+Reminders__Mode=Preview
+Reminders__PreviewTo=YOUR OWN ADDRESS
+```
+
+`Reminders__Link=` (the app's address, written into the email) is left out while the rebuild is only
+reachable through the tunnel; the email then says "under Registers". `Reminders__At=18:00` and `Reminders__SummaryTo=` (one list of counts to an administrator) are
+optional. A mode that is misspelt counts as Off and System says so, rather than guessing. Then
+recreate the container with the file:
+
+```powershell
+ssh -t cccc-ts "sudo docker rm -f cccc-next; sudo docker run -d --name cccc-next --restart unless-stopped -p 127.0.0.1:8090:8080 -v /srv/cccc-next:/data --env-file /srv/cccc-next/mail.env cccc-next; sleep 10; curl -s http://127.0.0.1:8090/healthz"
+```
+
+No email names a student, and the log records only how many reminders went out.
+
 ## Erasing a person
 
 Administration ▸ Erase a person takes the name out of every timetable and every stored copy inside the

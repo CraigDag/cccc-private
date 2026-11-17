@@ -64,6 +64,12 @@ builder.Services.AddSingleton<ProjectChoice>();
 builder.Services.AddSingleton<PdfGate>();
 builder.Services.AddSingleton<PrintRequests>();
 builder.Services.AddHostedService<Maintenance>();
+// Mail is an extra, and the end-of-day reminder is off unless Reminders__Mode says otherwise.
+var mailSettings = Cccc.Web.Features.Mail.MailSettings.Read(builder.Configuration);
+builder.Services.AddSingleton(mailSettings);
+builder.Services.AddSingleton(Cccc.Web.Features.Mail.ReminderSettings.Read(builder.Configuration));
+builder.Services.AddSingleton<Cccc.Web.Features.Mail.IMailer>(new Cccc.Web.Features.Mail.SmtpMailer(mailSettings));
+builder.Services.AddHostedService<Cccc.Web.Features.Mail.RegisterReminderService>();
 builder.Services.AddScoped<Cccc.Web.Features.Shell.Dialogs>();
 builder.Services.AddScoped<Cccc.Web.Features.Shell.Toasts>();
 builder.Services.AddScoped<Cccc.Web.Features.Week.WeekView>();

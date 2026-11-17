@@ -1,9 +1,12 @@
 @inject ProjectStore Store
 @inject IWebHostEnvironment Env
+@inject Cccc.Web.Features.Mail.ReminderSettings Reminders
+@inject Cccc.Web.Features.Mail.MailSettings Mail
 @{
     var size = Store.SizeOnDisk;
     var backup = Store.GetMeta("last_backup");
     var prune = Store.GetMeta("last_prune");
+    var last = Store.GetMeta("reminders_last")?.Split('|');
 }
 <div class="cards">
     <div class="card"><small>Version</small><b>@AppVersion.Current</b><small>@Env.EnvironmentName</small></div>
@@ -12,6 +15,16 @@
     @{ var hasBackup = DateTimeOffset.TryParse(backup, out var b); var stale = !hasBackup || W.Clock.Now - b > TimeSpan.FromHours(36); }
     <div class="card @(stale ? "warn" : "")"><small>Last backup</small><b>@(hasBackup ? W.Clock.Describe(b) : "Not reported")</b><small>@(hasBackup && stale ? "More than a night ago: the nightly job may have stopped. " : "")Taken by the laptop's nightly job with <code>cccc backup</code></small></div>
     <div class="card"><small>History folded</small><b>@(DateTimeOffset.TryParse(prune, out var p) ? W.Clock.Describe(p) : "Not yet")</b><small>Changes older than 30 days, every hour</small></div>
+    <div class="card @(Reminders.Problem is not null || (last is { Length: 3 } && last[1] == "failed") ? "warn" : "")" data-testid="reminder-card">
+        <small>Register reminders</small>
+        <b>@(Reminders.Problem is not null ? "Off: a setting is wrong" : Reminders.Mode.ToString())</b>
+        <small>@Reminders.Describe(Mail)
+            @if (last is { Length: 3 } && DateTimeOffset.TryParse(last[0], out var ran))
+            {
+                @(last[1] == "ok" ? $" Last run {W.Clock.Describe(ran)}: {last[2]} sent." : $" Last run {W.Clock.Describe(ran)} failed ({last[2]}).")
+            }
+        </small>
+    </div>
 </div>
 <p class="hint">The nightly backup copies the whole store while the app runs; the runbook in <code>docs/deployment</code> has the steps.</p>
 @code {

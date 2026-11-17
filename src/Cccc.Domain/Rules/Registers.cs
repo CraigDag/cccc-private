@@ -85,3 +85,31 @@ public static class Registers
             .Where(id => t.Absences.Any(a => a.Is(AbsentPerson.Student, id) && a.Covers(s.Date, s.Start, s.End)))
             .ToList();
 }
+
+/// <summary>One facilitator's missing registers for a day — what one reminder email says. No student in it.</summary>
+public sealed record Reminder(Facilitator Facilitator, IReadOnlyList<Occurrence> Classes);
+
+/// <summary>
+/// Who to remind at the end of the day, and about which classes. Which registers are missing is
+/// <see cref="Registers.MissingBetween"/>' answer, asked as if the day had passed, narrowed to classes
+/// that had ended by the time the reminder goes (a class still running waits for the next evening).
+/// Who is reminded is whoever was in the room — the people who may file it — less anybody whose own
+/// absence covers the class, and never a guest (nobody's account) or somebody with no address.
+/// </summary>
+public static class RegisterReminders
+{
+    public static IReadOnlyList<Reminder> For(Timetable t, DateOnly day, TimeOnly endedBy)
+    {
+        var owed = new Dictionary<Guid, List<Occurrence>>();
+        foreach (var o in Registers.MissingBetween(t, day, day, day.AddDays(1)).Where(o => o.Session.End <= endedBy))
+            foreach (var fid in o.InTheRoom)
+            {
+                var f = t.Facilitators[fid];
+                if (f is null || f.IsGuest || string.IsNullOrWhiteSpace(f.Email)) continue;
+                if (Occurrences.IsAway(t, fid, o.Date, o.Session.Start, o.Session.End)) continue;
+                (owed.TryGetValue(fid, out var l) ? l : owed[fid] = []).Add(o);
+            }
+        return owed.Select(kv => new Reminder(t.Facilitators[kv.Key]!, kv.Value.OrderBy(o => o.Session.Start).ToList()))
+            .OrderBy(r => r.Facilitator.Name, NameOrder.Comparer).ToList();
+    }
+}

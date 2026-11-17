@@ -30,6 +30,9 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
 - **The line at "now"** on today's column moves by itself through the day.
 - **Bring in a file…** reads the current app's `.cccc` (every version) and says what came across.
 
-Not carried over yet: the end-of-day register reminder email (off by default in the current app; it
-needs the school's mail settings). Not carried over: Google sign-in (the school uses its own accounts), the floor plan (off the screen
+- **The end-of-day register reminder email** is here, off until it is switched on, with a Preview mode
+  that sends every reminder to one address first. Administration ▸ System shows its state. The
+  settings have the same names as the current app's.
+
+Not carried over: Google sign-in (the school uses its own accounts), the floor plan (off the screen
 since 1.31.0), and the old desktop apps.

@@ -157,3 +157,30 @@ public class PeopleImportTests
         Assert.Equal(["First", "Ng, Jr"], lines.Select(l => l.Student!.FirstName));
     }
 }
+
+public class ReminderTests
+{
+    [Fact]
+    public void TheEveningReminderNamesWhoWasInTheRoomForClassesThatHaveEndedAndNobodyElse()
+    {
+        var b = new Build();
+        var g = b.Group("BA 1");
+        b.Student("Ada", g);
+        var cleo = b.Facilitator("Cleo");
+        var dag = b.Facilitator("Dag");
+        var guest = b.Facilitator("Gwen");
+        b.T = b.T with
+        {
+            Facilitators = b.T.Facilitators.Put(b.T.Facilitators[cleo.Id]! with { Email = "cleo@example.invalid" })
+                                           .Put(b.T.Facilitators[dag.Id]! with { Email = "dag@example.invalid" })
+                                           .Put(b.T.Facilitators[guest.Id]! with { Email = "gwen@example.invalid", IsGuest = true }),
+        };
+        var morning = b.Session(Monday, "09:00", "10:00", Audience.ForGroup(g.Id), null, null, In(cleo), In(guest));
+        b.Session(Monday, "17:00", "19:00", Audience.ForGroup(g.Id), null, null, In(dag));              // still running at 18:00
+        var filed = b.Session(Monday, "11:00", "12:00", Audience.ForGroup(g.Id), null, null, In(dag));
+        b.T = b.T with { Registers = b.T.Registers.Put(new Register { Id = filed.Id }) };
+        var r = Assert.Single(RegisterReminders.For(b.T, Monday, new TimeOnly(18, 0)));
+        Assert.Equal(cleo.Id, r.Facilitator.Id);
+        Assert.Equal([morning.Id], r.Classes.Select(o => o.Session.Id));
+    }
+}
