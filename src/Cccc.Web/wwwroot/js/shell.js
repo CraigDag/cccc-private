@@ -64,6 +64,19 @@
 
     window.ccccShell = {
         trap(panel) {
+            // When the dialog goes, focus goes back where it came from (by id for a block, which a
+            // re-render may have replaced), so a keyboard user is not dropped at the top of the page.
+            const from = panel.contains(document.activeElement) ? null : document.activeElement;
+            const fromId = from && from.dataset ? from.dataset.id : null;
+            const watch = new MutationObserver(() => {
+                if (document.body.contains(panel)) return;
+                watch.disconnect();
+                if (document.querySelector('[data-testid=dialog]')) return;   // another dialog took over
+                const back = (from && document.body.contains(from)) ? from
+                    : fromId ? document.querySelector(`[data-id="${CSS.escape(fromId)}"][tabindex]`) : null;
+                if (back && (document.activeElement === document.body || !document.activeElement)) back.focus();
+            });
+            watch.observe(document.body, { childList: true, subtree: true });
             trapped = panel;
             const f = focusables(panel).filter(el => !el.hasAttribute('data-close'));
             const first = panel.querySelector('[autofocus]') || f.find(el => el.matches('input, select, textarea')) || f[0];

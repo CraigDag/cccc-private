@@ -26,6 +26,13 @@
         root.__bound = true;
         root.addEventListener('pointerdown', e => down(root, e));
         root.addEventListener('dblclick', e => dbl(root, e));
+        // From the keyboard: Tab reaches each block, Enter opens it, Space chooses it (Shift adds).
+        root.addEventListener('keydown', e => {
+            const block = e.target.closest && e.target.closest('.block');
+            if (!block || e.target !== block) return;
+            if (e.key === 'Enter') { e.preventDefault(); root.__ref.invokeMethodAsync('Open', block.dataset.id); }
+            else if (e.key === ' ') { e.preventDefault(); root.__ref.invokeMethodAsync('Choose', block.dataset.id, e.shiftKey); }
+        });
     }
 
     function down(root, e) {

@@ -58,7 +58,7 @@
                     bool movable = Editable && M.PartOf is null && !M.Locked;
                     double pad = p.Width <= 0 ? 0 : Math.Max(0, (p.ClearFrom - p.Left) / p.Width * 100);
                     <div class="block @Classes(o, p)" data-id="@s.Id" data-start="@p.StartMinutes" data-end="@p.EndMinutes" data-move="@(movable ? "1" : "0")"
-                         data-testid="block" data-title="@Looks.Title(t, s)"
+                         data-testid="block" data-title="@Looks.Title(t, s)" tabindex="0" role="button" aria-label="@(Looks.Title(t, s) + ", " + Looks.WhenWithDay(s))"
                          style="top:@Px(p.StartMinutes - M.FrameStart)px; height:@Px(Math.Max(15, p.EndMinutes - p.StartMinutes))px; left:calc(@Pct(p.Left)% + 1px); width:calc(@Pct(p.Width)% - 3px); @(colour is null ? "" : $"--c:{colour};")">
                         @if (first)
                         {

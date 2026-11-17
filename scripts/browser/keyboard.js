@@ -1,0 +1,22 @@
+const { chromium } = require('playwright');
+const OUT = (process.env.OUT || require('os').tmpdir() + '/cccc-browser') + '/'; require('fs').mkdirSync(OUT, { recursive: true });
+const B = 'http://127.0.0.1:5299';
+(async () => {
+  const browser = await chromium.launch();
+  const page = await (await browser.newContext({ viewport: { width: 1400, height: 900 } })).newPage();
+  await page.goto(B + '/signin');
+  await page.fill('[data-testid=signin-login]', 'admin');
+  await page.fill('[data-testid=signin-passphrase]', 'northlight admin');
+  await page.click('[data-testid=signin-submit]');
+  await page.waitForSelector('[data-testid=week-grid] [data-testid=block]'); await page.waitForTimeout(1000);
+  await page.locator('[data-testid=week-grid] [data-testid=block]').nth(2).focus();
+  await page.keyboard.press(' ');
+  await page.waitForSelector('[data-testid=chosen]', { timeout: 4000 }); console.log('OK space chooses');
+  await page.locator('[data-testid=week-grid] [data-testid=block]').nth(2).focus();
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('[data-testid=dialog]', { timeout: 4000 }); console.log('OK enter opens');
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('[data-testid=dialog]', { state: 'detached', timeout: 4000 }); console.log('OK escape closes');
+  console.log('focus back on', await page.evaluate(() => document.activeElement?.getAttribute('data-testid')));
+  await browser.close();
+})();
