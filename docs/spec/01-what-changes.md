@@ -52,7 +52,7 @@ What this gives:
 **Rebuild:** one SQLite file (`cccc.db`) holding projects, their operation logs, snapshots, accounts
 and sign-ins, written with SQLite's own atomic transactions (WAL). A backup is one file, taken with
 `VACUUM INTO`. `.cccc` remains a format the app can **import** (every schema up to 23) and **export**
-(the current, rebuilt shape is a different format, `.cccc2`, so the two cannot be confused).
+(the rebuilt shape is a different format, `.cccc2`, so the two cannot be confused).
 
 Drafts disappear: there is no unsaved work, because every change is stored the moment it is made.
 

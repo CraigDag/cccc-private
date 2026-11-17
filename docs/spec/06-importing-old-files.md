@@ -35,10 +35,10 @@ A file newer than schema 23 is refused, in the old app's words.
 - **Weeks are separate** (`WeeksAreSeparate`): each session already has its week; it becomes one
   dated session.
 - **A frozen week**: its sessions already carry their week; each becomes one dated session.
-- **The standing pattern** (`WeekMonday` null): it is stamped onto **every week from the week of the
-  import up to the end of the last semester that is not frozen** — which is exactly what the old app
-  draws for those weeks today, so nothing the school sees changes. Weeks before the import that are
-  not frozen (none, in a file in use, since every ended week freezes on the first edit) are left blank.
+- **The standing pattern** (`WeekMonday` null): it is stamped onto **every semester week that is not
+  frozen**, plus any week a pattern session holds a register or one-off change for — exactly the weeks
+  the old app draws the pattern on inside the year, so nothing the school sees changes. (The old pattern
+  also ran in weeks outside every semester; here those weeks are blank, which the round-trip test pins.)
   Each stamped copy gets a **stable id** derived from the pattern id and the Monday, the old app's own
   `FrozenCopyId`, so an old register keyed to a pattern session lands on the right copy.
 - An exception or register keyed to a week where its session does not land is kept on the nearest
