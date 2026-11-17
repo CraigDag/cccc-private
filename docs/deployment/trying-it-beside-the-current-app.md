@@ -5,12 +5,13 @@ port (8080), its nginx site, its data (`/srv/cccc`), its nightly update and its 
 gets a container, a port, a folder and a backup of its own, and is reached only through an SSH tunnel
 from Craig's own PC: it is not on nginx, not on the tailnet's 443, and not on the school network.
 Step 8, which is optional, lets it follow the current app's timetable by reading a copy of its file; it
-never writes to anything of the current app's.
+never writes to anything of the current app's. Step 9, also optional and Craig's decision, lets other
+people reach it on the school network, on a port of its own.
 
 | | Current app | Rebuild |
 |---|---|---|
 | Container | `cccc-scheduler` | `cccc-next` |
-| Port on the laptop | 8080 (nginx in front) | **127.0.0.1:8090 only** |
+| Port on the laptop | 8080 (nginx in front, 443) | **127.0.0.1:8090 only** (nginx on 8443 only after step 9) |
 | Data | `/srv/cccc` | `/srv/cccc-next` |
 | Image | `ghcr.io/craigdag/cccc-web`, updated nightly | `cccc-next`, built by hand, never updated by a timer |
 
@@ -192,6 +193,61 @@ To stop following, stop the copier, delete its copy, and recreate the container 
 ssh -t cccc-ts "sudo systemctl disable --now cccc-next-follow.service; sudo rm -f /srv/cccc-next/follow/current.cccc /etc/cccc-next-follow.env"
 ```
 
+## 9. Let other people reach it (optional, and Craig's decision)
+
+Until now only Craig reaches the rebuild, through the tunnel in step 4. For the administrator and the
+facilitators to try it beside the current app, nginx can serve it on a port of its own, **8443**, with
+the certificate the current app already uses (a certificate names the laptop, not a port). Who can
+reach it is then the same as who reaches the current app: anybody on the school network, and Craig's
+devices over Tailscale.
+
+**This puts a second copy of the school's timetable behind a second sign-in page on the school
+network**, with students in it if step 8 is on. Everybody needs an account in the rebuild:
+its accounts are its own (Administration ▸ Accounts), not the current app's, and a coach's account is
+linked to their name there so Now opens on their own day.
+
+**The current app's nginx site is only read**, for where its certificate is; nothing in it changes. The
+rebuild gets a site file of its own (`laptop/cccc-next.nginx`), whose names cannot clash with the
+current app's, and a small script puts it in place. nginx checks the whole configuration before it
+takes it; if it refuses, the script takes the rebuild's site straight back out, so a mistake here
+cannot stop the current app at the next restart. `ON:` in the last line means it is serving:
+
+```powershell
+ssh -t cccc-ts "sudo bash /opt/cccc-next-src/docs/deployment/laptop/cccc-next-nginx.sh on"
+```
+
+Then the firewall, the same way the current app's 443 is open: the school network, and the tailnet.
+The default stays *deny*:
+
+```powershell
+ssh -t cccc-ts "sudo ufw allow from 192.168.20.0/24 to any port 8443 proto tcp comment 'rebuild on the school network'; sudo ufw allow in on tailscale0 to any port 8443 proto tcp comment 'rebuild over tailscale'; sudo ufw status numbered"
+```
+
+For Craig's own devices over Tailscale, the access policy at `https://login.tailscale.com/admin/acls`
+needs the port as well: `"dst": ["tag:cccc-laptop:22,443,8443"]`.
+
+Last, recreate the container so the app counts sign-in attempts per machine behind nginx (it believes
+nginx's word about which machine asked only from nginx's own address), with step 8's and step 7's
+settings if they are on:
+
+```powershell
+ssh -t cccc-ts "sudo docker rm -f cccc-next; sudo docker run -d --name cccc-next --restart unless-stopped -p 127.0.0.1:8090:8080 -v /srv/cccc-next:/data -e SignIn__TrustedProxies=172.17.0.1 -e Follow__File=/data/follow/current.cccc cccc-next; sleep 10; curl -s http://127.0.0.1:8090/healthz"
+```
+
+(Leave out `-e Follow__File=…` if step 8 is not on; add `--env-file /srv/cccc-next/mail.env` before the
+last `cccc-next` if step 7 is.) The rebuild is then at **https://192.168.20.226:8443** on the school
+network, and **https://skema.cccc.internal:8443** on Craig's devices, which already trust the
+certificate. The current app stays where it is, on 443. With step 7 on, `Reminders__Link=https://192.168.20.226:8443`
+in `mail.env` puts that address in the reminder email.
+
+To stop other people reaching it, and keep it for Craig through the tunnel:
+
+```powershell
+ssh -t cccc-ts "sudo bash /opt/cccc-next-src/docs/deployment/laptop/cccc-next-nginx.sh off; sudo ufw delete allow from 192.168.20.0/24 to any port 8443 proto tcp; sudo ufw delete allow in on tailscale0 to any port 8443 proto tcp; sudo ufw status numbered"
+```
+
+and take `,8443` back out of the Tailscale policy.
+
 ## Erasing a person
 
 Administration ▸ Erase a person takes the name out of every timetable and every stored copy inside the
@@ -212,6 +268,8 @@ ssh -t cccc-ts "sudo rm -f /srv/cccc-next/backups/cccc-*.db; sudo /usr/local/bin
 If the off-site line in the backup script is switched on, delete that remote's older copies too.
 
 ## Taking it away again
+
+If step 9 is on, run its last line first, so nginx and the firewall no longer offer it. Then:
 
 ```powershell
 ssh -t cccc-ts "sudo systemctl disable --now cccc-next-backup.timer; sudo systemctl disable --now cccc-next-follow.service 2>/dev/null; sudo rm -f /etc/cccc-next-follow.env; sudo docker rm -f cccc-next"

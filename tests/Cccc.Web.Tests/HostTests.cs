@@ -99,6 +99,20 @@ public class HostTests : IClassFixture<Host>
     }
 
     [Fact]
+    public async Task BehindAProxyThatSaysHttpsTheSignInCookieIsSecure()
+    {
+        // nginx in front (the runbook's step 9) ends https itself and says so in X-Forwarded-Proto. The app
+        // believes it, so from there on the cookie that carries a sign-in is never sent over plain http.
+        _host.Admin();
+        var c = _host.Client();
+        c.DefaultRequestHeaders.Add("X-Forwarded-Proto", "https");
+        var right = await Host.SignIn(c, "admin", Host.AdminPassphrase);
+        Assert.Equal(HttpStatusCode.Redirect, right.StatusCode);
+        var cookie = right.Headers.GetValues("Set-Cookie").First(h => h.StartsWith("cccc.signin="));
+        Assert.Contains("secure", cookie.Split(';').Select(p => p.Trim().ToLowerInvariant()));
+    }
+
+    [Fact]
     public async Task AViewerCannotDownloadTheWholeFile()
     {
         var admin = _host.Admin();

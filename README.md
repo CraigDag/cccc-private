@@ -39,7 +39,9 @@ administrator through a one-time setup address printed in the log.
 ## Try it on the school laptop, beside the current app
 
 [`docs/deployment/trying-it-beside-the-current-app.md`](docs/deployment/trying-it-beside-the-current-app.md):
-its own container, port, folder and backup, reached only through an SSH tunnel.
+its own container, port, folder and backup, reached through an SSH tunnel from Craig's PC. Two
+optional steps let it follow the current app's timetable (reading it only) and let other people reach
+it on the school network on a port of its own.
 
 ## Build and test
 

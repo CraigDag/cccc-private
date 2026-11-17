@@ -1,0 +1,66 @@
+# The rebuild, for other people to reach beside the current app, on a port of its own: 8443.
+# Installed as /etc/nginx/sites-available/cccc-next by step 9 of
+# docs/deployment/trying-it-beside-the-current-app.md, which is optional and Craig's decision.
+#
+# Nothing in the current app's own site (cccc-scheduler) is changed by this file, and nothing in it is
+# named the same as anything there: the map, the zone and the error page all start cccc_next.
+#
+# The certificate is the one the current app's site already uses. A certificate names the laptop
+# (skema.cccc.internal and its school-network address), not a port, so it is good on 8443 too. If the
+# current app's site reads it from somewhere else, step 9 says how to change the two ssl_ lines.
+
+# Sign-in attempts only: a POST to /signin, ten a minute per machine, the same as the app's own count,
+# so ten honest retries are refused by the app in its own words before nginx refuses anything. A page
+# load or refresh of /signin has no key and is never held up.
+map $request_method $cccc_next_signin {
+    POST    $binary_remote_addr;
+    default "";
+}
+limit_req_zone $cccc_next_signin zone=cccc_next_signin:1m rate=10r/m;
+
+# The live page talks to the server over a WebSocket; without these two headers it loads and then says
+# it has lost the connection.
+map $http_upgrade $cccc_next_connection {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 8443 ssl;
+    server_name _;
+
+    ssl_certificate     /etc/ssl/cccc/server.crt;
+    ssl_certificate_key /etc/ssl/cccc/server.key;
+
+    # Bring in a file… takes a whole .cccc; nginx's own limit is 1 MB.
+    client_max_body_size 64m;
+
+    location = /signin {
+        limit_req zone=cccc_next_signin burst=10 nodelay;
+        limit_req_status 429;
+        error_page 429 = @cccc_next_too_many;
+        proxy_pass         http://127.0.0.1:8090;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        # SET to the machine's own address, never passed on from what it sent: the app counts sign-in
+        # attempts per machine by this header, and believes it only from nginx (SignIn__TrustedProxies).
+        proxy_set_header   X-Forwarded-For   $remote_addr;
+    }
+
+    location / {
+        proxy_pass         http://127.0.0.1:8090;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   X-Forwarded-For   $remote_addr;
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        $cccc_next_connection;
+        proxy_read_timeout 1h;
+    }
+
+    location @cccc_next_too_many {
+        default_type text/html;
+        return 429 '<!doctype html><meta charset="utf-8"><title>Too many tries</title><body style="font-family:sans-serif;max-width:32em;margin:3em auto"><h1>Too many tries</h1><p>Too many sign-in attempts from this machine. Wait a minute and try again.</p><p><a href="/signin">Back to sign in</a></p></body>';
+    }
+}
