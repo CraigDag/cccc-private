@@ -22,7 +22,7 @@ else if (!_editable && existing is not null)
                 <dt>In the room</dt><dd>@(Cccc.Web.Features.Week.Looks.Names(t, o.InTheRoom) is { Length: > 0 } n ? n : "Nobody yet")</dd>
                 @foreach (var a in existing.Facilitators.Where(a => a.From is not null || a.Until is not null))
                 {
-                    <dt>@(t.Facilitators[a.FacilitatorId]?.Name)</dt><dd>@Windows.Describe(existing, a.FacilitatorId)</dd>
+                    <dt>@(t.Facilitators[a.FacilitatorId]?.Name)</dt><dd>@TimeWindows.Describe(existing, a.FacilitatorId)</dd>
                 }
                 @if (Cccc.Web.Features.Week.Looks.StateWord(o) is { Length: > 0 } st)
                 {
@@ -345,7 +345,7 @@ else
             : p.Audience.Kind == AudienceKind.Groups && p.Audience.GroupIds.Count == 0 ? "Tick at least one group."
             : p.Audience.Kind == AudienceKind.Programme && p.Audience.ProgrammeId is null ? "Choose the programme it is for."
             : null;
-        _warnings = _why is null ? Clashes.CausedBy(W.T, Windows.Normalise(p)) : [];
+        _warnings = _why is null ? Clashes.CausedBy(W.T, TimeWindows.Normalise(p)) : [];
     }
 
     private void Save()

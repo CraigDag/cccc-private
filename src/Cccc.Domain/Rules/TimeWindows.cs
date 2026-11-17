@@ -6,7 +6,7 @@ namespace Cccc.Domain.Rules;
 /// The part of a session each person is in (schema 23). With no times, the whole session. The old
 /// <c>FacilitatorParts</c>.
 /// </summary>
-public static class Windows
+public static class TimeWindows
 {
     public static Assignment? AssignmentOf(Session s, Guid facilitatorId) =>
         s.Facilitators.FirstOrDefault(a => a.FacilitatorId == facilitatorId);

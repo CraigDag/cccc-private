@@ -133,7 +133,7 @@
 
     private static string Describe(Occurrence o, Guid f)
     {
-        var (a, b) = Windows.InRoom(o, f);
+        var (a, b) = TimeWindows.InRoom(o, f);
         return $"{Cccc.Domain.Week.Hm(a)}–{Cccc.Domain.Week.Hm(b)}" + (a != o.Start || b != o.End ? $" (class {Looks.When(o.Session)})" : "");
     }
 

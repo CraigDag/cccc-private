@@ -74,7 +74,7 @@ public static class Clashes
                         $"Room \"{RoomOf(a)}\": \"{a.Session.DisplayTitle}\" overlaps \"{b.Session.DisplayTitle}\" ({When(a)})", both));
 
                 foreach (var fid in a.InTheRoom.Intersect(b.InTheRoom))
-                    if (Windows.Overlap(a, b, fid))
+                    if (TimeWindows.Overlap(a, b, fid))
                         found.Add(new Clash(ClashKind.FacilitatorDoubleBooked,
                             $"{t.Facilitators[fid]?.Name ?? "A facilitator"} double-booked: \"{a.Session.DisplayTitle}\" ({RoomOf(a)}) and \"{b.Session.DisplayTitle}\" ({RoomOf(b)}) ({When(a)})", both));
 
@@ -108,7 +108,7 @@ public static class Clashes
             {
                 var f = t.Facilitators[fid];
                 if (f is null || f.Availability.IsEmpty) continue;
-                var (from, until) = Windows.InRoom(o, fid);
+                var (from, until) = TimeWindows.InRoom(o, fid);
                 if (until <= from) continue;
                 bool ok = f.Availability.Any(w => w.Day == o.Day && w.Start <= from && w.End >= until);
                 if (!ok)
@@ -138,7 +138,7 @@ public static class Clashes
 
             if (f.MaxGap is { } maxGap)
             {
-                var hours = theirs.Select(o => (O: o, W: Windows.InRoom(o, f.Id)))
+                var hours = theirs.Select(o => (O: o, W: TimeWindows.InRoom(o, f.Id)))
                     .OrderBy(x => x.O.Date).ThenBy(x => x.W.Start).ToList();
                 var freeFrom = hours[0];
                 for (int i = 1; i < hours.Count; i++)

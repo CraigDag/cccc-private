@@ -164,7 +164,7 @@ public sealed class WeekModel
         var items = visible.Select(o =>
         {
             if (part is not { } f || !o.InTheRoom.Contains(f)) return LaneItem.Of(o.Session);
-            var (a, b) = Windows.InRoom(o, f);
+            var (a, b) = TimeWindows.InRoom(o, f);
             return new LaneItem(o.Session.Id, o.Date, Minutes(a), Minutes(b), o.Session.Audience);
         }).ToList();
         var lanes = Lanes.ForWeek(items, t, v.OnePerson || forPerson is not null);

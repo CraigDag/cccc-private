@@ -29,7 +29,7 @@ public static class Hours
 
     /// <summary>A facilitator's teaching: the sum of their own windows in the occurrences they are in the room for.</summary>
     public static TimeSpan Teaching(IEnumerable<Occurrence> week, Guid facilitatorId) =>
-        week.Where(o => o.Happens).Aggregate(TimeSpan.Zero, (a, o) => a + Windows.Length(o, facilitatorId));
+        week.Where(o => o.Happens).Aggregate(TimeSpan.Zero, (a, o) => a + TimeWindows.Length(o, facilitatorId));
 
     public static IReadOnlyList<Occurrence> SessionsFor(IEnumerable<Occurrence> week, Guid facilitatorId) =>
         week.Where(o => o.Happens && o.InTheRoom.Contains(facilitatorId)).ToList();
@@ -48,7 +48,7 @@ public static class Hours
                 if (o.Session.ClassId is not { } cid || !classes.Contains(cid)) continue;
                 foreach (var fid in o.InTheRoom)
                 {
-                    var earned = Prep(Windows.Length(o, fid), rule.Percent);
+                    var earned = Prep(TimeWindows.Length(o, fid), rule.Percent);
                     if (earned > TimeSpan.Zero) credits.Add(new Credit(rule, o, fid, earned));
                 }
             }
@@ -79,7 +79,7 @@ public static class Hours
                 foreach (var fid in people)
                 {
                     var theirs = today.Where(o => o.InTheRoom.Contains(fid))
-                        .Select(o => (Occ: o, W: Windows.InRoom(o, fid))).ToList();
+                        .Select(o => (Occ: o, W: TimeWindows.InRoom(o, fid))).ToList();
                     if (theirs.Any(x => x.W.Start < brk.End && x.W.End > brk.Start)) continue;
                     var teaching = theirs.Where(x => Teaches(x.Occ)).ToList();
                     if (teaching.Count == 0) continue;

@@ -174,7 +174,7 @@ public static class LegacyImport
                         var start = over.NewStart ?? e.Start;
                         var end = over.NewEnd ?? e.End;
                         if (over.NewStart is null || over.NewEnd is null) { start = e.Start; end = e.End; }
-                        s = Domain.Rules.Windows.Shift(s, start - e.Start) with
+                        s = Domain.Rules.TimeWindows.Shift(s, start - e.Start) with
                         {
                             Date = Week.DateOf(monday, day), Start = start, End = end,
                             MovedFrom = new MovedFrom(s.Date, s.Start, s.End),
@@ -248,6 +248,6 @@ public static class LegacyImport
             Notes = e.Notes,
             Provisional = e.Provisional,
         };
-        return Domain.Rules.Windows.Normalise(s);
+        return Domain.Rules.TimeWindows.Normalise(s);
     }
 }

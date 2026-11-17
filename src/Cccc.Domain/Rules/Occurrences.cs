@@ -70,21 +70,21 @@ public static class Occurrences
         var assigned = s.FacilitatorIds.ToList();
         var away = assigned.Where(id =>
         {
-            var (from, until) = Windows.Assigned(s, id);
+            var (from, until) = TimeWindows.Assigned(s, id);
             return until > from && IsAway(t, id, s.Date, from, until);
         }).ToImmutableList();
 
         var present = assigned.Where(id => !away.Contains(id));
         if (!s.CoverIds.IsEmpty)
             return new Occurrence(s, OccurrenceState.Runs, null, away,
-                present.Concat(s.CoverIds).Distinct().Where(id => Windows.Length(s, away, id) > TimeSpan.Zero).ToImmutableList());
+                present.Concat(s.CoverIds).Distinct().Where(id => TimeWindows.Length(s, away, id) > TimeSpan.Zero).ToImmutableList());
 
-        if (Windows.LeavesAGap(s, away))
+        if (TimeWindows.LeavesAGap(s, away))
             return new Occurrence(s, OccurrenceState.NeedsCover, null, away,
-                present.Where(id => Windows.Length(s, away, id) > TimeSpan.Zero).ToImmutableList());
+                present.Where(id => TimeWindows.Length(s, away, id) > TimeSpan.Zero).ToImmutableList());
 
         return new Occurrence(s, OccurrenceState.Runs, null, away,
-            present.Where(id => Windows.Length(s, away, id) > TimeSpan.Zero).ToImmutableList());
+            present.Where(id => TimeWindows.Length(s, away, id) > TimeSpan.Zero).ToImmutableList());
     }
 
     public static bool IsAway(Timetable t, Guid facilitatorId, DateOnly date, TimeOnly from, TimeOnly until) =>

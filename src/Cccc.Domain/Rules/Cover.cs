@@ -32,7 +32,7 @@ public static class Cover
         Occurrence? BusyIn(Guid id) => sameTime.FirstOrDefault(o =>
         {
             if (!o.InTheRoom.Contains(id)) return false;
-            var (a, b) = Windows.InRoom(o, id);
+            var (a, b) = TimeWindows.InRoom(o, id);
             return a < gap.End && gap.Start < b;
         });
         var assigned = gap.Session.FacilitatorIds.ToHashSet();

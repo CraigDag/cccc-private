@@ -41,7 +41,7 @@ public static class Edits
     public static Batch PutSession(Timetable t, Session s, string label = "Saved a session")
     {
         if (s.End <= s.Start) throw new EditRefused("A session must end after it starts.");
-        s = Windows.Normalise(s) with
+        s = TimeWindows.Normalise(s) with
         {
             CoverIds = [.. s.CoverIds.Distinct()],
             AddedStudentIds = [.. s.AddedStudentIds.Distinct()],
@@ -78,7 +78,7 @@ public static class Edits
         var delta = start - s.Start;
         bool stretched = end - start != s.Length;
         // A move carries each person's part with it; a stretch leaves the parts where they are in the day.
-        var moved = (stretched ? s : Windows.Shift(s, delta)) with
+        var moved = (stretched ? s : TimeWindows.Shift(s, delta)) with
         {
             Date = date,
             Start = start,
@@ -92,7 +92,7 @@ public static class Edits
     {
         var s = t.Sessions[sessionId] ?? throw new EditRefused("That session has gone.");
         if (Week.MondayOf(date) != s.WeekMonday) throw new EditRefused("A reschedule stays inside its week. To move it to another week, copy it there.");
-        var moved = Windows.Shift(s, start - s.Start) with
+        var moved = TimeWindows.Shift(s, start - s.Start) with
         {
             Date = date,
             Start = start,
