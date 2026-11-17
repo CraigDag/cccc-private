@@ -1,4 +1,5 @@
 using Cccc.Domain.Model;
+using Cccc.Domain.Rules;
 
 namespace Cccc.Domain.Editing;
 
@@ -48,12 +49,19 @@ public static class PeopleImport
     public static IReadOnlyList<ImportLine> Facilitators(Timetable t, string pasted)
     {
         var known = t.Facilitators.Select(f => Key(f.Name)).ToHashSet();
+        var former = t.Facilitators.Where(f => f.IsFormer()).Select(f => Key(f.Name)).ToHashSet();
         var lines = new List<ImportLine>();
         foreach (var (n, text, cells) in Rows(pasted))
         {
             if (n == 1 && LooksLikeHeader(cells, "name")) continue;
             var name = Cell(cells, 0);
             if (name.Length == 0) continue;
+            // Somebody who left and is back is the same person: brought back, never a second of them.
+            if (former.Contains(Key(name)))
+            {
+                lines.Add(new(n, text, null, null, "A former facilitator: open them under the list's former ones and bring them back.", true));
+                continue;
+            }
             if (!known.Add(Key(name)))
             {
                 lines.Add(new(n, text, null, null, "Already on the list, or twice in what was pasted.", true));

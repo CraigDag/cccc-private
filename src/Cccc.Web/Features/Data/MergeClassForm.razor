@@ -1,0 +1,47 @@
+@inject Dialogs D
+@* Two entries for one activity (Floor Acrobatic beside Floor Acrobatics) become one. It only chooses and
+   says what will happen: the merge, and what it changes, are Edits.MergeClass and Edits.MergeDifferences,
+   worked out against the timetable as it is when OK is pressed. *@
+@if (W.T.Classes[Id] is not { } merged)
+{
+    <DialogFrame Title="Merge classes"><p>That class has gone.</p></DialogFrame>
+}
+else
+{
+    var keep = Guid.TryParse(_keep, out var k) ? k : (Guid?)null;
+    <DialogFrame Title="@("Merge " + merged.Name)" OnOk="Save" OkLabel="Merge" OkEnabled="@(keep is not null)">
+        <ChildContent>
+            <p>Every class on the timetable that counts as <b>@merged.Name</b> will count as the one you keep, and @merged.Name goes from the list.</p>
+            <label class="field"><span>Keep</span>
+                <select @bind="_keep" data-testid="merge-keep">
+                    <option value="">Choose…</option>
+                    @foreach (var c in W.T.Classes.Current().Where(c => c.Id != merged.Id).OrderBy(c => c.Name, NameOrder.Comparer))
+                    {
+                        <option value="@c.Id">@c.Name</option>
+                    }
+                </select>
+            </label>
+            @if (keep is { } survivor && W.T.Classes[survivor] is { } kept)
+            {
+                <ul class="said" data-testid="merge-said">
+                    @foreach (var line in Edits.MergeDifferences(W.T, merged.Id, survivor))
+                    {
+                        <li>@line</li>
+                    }
+                </ul>
+                <p class="hint">Weeks that have ended keep the titles they ran under. From this week on, a class still called @merged.Name takes the name @kept.Name; one with a title of its own keeps it. Undo puts it all back.</p>
+            }
+        </ChildContent>
+    </DialogFrame>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid Id { get; set; }
+    private string _keep = "";
+
+    private void Save()
+    {
+        if (!Guid.TryParse(_keep, out var survivor)) return;
+        if (W.Commit(t => Edits.MergeClass(t, Id, survivor, W.Today))) D.Close();
+    }
+}

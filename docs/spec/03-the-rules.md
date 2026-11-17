@@ -9,8 +9,11 @@ old app has a class that carries the reasoning, it is named in brackets so the h
 - **A week's timetable is the sessions dated Monday to Sunday of that week.** A week nobody has filled
   is blank — a fact the screen states, not an empty page (1.47.0).
 - **A week that has wholly ended is locked**: its Sunday is before today. Nothing about its sessions
-  changes, except that a register may be filed or corrected by somebody allowed to. Undo cannot unlock
-  a week. (`Building.FrozenWeeks`, `FreezeEndedWeeks`.)
+  changes, except that a register may be filed or corrected by somebody allowed to, and that a merge may
+  re-point a class from the class merged to the one kept: a change of `ClassId` and of nothing else, in
+  a batch that removes the old class or adds the new one (`Edits.CheckLock`). Undo cannot unlock a week;
+  undoing a merge puts the ended weeks back by the same exception. (`Building.FrozenWeeks`,
+  `FreezeEndedWeeks`.)
 - **What an occurrence's state is, in this order** (`ScheduleResolver.Resolve`):
   1. a **closure** covering its date and applying to it → *closed* (not drawn by default, never counted);
   2. **cancelled** → *cancelled* (drawn struck through on request, never counted);
@@ -246,5 +249,21 @@ different years, and a test fails when a collection is added to the timetable wi
 - **Clear the weeks after this one** empties every week after today's (clamped inside the year), on a
   press, never automatically.
 - **Renaming a class renames the sessions still carrying its old title**, in weeks that are not locked.
-- **Deleting a room leaves its sessions without a room**, stated, never a side effect.
+- **Deleting a class, a space or a facilitator used before today keeps it, as former** (`FormerSince`,
+  `Rules/Former`). The days before today keep it whole: its name, colour, area and workload, where a
+  class was held, who taught it, so hours, credit and reports over those weeks add up as they did. From
+  today on (the Scratch Week included) it is taken off, stated: a class's sessions keep the name they
+  showed with no class, a space's run with no space, a person comes off them; a space stays on an event
+  already over, a person keeps the absences that began before today. Nothing ahead offers it: pickers,
+  Find (last, marked former), Now, the plan's rows, counts, cover. Every copy (a week, a day, the Scratch
+  Week, next year, Duplicate) leaves it out through `Edits.CopyOf`, and next year does not carry it.
+  *Bring back* offers it again and restores nothing that deleting took off; Undo does. One never used
+  before today is removed outright (a class comes off every time rule too). Students are not kept this way: a
+  filed register keeps their id, and nothing more of a person who has left is held than that.
+- **Merging two classes** (`Edits.MergeClass`) re-points every session of one to the other, the ended
+  weeks included, removes it and takes it off the time rules. In weeks not ended, a session titled with
+  the merged name takes the kept one's; ended weeks keep the titles they ran under. The form says first
+  what else changes (`Edits.MergeDifferences`): the area, whether it counts for a student (only when
+  that really changes), each time rule that stops or starts crediting it. A class cannot be merged into
+  itself or into a former one.
 - **Undo is per person**, and keeps at most the last 100 of their own steps.

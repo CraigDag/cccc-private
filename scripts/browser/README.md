@@ -10,6 +10,7 @@ per step and saves screenshots and PDFs to `$OUT` (default: the temporary folder
     node scripts/browser/student-hours.js        # Reports ▸ Student hours against the 15h target: meets, short (and why), a visitor never measured, totals, the overview's count; a student's week on the plan; a coach sees none; the phone
     node scripts/browser/next-year.js            # Administration ▸ Projects ▸ Start next year…: what it keeps and leaves, every semester in the same week number, the new year beside this one opening on the first week, this year untouched; no semesters, no year; the phone
     node scripts/browser/looking.js              # Look at it: next year in this tab only, the band on every page, the plan on next year's first week, a class added there unseen by the editor, printing and spreadsheets of it, a reload, Back, opening it for everybody, deleting it from another tab; the phone
+    node scripts/browser/former.js               # People & places: deleting a class, a facilitator and a space that were used keeps them former (a week that ran still shows them, the week ahead does not), Bring back, Merge into… with what it changes, the ended weeks re-pointed, Undo; the phone
     node scripts/browser/following.js            # with FOLLOW=1 scripts/preview.sh: the current app's timetable, read only here; its Scratch Week; a class cancelled over there on Now in seconds; starting next year from it; erasing somebody taken off over there
 
 Each exits non-zero when a step fails. Set `CCCC_PREVIEW` to point them at another address.

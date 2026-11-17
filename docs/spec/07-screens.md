@@ -152,6 +152,15 @@ their own classes with *Only the ones I can take* ticked, and unticking it shows
 everybody reads every register. When nobody is in the room because the facilitator is away, the *In
 the room* column says *Nobody yet: … away* rather than nothing.
 
+**People & places folds what is former under each list** (`Data/FormerList`): *3 former classes*,
+closed unless a search is on, each row saying since when and how many classes it has before then. A
+class's, space's or facilitator's form says first what Delete (Remove, for a person) will do, counted
+by `Former.Of`, the count the delete itself decides by (`Data/FormerWords`); a former one's form says
+what it is kept for and offers *Bring back* in place of Delete. A class's form also has *Merge into…*
+(`Data/MergeClassForm`): choose the class to keep, and the form lists what changes beyond the name
+before OK says *Merge*. A picker keeps a former one only where it is the value already chosen, marked
+*(former)*.
+
 **A figure of a facilitator's hours opens the lines that make it** (`Reports/HoursLines`): a week's
 figure or the total on Reports ▸ Facilitator hours, *21h 30m this week* under a facilitator's name when
 the plan is narrowed to them, and *How it adds up* on My week. The drawer lists every class and time

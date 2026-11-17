@@ -26,9 +26,11 @@ public sealed class ProjectStore
     /// <summary>
     /// The store's format. 2 added the Scratch Week's collection: a build of format 1 would replay one of
     /// its changes as a collection it has never heard of, or drop the plan at its next snapshot, so it
-    /// refuses a store of format 2 instead. A store of format 1 has no Scratch Week and opens as it is.
+    /// refuses a store of format 2 instead. 3 added former classes, spaces and facilitators
+    /// (<c>FormerSince</c>): a build of format 2 would read every former one as in use and offer it ahead
+    /// again. An older store has neither and opens as it is.
     /// </summary>
-    public const int FormatVersion = 2;
+    public const int FormatVersion = 3;
     public const int SnapshotEvery = 200;
     public static readonly TimeSpan Retention = TimeSpan.FromDays(30);
 
@@ -416,34 +418,39 @@ public sealed class ProjectStore
     }
 
     /// <summary>
-    /// Rewrites every stored batch and snapshot of a project through <paramref name="scrub"/> — the one
-    /// sanctioned rewrite of history, for erasing a person. Returns how many stored values changed.
+    /// Rewrites every stored batch and snapshot of a project through <paramref name="scrub"/>, and every
+    /// batch's label through <paramref name="relabel"/> — the one sanctioned rewrite of history, for erasing
+    /// a person. A label is words rather than a record with an id, so it is reached by the person's names.
+    /// Returns how many stored values changed.
     /// </summary>
-    public int Rewrite(Guid id, Func<string, string> scrub)
+    public int Rewrite(Guid id, Func<string, string> scrub, Func<string, string>? relabel = null)
     {
         using var c = Connect();
         using var tx = c.BeginTransaction();
         int changed = 0;
         foreach (var table in new[] { ("batches", "ops"), ("snapshots", "state") })
         {
-            var rows = new List<(long Seq, byte[] Blob)>();
+            bool labelled = table.Item1 == "batches";
+            var rows = new List<(long Seq, byte[] Blob, string? Label)>();
             using (var cmd = c.CreateCommand())
             {
                 cmd.Transaction = tx;
-                cmd.CommandText = $"SELECT seq,{table.Item2} FROM {table.Item1} WHERE project=$p";
+                cmd.CommandText = $"SELECT seq,{table.Item2}{(labelled ? ",label" : "")} FROM {table.Item1} WHERE project=$p";
                 cmd.Parameters.AddWithValue("$p", id.ToString());
                 using var r = cmd.ExecuteReader();
-                while (r.Read()) rows.Add((r.GetInt64(0), (byte[])r[1]));
+                while (r.Read()) rows.Add((r.GetInt64(0), (byte[])r[1], labelled ? r.GetString(2) : null));
             }
-            foreach (var (seq, blob) in rows)
+            foreach (var (seq, blob, label) in rows)
             {
                 var before = Unzip(blob);
                 var after = scrub(before);
-                if (after == before) continue;
+                var newLabel = label is not null && relabel is not null ? relabel(label) : label;
+                if (after == before && newLabel == label) continue;
                 using var up = c.CreateCommand();
                 up.Transaction = tx;
-                up.CommandText = $"UPDATE {table.Item1} SET {table.Item2}=$v WHERE project=$p AND seq=$s";
+                up.CommandText = $"UPDATE {table.Item1} SET {table.Item2}=$v{(labelled ? ",label=$l" : "")} WHERE project=$p AND seq=$s";
                 up.Parameters.AddWithValue("$v", Zip(after));
+                if (labelled) up.Parameters.AddWithValue("$l", newLabel);
                 up.Parameters.AddWithValue("$p", id.ToString());
                 up.Parameters.AddWithValue("$s", seq);
                 up.ExecuteNonQuery();

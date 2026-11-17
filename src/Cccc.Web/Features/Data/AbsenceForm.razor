@@ -5,9 +5,10 @@
             <select @bind="_who" @bind:after="Check">
                 <option value="">Choose…</option>
                 <optgroup label="Facilitators">
-                    @foreach (var f in W.T.Facilitators.OrderBy(f => f.Name, NameOrder.Comparer))
+                    @* A former facilitator teaches nothing ahead; an absence already on one keeps showing them. *@
+                    @foreach (var f in W.T.Facilitators.Where(f => !f.IsFormer() || _who == "f:" + f.Id).OrderBy(f => f.Name, NameOrder.Comparer))
                     {
-                        <option value="@("f:" + f.Id)">@f.Name</option>
+                        <option value="@("f:" + f.Id)">@f.Name@(f.IsFormer() ? " (former)" : "")</option>
                     }
                 </optgroup>
                 <optgroup label="Students">

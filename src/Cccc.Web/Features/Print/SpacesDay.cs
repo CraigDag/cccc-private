@@ -103,7 +103,9 @@ public static class SpacesDay
 
         var rows = new List<(string Key, string Name, string? Colour, string Section)>();
         if (bars[NoSpace].Any()) rows.Add((NoSpace, "No space given", null, ""));
+        // A former space is a row only on a day it was used, or when it was asked for, as on the plan.
         foreach (var r in t.Rooms.Where(r => onlyRooms is not { Count: > 0 } || onlyRooms.Contains(r.Id))
+                     .Where(r => !r.IsFormer() || bars[r.Id.ToString()].Any() || onlyRooms?.Contains(r.Id) == true)
                      .OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer))
             rows.Add((r.Id.ToString(), r.Name, r.Colour, Sections.Of(r)));
         // One heading over every space says nothing: headings only between two kinds or more.

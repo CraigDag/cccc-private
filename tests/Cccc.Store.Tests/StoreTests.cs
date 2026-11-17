@@ -203,6 +203,56 @@ public class ProjectStoreTests
     }
 
     [Fact]
+    public void ARewriteReachesTheWordsOfALabelToo()
+    {
+        using var s = new Scratch();
+        var store = s.Open();
+        var id = store.Create("Year", Timetable.Empty, "ada", s.Now);
+        var live = new LiveProjects(store, () => s.Now, () => s.Today).Get(id);
+        live.Commit(new Draft(live.State).Put(Collections.Facilitators, new Facilitator { Name = "Zebedee Unique" }).ToBatch("Changed Zebedee Unique"), "ada");
+        live.Settle();
+        store.Rewrite(id, json => json.Replace("Zebedee Unique", "[erased]"), label => label.Replace("Zebedee Unique", "[erased]"));
+        Assert.Equal("Changed [erased]", store.ChangesSince(id, 0).Single().Batch.Label);
+        Assert.DoesNotContain("Zebedee", File.ReadAllBytes(store.DatabasePath).Select(b => (char)b).Aggregate(new System.Text.StringBuilder(), (sb, c) => sb.Append(c)).ToString());
+    }
+
+    /// <summary>
+    /// Undo checks each operation it puts back on its own, so a merge's re-pointing of an ended week has to
+    /// be read beside the class it brings back, or undoing a merge would leave the ended weeks merged.
+    /// </summary>
+    [Fact]
+    public void UndoingAMergePutsEveryWeekBackTheEndedOnesIncluded()
+    {
+        using var s = new Scratch();
+        var store = s.Open();
+        var merged = new Class { Name = "Floor Acrobatic" };
+        var keep = new Class { Name = "Floor Acrobatics" };
+        var ended = new Session { Date = s.Today.AddDays(-7), Title = merged.Name, ClassId = merged.Id };
+        var ahead = new Session { Date = s.Today.AddDays(1), Title = merged.Name, ClassId = merged.Id };
+        var t = Timetable.Empty with
+        {
+            Classes = EntitySet<Class>.Of([merged, keep]),
+            Sessions = EntitySet<Session>.Of([ended, ahead]),
+        };
+        var id = store.Create("Year", t, "ada", s.Now);
+        var live = new LiveProjects(store, () => s.Now, () => s.Today).Get(id);
+
+        live.Commit(x => Edits.MergeClass(x, merged.Id, keep.Id, s.Today), "ada");
+        Assert.Equal((keep.Id, keep.Id), (live.State.Sessions[ended.Id]!.ClassId!.Value, live.State.Sessions[ahead.Id]!.ClassId!.Value));
+
+        var undone = live.Undo("ada");
+        Assert.True(undone.Done);
+        Assert.Empty(undone.Skipped);
+        Assert.Equal((merged.Id, merged.Id), (live.State.Sessions[ended.Id]!.ClassId!.Value, live.State.Sessions[ahead.Id]!.ClassId!.Value));
+        Assert.Equal(merged.Name, live.State.Sessions[ahead.Id]!.Title);
+        Assert.NotNull(live.State.Classes[merged.Id]);
+
+        live.Redo("ada");
+        Assert.Equal(keep.Id, live.State.Sessions[ended.Id]!.ClassId);
+        Assert.Null(live.State.Classes[merged.Id]);
+    }
+
+    [Fact]
     public void ARewriteThroughTheLiveCopiesLeavesNothingInMemoryToWriteTheOldWordsBack()
     {
         using var s = new Scratch();

@@ -1,3 +1,5 @@
+using Cccc.Domain.Rules;
+
 namespace Cccc.Web.Features.Find;
 
 /// <summary>Whether this tab's Find box is open. One per tab; Ctrl+K or / opens it from anywhere.</summary>
@@ -49,9 +51,11 @@ public static class FindIndex
             int s = Score(name);
             if (s >= 0) hits.Add((s * 10 + kindRank, hit));
         }
-        foreach (var f in t.Facilitators) Add(0, f.Name, new FindHit("facilitator", f.Name, f.IsGuest ? "Guest facilitator" : "Facilitator", f.Id, f.Colour));
+        // A former facilitator or space is still found, last among names that match as well, so the weeks
+        // they were in can be looked at; nothing ahead has them.
+        foreach (var f in t.Facilitators) Add(f.IsFormer() ? 5 : 0, f.Name, new FindHit("facilitator", f.Name, f.IsFormer() ? "Former facilitator, " + Former.Since(f) : f.IsGuest ? "Guest facilitator" : "Facilitator", f.Id, f.Colour));
         foreach (var s in t.Students) Add(1, s.Name, new FindHit("student", s.Name, "Student" + (t.Groups.Find(s.GroupId) is { } g ? " · " + g.Name : ""), s.Id, null));
-        foreach (var r in t.Rooms) Add(2, r.Name, new FindHit("room", r.Name, r.Category ?? "Space", r.Id, r.Colour));
+        foreach (var r in t.Rooms) Add(r.IsFormer() ? 6 : 2, r.Name, new FindHit("room", r.Name, r.IsFormer() ? "Former space, " + Former.Since(r) : r.Category ?? "Space", r.Id, r.Colour));
         foreach (var g in t.Groups) Add(3, g.Name, new FindHit("group", g.Name, "Group" + (t.Programmes.Find(g.ProgrammeId) is { } p ? " · " + p.Name : ""), g.Id, g.Colour));
         foreach (var p in t.Programmes) Add(4, p.Name, new FindHit("programme", p.Name, p.IsGuest ? "Guest programme" : "Programme", p.Id, p.Colour));
 

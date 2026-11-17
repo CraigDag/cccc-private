@@ -4,11 +4,19 @@
         <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" data-testid="room-name" /></label>
         <label class="field"><span>Kind of space (optional)</span><input @bind="_category" placeholder="Studio, gym, aerial hall…" /></label>
         <Colour @bind-Value="_colour" />
+        @if (_old is not null && FormerWords.For(W.T, _old, W.Today) is { } said)
+        {
+            <p class="@(_old.IsFormer() ? "notice" : "hint")" data-testid="former-note">@said</p>
+        }
     </ChildContent>
     <Extra>
-        @if (_old is not null)
+        @if (_old is { } old && old.IsFormer())
         {
-            <button type="button" class="btn danger" @onclick="Delete">Delete</button>
+            <button type="button" class="btn" @onclick="BringBack" data-testid="bring-back">Bring back</button>
+        }
+        else if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete" data-testid="data-delete">Delete</button>
         }
     </Extra>
 </DialogFrame>
@@ -35,5 +43,10 @@
     private void Delete()
     {
         if (W.Commit(t => Edits.RemoveRoom(t, _old!.Id, W.Today))) D.Close();
+    }
+
+    private void BringBack()
+    {
+        if (W.Commit(t => Edits.BringBack(t, t.Rooms[_old!.Id] ?? throw new EditRefused("That space has gone.")))) D.Close();
     }
 }

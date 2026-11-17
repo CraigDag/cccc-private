@@ -26,11 +26,26 @@
             <span>Renaming a class renames the classes on the timetable still carrying its old name, in weeks that have not ended.</span>
         }
         </p>
+        @if (_old is not null && FormerWords.For(W.T, _old, W.Today) is { } said)
+        {
+            <p class="@(_old.IsFormer() ? "notice" : "hint")" data-testid="former-note">@said</p>
+        }
     </ChildContent>
     <Extra>
         @if (_old is not null)
         {
-            <button type="button" class="btn danger" @onclick="Delete">Delete</button>
+            @if (_old.IsFormer())
+            {
+                <button type="button" class="btn" @onclick="BringBack" data-testid="bring-back">Bring back</button>
+            }
+            else
+            {
+                <button type="button" class="btn danger" @onclick="Delete" data-testid="data-delete">Delete</button>
+            }
+            @if (W.T.Classes.Current().Any(c => c.Id != _old.Id))
+            {
+                <button type="button" class="btn" @onclick="Merge" data-testid="class-merge">Merge into…</button>
+            }
         }
     </Extra>
 </DialogFrame>
@@ -58,4 +73,11 @@
     {
         if (W.Commit(t => Edits.RemoveClass(t, _old!.Id, W.Today))) D.Close();
     }
+
+    private void BringBack()
+    {
+        if (W.Commit(t => Edits.BringBack(t, t.Classes[_old!.Id] ?? throw new EditRefused("That class has gone.")))) D.Close();
+    }
+
+    private void Merge() => D.Show<MergeClassForm>(new Dictionary<string, object?> { [nameof(MergeClassForm.Id)] = _old!.Id });
 }

@@ -182,7 +182,9 @@ public sealed class PlanModel
         {
             case Lens.Spaces:
                 foreach (var r in t.Rooms.OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer))
-                    if (focus is not { Kind: "room" } || focus.Id == r.Id)
+                    // A former space is a row only where it was used, or when somebody asked for it.
+                    if ((focus is not { Kind: "room" } || focus.Id == r.Id)
+                        && (!r.IsFormer() || focus?.Id == r.Id || range.Any(o => o.Session.RoomId == r.Id)))
                         rows.Add(new PlanRow(r.Id.ToString(), r.Id, r.Name, r.Colour, Sections.Of(r)));
                 if (focus is null && range.Any(o => o.Session.RoomId is null || t.Rooms[o.Session.RoomId.Value] is null))
                     rows.Add(new PlanRow(NoSpace, null, "No space given", null, Sections.OtherSpaces));

@@ -21,9 +21,9 @@
         <label class="field"><span>Linked to a facilitator</span>
             <select @bind="_link">
                 <option value="">Not linked</option>
-                @foreach (var f in W.T.Facilitators.Where(f => !f.IsGuest).OrderBy(f => f.Name, NameOrder.Comparer))
+                @foreach (var f in W.T.Facilitators.Where(f => !f.IsGuest && (!f.IsFormer() || _link == f.Id.ToString())).OrderBy(f => f.Name, NameOrder.Comparer))
                 {
-                    <option value="@f.Id">@f.Name</option>
+                    <option value="@f.Id">@f.Name@(f.IsFormer() ? " (former)" : "")</option>
                 }
             </select>
         </label>

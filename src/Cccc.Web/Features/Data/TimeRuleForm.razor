@@ -14,9 +14,9 @@
         {
             <label class="field"><span>Share of the class's length, in percent</span><input type="number" min="1" max="200" @bind="_percent" @bind:after="Check" /></label>
             <fieldset class="field checks columns"><legend>Classes that earn it</legend>
-                @foreach (var c in W.T.Classes.OrderBy(c => c.Name, NameOrder.Comparer))
+                @foreach (var c in Offered())
                 {
-                    <label><input type="checkbox" checked="@_classes.Contains(c.Id)" @onchange="e => { if ((bool)e.Value!) _classes.Add(c.Id); else _classes.Remove(c.Id); Check(); }" /> @c.Name</label>
+                    <label><input type="checkbox" checked="@_classes.Contains(c.Id)" @onchange="e => { if ((bool)e.Value!) _classes.Add(c.Id); else _classes.Remove(c.Id); Check(); }" /> @c.Name@(c.IsFormer() ? " (former)" : "")</label>
                 }
             </fieldset>
             <p class="hint">For each person in the room, per class, never divided between co-teachers. Cover moves it with the teaching.</p>
@@ -37,9 +37,9 @@
                 </select>
             </label>
             <fieldset class="field checks columns"><legend>The class it is (for example Lunch), optional</legend>
-                @foreach (var c in W.T.Classes.OrderBy(c => c.Name, NameOrder.Comparer))
+                @foreach (var c in Offered())
                 {
-                    <label><input type="checkbox" checked="@_classes.Contains(c.Id)" @onchange="e => { if ((bool)e.Value!) _classes.Add(c.Id); else _classes.Remove(c.Id); }" /> @c.Name</label>
+                    <label><input type="checkbox" checked="@_classes.Contains(c.Id)" @onchange="e => { if ((bool)e.Value!) _classes.Add(c.Id); else _classes.Remove(c.Id); }" /> @c.Name@(c.IsFormer() ? " (former)" : "")</label>
                 }
             </fieldset>
         }
@@ -77,6 +77,12 @@
         }
         Check();
     }
+
+    // A former class stays on the rules it was on, so the days it ran keep their credit; it is listed only
+    // on those, as the rule had it when the form opened, so unticking it does not make it vanish.
+    private IEnumerable<Class> Offered() => W.T.Classes
+        .Where(c => !c.IsFormer() || _old?.ClassIds.Contains(c.Id) == true)
+        .OrderBy(c => c.Name, NameOrder.Comparer);
 
     private void Check()
     {

@@ -91,9 +91,9 @@ else
                 <label class="field"><span>Space</span>
                     <select @bind="RoomText">
                         <option value="">No space</option>
-                        @foreach (var r in t.Rooms.OrderBy(r => r.Name, NameOrder.Comparer))
+                        @foreach (var r in t.Rooms.Where(r => !r.IsFormer() || r.Id == _e.RoomId).OrderBy(r => r.Name, NameOrder.Comparer))
                         {
-                            <option value="@r.Id">@r.Name</option>
+                            <option value="@r.Id">@r.Name@(r.IsFormer() ? " (former)" : "")</option>
                         }
                     </select>
                 </label>

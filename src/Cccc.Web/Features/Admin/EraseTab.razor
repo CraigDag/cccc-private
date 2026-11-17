@@ -22,9 +22,11 @@
                     }
                 </optgroup>
                 <optgroup label="Facilitators">
-                    @foreach (var f in W.T.Facilitators.OrderBy(f => f.Name, NameOrder.Comparer))
+                    @* A former facilitator is still on the timetable, kept for the days they taught, and is erased
+                       from here; one erased already is "[erased]" and has nothing left to take out. *@
+                    @foreach (var f in W.T.Facilitators.Where(f => !f.Name.Contains("[erased]", StringComparison.Ordinal)).OrderBy(f => f.Name, NameOrder.Comparer))
                     {
-                        <option value="@("f:" + f.Id)">@f.Name</option>
+                        <option value="@("f:" + f.Id)">@f.Name@(f.IsFormer() ? " (former)" : "")</option>
                     }
                 </optgroup>
             }
@@ -72,6 +74,7 @@
     private void Erase()
     {
         if (W.Project is null || !Guid.TryParse(_who[2..], out var id)) return;
+        var named = Name;   // read before they are taken off, which can leave nothing here to read it from
         bool student = _who[0] == 's';
         // Somebody still on the timetable is taken off first; somebody taken off already has only history left.
         bool onTimetable = student ? W.T.Students.Contains(id) : W.T.Facilitators.Contains(id);
@@ -82,7 +85,10 @@
         // Every timetable, deleted ones too, is rewritten through its one live copy under its lock, which then
         // holds the rewritten history: a tab looking at another timetable keeps the copy it has, and nothing
         // is left in memory to write the name back.
-        int changed = Live.RewriteEverywhere(ProjectFiles.Eraser(id));
+        // Every name they have had, in every timetable, so a label that ever named them is reached too.
+        var names = Store.List(includeDeleted: true).SelectMany(p => ProjectFiles.NamesOf(id, Store.ChangesSince(p.Id, 0), Live.Get(p.Id).State))
+            .Append(named ?? "").ToList();
+        int changed = Live.RewriteEverywhere(ProjectFiles.Eraser(id), ProjectFiles.Relabeller(names));
         _formerAt = null;
         OnParametersSet();
         Log.LogWarning("A person was erased; {Count} stored records were rewritten.", changed);

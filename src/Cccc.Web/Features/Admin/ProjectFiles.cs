@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cccc.Domain.Editing;
 using Cccc.Domain.Model;
@@ -13,8 +14,12 @@ namespace Cccc.Web.Features.Admin;
 public static class ProjectFiles
 {
     public const string Extension = ".cccc2";
-    /// <summary>The format this build writes. 2 added the Scratch Week; a file of format 1 has none, which reads as an empty one.</summary>
-    private const int Format = 2;
+    /// <summary>
+    /// The format this build writes. 2 added the Scratch Week; a file of format 1 has none, which reads as an
+    /// empty one. 3 added former classes, spaces and facilitators, which a build of format 2 would read as in
+    /// use; a file of format 2 has nothing former.
+    /// </summary>
+    private const int Format = 3;
     private const string Marker = "cccc2 ";
 
     public static byte[] Write(Timetable t)
@@ -82,5 +87,39 @@ public static class ProjectFiles
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// The same erasure for the words of the history: a label ("Changed …") is not a record with an id, so
+    /// the person is found there by every name they have had. Labels are written not to name people, and
+    /// this is what keeps that promise if one ever does, or did before.
+    /// </summary>
+    public static Func<string, string> Relabeller(IEnumerable<string> names)
+    {
+        var all = names.Select(n => n.Trim()).Where(n => n.Length > 1 && !n.Contains("[erased]", StringComparison.Ordinal))
+            .Distinct(StringComparer.OrdinalIgnoreCase).OrderByDescending(n => n.Length).ToList();
+        if (all.Count == 0) return label => label;
+        // A whole name, never part of a word (erasing "Ann" leaves "Annual" alone); the longest first, so
+        // a name inside a longer one they also had is not reached first.
+        var whole = new System.Text.RegularExpressions.Regex(
+            string.Join("|", all.Select(n => @"(?<!\w)" + System.Text.RegularExpressions.Regex.Escape(n) + @"(?!\w)")),
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        return label => whole.Replace(label, "[erased]");
+    }
+
+    /// <summary>Every name a person has had in a timetable's stored history, and the one they have now.</summary>
+    public static IEnumerable<string> NamesOf(Guid personId, IEnumerable<Change> history, Timetable now)
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (now.Students[personId] is { } st) names.Add(st.Name);
+        if (now.Facilitators[personId] is { } f) names.Add(f.Name);
+        foreach (var op in history.SelectMany(c => c.Batch.Ops).Where(o => o.Id == personId))
+            foreach (var node in new[] { op.Before, op.After })
+            {
+                if (node is null) continue;
+                if (op.Collection == Collections.Students.Name && node.Deserialize<Student>(ModelJson.Options) is { } s) names.Add(s.Name);
+                if (op.Collection == Collections.Facilitators.Name && node.Deserialize<Facilitator>(ModelJson.Options) is { } x) names.Add(x.Name);
+            }
+        return names;
     }
 }

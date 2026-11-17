@@ -151,6 +151,22 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   was asked for could vanish before its box appeared, more often from home than in the building.
 - **Copying a week again no longer takes a class out of another week**: if a copied class had since been
   moved to a different week, copying the first week a second time pulled it back out of there.
+- **Deleting a class, a space or a facilitator keeps the weeks that ran.** One used before today stays,
+  as *former*, for those days: last week still shows the class in its colour, where it was held and who
+  taught it, and the hours and reports for those weeks still add up. From today on it is taken off (a
+  class keeps its name with no class, a space's classes keep running with no space, a person comes off
+  the classes ahead) and nothing offers it. People & places folds the former ones under each list, with
+  *Bring back*, and the form says first what Delete or Remove will do. One never used before today is
+  simply gone, as before. Copying a week or a day, the Scratch Week and next year leave the former ones
+  out.
+- **Two classes can become one**: *Merge into…* on a class (Floor Acrobatic beside Floor Acrobatics)
+  makes every class of it count as the one you keep, the weeks that ran included, and says first what
+  else changes: the area its hours count towards, whether it counts for a student, and the time rules
+  that credit it. Weeks that have ended keep the titles they ran under. It is the one change let into a
+  week that has ended, besides registers, and Undo puts every week back.
+- **Erasing a person also takes their name out of the history's descriptions**, every name they have
+  had, not only out of its records. The history no longer writes a facilitator's name into what it says
+  was changed.
 
 - **The end-of-day register reminder email** is here, off until it is switched on, with a Preview mode
   that sends every reminder to one address first. Administration ▸ System shows its state. The

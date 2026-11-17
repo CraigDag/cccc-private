@@ -629,6 +629,13 @@ div.agenda-row { cursor: default; }
 .warnings summary { cursor: pointer; color: var(--warning); font-weight: 650; }
 .warnings ul { margin: 6px 0 0; padding-left: 18px; }
 details.field summary { cursor: pointer; font-size: 13px; }
+/* The former ones of a list, folded away beneath it: quieter, still there. */
+.former-list { margin-top: 14px; }
+.former-list > summary { cursor: pointer; font-size: 13px; color: var(--text-muted); font-weight: 600; padding: 4px 0; }
+.former-list > .hint { margin: 4px 0 8px; }
+.former-list .list-row .name { font-weight: 450; color: var(--text-muted); }
+ul.said { margin: 4px 0 10px; padding-left: 18px; }
+ul.said li + li { margin-top: 4px; }
 
 .pick-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .pick {

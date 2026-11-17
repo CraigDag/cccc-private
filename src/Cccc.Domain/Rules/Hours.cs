@@ -214,8 +214,11 @@ public static class Hours
             .Select(m => (Monday: m, Happening: Occurrences.HappeningInWeek(t, m)))
             .Select(w => (w.Monday, Ran: w.Happening.Count > 0, By: ByFacilitator(t, w.Happening)))
             .ToList();
+        // A former facilitator is listed only over weeks they taught in: a year's report still adds up after
+        // somebody leaves, and a row of nothing for everybody who ever left says nothing.
         return t.Facilitators.OrderBy(f => f.IsGuest).ThenBy(f => f.Name, NameOrder.Comparer)
             .Select(f => new FacilitatorWeeks(f, each.Select(w => new WeekHours(w.Monday, w.By.GetValueOrDefault(f.Id) ?? HoursSplit.None, w.Ran)).ToList()))
+            .Where(r => !r.Person.IsFormer() || r.Total > TimeSpan.Zero)
             .ToList();
     }
 

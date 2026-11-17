@@ -5,11 +5,11 @@
     var t = W.T;
     var steps = new (string Title, string Hint, string Slug, int Count, string One, string Many)[]
     {
-        ("Spaces", "where classes happen: halls, studios, the gym", "rooms", t.Rooms.Count, "space", "spaces"),
+        ("Spaces", "where classes happen: halls, studios, the gym", "rooms", t.Rooms.Current().Count(), "space", "spaces"),
         // A group belongs to a programme, so the way in is the programmes until there is one.
         ("Programmes and groups", "who classes are for", t.Programmes.Count == 0 ? "programmes" : "groups", t.Groups.Count, "group", "groups"),
-        ("Facilitators", "who teaches", "facilitators", t.Facilitators.Count, "facilitator", "facilitators"),
-        ("Classes", "the kinds of class, such as Acrobatics, Aerial or Lunch", "classes", t.Classes.Count, "class", "classes"),
+        ("Facilitators", "who teaches", "facilitators", t.Facilitators.Current().Count(), "facilitator", "facilitators"),
+        ("Classes", "the kinds of class, such as Acrobatics, Aerial or Lunch", "classes", t.Classes.Current().Count(), "class", "classes"),
         ("Semesters", "when the year's terms run", "semesters", t.Semesters.Count, "semester", "semesters"),
     };
 }

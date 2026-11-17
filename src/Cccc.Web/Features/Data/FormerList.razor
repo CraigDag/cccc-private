@@ -1,0 +1,18 @@
+@* The former classes, spaces or facilitators of a list, folded away under it: kept for the days they
+   were used, offered nowhere ahead. Open while a search is on, so a name found there is not hidden. *@
+@{ var list = Items.ToList(); }
+@if (list.Count > 0)
+{
+    <details class="former-list" data-testid="data-former" open="@Searching">
+        <summary>@Looks.Count(list.Count, "former " + One, "former " + Many)</summary>
+        <p class="hint">Kept for the days they were used, so those weeks and the reports keep them. Nothing ahead offers them. Open one to bring it back.</p>
+        <Rows Items="list" OnOpen="OnOpen" />
+    </details>
+}
+@code {
+    [Parameter, EditorRequired] public IEnumerable<Row> Items { get; set; } = [];
+    [Parameter] public EventCallback<Guid> OnOpen { get; set; }
+    [Parameter, EditorRequired] public string One { get; set; } = "";
+    [Parameter, EditorRequired] public string Many { get; set; } = "";
+    [Parameter] public bool Searching { get; set; }
+}

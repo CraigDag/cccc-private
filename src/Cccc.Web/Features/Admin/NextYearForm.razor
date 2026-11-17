@@ -50,8 +50,8 @@ else
         <h3 class="ny-head">Carried over</h3>
         <ul class="ny-list" data-testid="next-year-keeps">
             <li data-testid="next-year-first-week">@FirstWeek(plan)</li>
-            <li>The building: @Looks.Count(t.Rooms.Count, "space").</li>
-            <li>The people: @Looks.Count(t.Facilitators.Count, "facilitator"), and @Looks.Count(t.Students.Count, "student") in @Looks.Count(t.Groups.Count, "group").</li>
+            <li>The building: @Looks.Count(t.Rooms.Current().Count(), "space").</li>
+            <li>The people: @Looks.Count(t.Facilitators.Current().Count(), "facilitator"), and @Looks.Count(t.Students.Count, "student") in @Looks.Count(t.Groups.Count, "group").</li>
             <li>The classes, disciplines and areas, the time rules and the settings.</li>
             @if (plan.ScratchClasses > 0)
             {
@@ -68,6 +68,11 @@ else
             <li><span data-testid="next-year-registers">@Looks.Count(plan.Registers, "register")</span> taken.</li>
             <li>@Looks.Count(plan.OtherClasses, "class", "classes") in the other weeks.</li>
             <li>@Both(plan.EventsDropped, "event", plan.AbsencesDropped, "absence") from this year.</li>
+            @{ int former = t.Classes.Count(c => c.IsFormer()) + t.Rooms.Count(r => r.IsFormer()) + t.Facilitators.Count(f => f.IsFormer()); }
+            @if (former > 0)
+            {
+                <li data-testid="next-year-former">@Looks.Count(former, "former class, space or facilitator", "former classes, spaces and facilitators").</li>
+            }
         </ul>
 
         @if (plan.Closures > 0)

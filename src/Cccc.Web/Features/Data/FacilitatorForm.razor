@@ -27,15 +27,23 @@
             }
             <button type="button" class="btn" @onclick="() => { _windows.Add(new Window()); Check(); }">Add a time they are available</button>
         </fieldset>
+        @if (_old is not null && FormerWords.For(W.T, _old, W.Today) is { } said)
+        {
+            <p class="@(_old.IsFormer() ? "notice" : "hint")" data-testid="former-note">@said</p>
+        }
         @if (_why is not null)
         {
             <p class="form-error">@_why</p>
         }
     </ChildContent>
     <Extra>
-        @if (_old is not null)
+        @if (_old is { } old && old.IsFormer())
         {
-            <button type="button" class="btn danger" @onclick="Delete">Remove</button>
+            <button type="button" class="btn" @onclick="BringBack" data-testid="bring-back">Bring back</button>
+        }
+        else if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete" data-testid="data-delete">Remove</button>
         }
     </Extra>
 </DialogFrame>
@@ -81,11 +89,17 @@
             Name = _name.Trim(), Email = _email.Trim(), Colour = _colour, IsGuest = _guest, MaxWeeklyHours = max, MaxGap = gap,
             Availability = _windows.Select(w => new AvailabilityWindow(w.Day, w.Start, w.End)).ToImmutableList(),
         };
-        if (W.Commit(t => new DraftOf(t).Put(Collections.Facilitators, f).ToBatch((_old is null ? "Added " : "Changed ") + f.Name))) D.Close();
+        // The label never names the person: erasing them could not reach a label's words.
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Facilitators, f).ToBatch(_old is null ? "Added a facilitator" : "Changed a facilitator"))) D.Close();
     }
 
     private void Delete()
     {
         if (W.Commit(t => Edits.RemoveFacilitator(t, _old!.Id, W.Today))) D.Close();
+    }
+
+    private void BringBack()
+    {
+        if (W.Commit(t => Edits.BringBack(t, t.Facilitators[_old!.Id] ?? throw new EditRefused("That facilitator has gone.")))) D.Close();
     }
 }

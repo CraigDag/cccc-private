@@ -76,7 +76,7 @@ public class ProjectFileTests
         using var ms = new MemoryStream();
         using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
         {
-            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 3");
+            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 4");
             using (var w = new StreamWriter(zip.CreateEntry("project.json").Open())) w.Write("{}");
         }
         var e = Assert.Throws<InvalidDataException>(() => ProjectFiles.Read(ms.ToArray()));
@@ -98,12 +98,18 @@ public class ProjectFileTests
         var back = ProjectFiles.Read(ms.ToArray());
         Assert.Equal(t.Sessions.Count, back.Sessions.Count);
         Assert.Empty(back.Scratch);
-        // And what this build writes says the format it is, so an older build refuses it rather than drop the plan.
-        var planned = t with { Scratch = EntitySet<Session>.Of([new Session { Date = ScratchWeek.Monday }]) };
-        Assert.Single(ProjectFiles.Read(ProjectFiles.Write(planned)).Scratch);
+        Assert.DoesNotContain(back.Classes, c => c.FormerSince is not null);
+        // And what this build writes says the format it is, so an older build refuses it rather than drop
+        // the plan, or offer a former class ahead again.
+        var gone = t.Classes.First();
+        var planned = t with { Scratch = EntitySet<Session>.Of([new Session { Date = ScratchWeek.Monday }]),
+                               Classes = t.Classes.Put(gone with { FormerSince = Day }) };
+        var again = ProjectFiles.Read(ProjectFiles.Write(planned));
+        Assert.Single(again.Scratch);
+        Assert.Equal(Day, again.Classes[gone.Id]!.FormerSince);
         using var written = new System.IO.Compression.ZipArchive(new MemoryStream(ProjectFiles.Write(planned)));
         using var r = new StreamReader(written.GetEntry("format.txt")!.Open());
-        Assert.Equal("cccc2 2", r.ReadToEnd());
+        Assert.Equal("cccc2 3", r.ReadToEnd());
     }
 
     [Fact]
@@ -122,22 +128,28 @@ public class ProjectFileTests
 
     /// <summary>
     /// Somebody taken off the timetable is still named in the stored changes for 30 days, so erasure has to
-    /// be able to reach them; somebody still on it, or already erased, is not "taken off".
+    /// be able to reach them; somebody still on it, or already erased, is not "taken off". A facilitator who
+    /// taught before today is not taken off at all: they stay, former, and are erased from the list of
+    /// facilitators like anybody on it.
     /// </summary>
     [Fact]
     public void ThePeopleTakenOffButStillNamedInTheHistoryAreFoundForErasure()
     {
-        var t = SampleSchool.Create(Day, Day);
+        var visitor = new Facilitator { Name = "Wren Example" };   // never taught, so removing them takes them off
+        var sample = SampleSchool.Create(Day, Day);
+        var t = sample with { Facilitators = sample.Facilitators.Put(visitor) };
         var students = t.Students.OrderBy(s => s.Surname, Cccc.Domain.NameOrder.Comparer).ToList();
         var (gone, erased) = (students[0], students[1]);
-        var coach = t.Facilitators.OrderBy(f => f.Name, Cccc.Domain.NameOrder.Comparer).First();
+        var coach = t.Facilitators.Where(f => t.Sessions.Any(s => s.Date < Day && s.FacilitatorIds.Contains(f.Id)))
+            .OrderBy(f => f.Name, Cccc.Domain.NameOrder.Comparer).First();
         var history = new List<Change>();
         var now = t;
         foreach (var build in new Func<Timetable, Batch>[]
         {
             x => Edits.RemoveStudent(x, gone.Id, Day),
-            x => Edits.RemoveFacilitator(x, coach.Id, Day),
+            x => Edits.RemoveFacilitator(x, visitor.Id, Day),
             x => Edits.RemoveStudent(x, erased.Id, Day),
+            x => Edits.RemoveFacilitator(x, coach.Id, Day),
         })
         {
             var batch = build(now);
@@ -153,10 +165,31 @@ public class ProjectFileTests
 
         var found = FormerPeople.In(history, now);
 
-        Assert.Equal(new[] { (true, gone.Id, gone.Name), (false, coach.Id, coach.Name) }.OrderBy(x => x.Item3, Cccc.Domain.NameOrder.Comparer),
+        Assert.Equal(new[] { (true, gone.Id, gone.Name), (false, visitor.Id, visitor.Name) }.OrderBy(x => x.Item3, Cccc.Domain.NameOrder.Comparer),
             found.Select(f => (f.Student, f.Id, f.Name)));
+        Assert.Equal(Day, now.Facilitators[coach.Id]?.FormerSince);
         // Put back on the timetable, they are listed with everybody on it instead.
         Assert.DoesNotContain(FormerPeople.In(history, now with { Students = now.Students.Put(gone) }), f => f.Id == gone.Id);
+    }
+
+    /// <summary>
+    /// A label is words, not a record with an id: erasure finds the person there by every name they have
+    /// had in the history, longest first so a full name goes before a part of it.
+    /// </summary>
+    [Fact]
+    public void ErasureFindsEveryNameAPersonHasHadAndTakesItOutOfTheLabels()
+    {
+        var ada = new Facilitator { Name = "Ada Lind" };
+        var t = Timetable.Empty with { Facilitators = EntitySet<Facilitator>.Of([ada]) };
+        var renamed = new Draft(t).Put(Collections.Facilitators, ada with { Name = "Ada Lind-Marr" }).ToBatch("Changed Ada Lind");
+        var now = Apply.Batch(t, renamed);
+        var names = ProjectFiles.NamesOf(ada.Id, [new Change(1, "admin", DateTimeOffset.UnixEpoch, renamed)], now).ToList();
+        Assert.Equal(["Ada Lind", "Ada Lind-Marr"], names.Order(StringComparer.Ordinal));
+        var relabel = ProjectFiles.Relabeller(names);
+        Assert.Equal("Changed [erased], then [erased]", relabel("Changed ada lind, then Ada Lind-Marr"));
+        Assert.Same("Copied a week", relabel("Copied a week"));
+        // A whole name only: somebody else whose name begins the same way keeps theirs.
+        Assert.Equal("Moved [erased]'s class, not Ada Linden's", relabel("Moved Ada Lind's class, not Ada Linden's"));
     }
 
     [Fact]

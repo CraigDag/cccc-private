@@ -151,6 +151,19 @@ public class PeopleImportTests
     }
 
     [Fact]
+    public void AFormerFacilitatorPastedAgainIsSentToBeBroughtBackNeverAddedASecondTime()
+    {
+        var b = new Build();
+        var ada = b.Facilitator("Ada Lind");
+        b.Session(Build.Monday.AddDays(-7), "09:00", "10:00", who: Build.In(ada));
+        var t = Apply.Batch(b.T, Edits.RemoveFacilitator(b.T, ada.Id, Build.Today));
+        var lines = PeopleImport.Facilitators(t, "ada lind\nBo Marr");
+        Assert.True(lines[0].Skipped);
+        Assert.Contains("bring them back", lines[0].Note);
+        Assert.Equal("Bo Marr", lines[1].Facilitator!.Name);
+    }
+
+    [Fact]
     public void AStudentCalledFirstIsNotTakenForAHeadingAndQuotedCommasStayInOneCell()
     {
         var lines = PeopleImport.Students(new Build().T, "First,Last\n\"Ng, Jr\",Kim");

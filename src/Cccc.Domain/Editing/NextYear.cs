@@ -86,8 +86,8 @@ public static class NextYear
         var starts = moves.Min(m => m.To.FirstMonday);
         var first = FirstTimetabledWeek(t);
         int classes = first is { } f ? t.SessionsInWeek(f).Count() : 0;
-        int keptAbsences = t.Absences.Count(a => a.To >= starts);
-        int keptEvents = t.Events.Count(e => LastDay(e) >= starts);
+        int keptAbsences = t.Absences.Count(a => Carried(t, a, starts));
+        int keptEvents = t.Events.Count(e => EventSchedule.LastDay(e) >= starts);
         return new Plan(moves, first, first is { } w ? w.AddDays(ShiftDays(moves, w)) : null,
             classes, t.Sessions.Count - classes, t.Registers.Count,
             keptAbsences, t.Absences.Count - keptAbsences, keptEvents, t.Events.Count - keptEvents,
@@ -105,7 +105,7 @@ public static class NextYear
         var sessions = new List<Session>();
         if (plan.FirstWeek is { } from && plan.FirstWeekTo is { } to)
             foreach (var s in t.SessionsInWeek(from))
-                sessions.Add(Edits.CopyOf(s, s.Date.AddDays(to.DayNumber - from.DayNumber), Edits.CopyId(s.Id, to)));
+                sessions.Add(Edits.CopyOf(t, s, s.Date.AddDays(to.DayNumber - from.DayNumber), Edits.CopyId(s.Id, to)));
         var closures = keepClosures
             ? t.Closures.Select(c =>
             {
@@ -113,17 +113,46 @@ public static class NextYear
                 return c with { From = c.From.AddDays(d), To = c.To.AddDays(d) };
             })
             : [];
-        return t with
+        var next = t with
         {
             Settings = t.Settings with { Name = name.Trim() },
             Semesters = EntitySet<Semester>.Of(plan.Semesters.Select(m => m.To)),
             Closures = EntitySet<Closure>.Of(closures),
             Sessions = EntitySet<Session>.Of(sessions),
             Registers = EntitySet<Register>.Empty,
-            Absences = EntitySet<Absence>.Of(t.Absences.Where(a => a.To >= starts)),
-            Events = EntitySet<SchoolEvent>.Of(t.Events.Where(e => LastDay(e) >= starts)),
+            Absences = EntitySet<Absence>.Of(t.Absences.Where(a => Carried(t, a, starts))),
+            Events = EntitySet<SchoolEvent>.Of(t.Events.Where(e => EventSchedule.LastDay(e) >= starts)),
+        };
+        return t.Classes.Any(c => c.IsFormer()) || t.Rooms.Any(r => r.IsFormer()) || t.Facilitators.Any(f => f.IsFormer())
+            ? LeaveFormerBehind(t, next) : next;
+    }
+
+    /// <summary>
+    /// What is former stays with this year: next year never offers it, so nothing there names it, and its
+    /// classes were copied without it already (<see cref="Edits.CopyOf"/>).
+    /// </summary>
+    private static Timetable LeaveFormerBehind(Timetable t, Timetable next)
+    {
+        bool FormerPerson(Guid id) => t.Facilitators[id] is { FormerSince: not null };
+        bool FormerClass(Guid id) => t.Classes[id] is { FormerSince: not null };
+        return next with
+        {
+            Events = EntitySet<SchoolEvent>.Of(next.Events.Select(e => e with
+            {
+                RoomId = t.Rooms.Find(e.RoomId) is { FormerSince: not null } ? null : e.RoomId,
+                FacilitatorIds = [.. e.FacilitatorIds.Where(f => !FormerPerson(f))],
+            })),
+            Scratch = EntitySet<Session>.Of(next.Scratch.Select(s => Former.Strip(t, s))),
+            TimeRules = EntitySet<TimeRule>.Of(next.TimeRules.Select(r => r with { ClassIds = [.. r.ClassIds.Where(c => !FormerClass(c))] })),
+            Classes = EntitySet<Class>.Of(next.Classes.Current()),
+            Rooms = EntitySet<Room>.Of(next.Rooms.Current()),
+            Facilitators = EntitySet<Facilitator>.Of(next.Facilitators.Current()),
         };
     }
+
+    /// <summary>An absence with a date in next year goes with it, unless it is a former facilitator's.</summary>
+    private static bool Carried(Timetable t, Absence a, DateOnly starts) =>
+        a.To >= starts && !(a.Person == AbsentPerson.Facilitator && t.Facilitators[a.PersonId] is { FormerSince: not null });
 
     /// <summary>A name for next year's timetable: this one's with its years moved on (2026 becomes 2027, 2026/27 becomes 2027/28), or "…, next year".</summary>
     public static string SuggestName(string name)
@@ -149,5 +178,4 @@ public static class NextYear
         return moves.MinBy(x => m < x.From.FirstMonday ? x.From.FirstMonday.DayNumber - m.DayNumber : m.DayNumber - x.From.LastMonday.DayNumber)!.Days;
     }
 
-    private static DateOnly LastDay(SchoolEvent e) => EventSchedule.RuleDates(e).LastOrDefault(e.Date).AddDays(e.SpanDays - 1);
 }

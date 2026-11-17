@@ -65,7 +65,7 @@ public static class ScratchWeek
     public static Batch CopyIn(Timetable t, Guid sessionId)
     {
         var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");
-        var copy = Edits.CopyOf(s, Week.DateOf(Monday, s.Date.DayOfWeek), Guid.NewGuid());
+        var copy = Edits.CopyOf(t, s, Week.DateOf(Monday, s.Date.DayOfWeek), Guid.NewGuid());
         return new Draft(t).Put(Collections.Scratch, copy).ToBatch($"Copied {s.DisplayTitle} to the Scratch Week");
     }
 
@@ -77,7 +77,7 @@ public static class ScratchWeek
         var d = new Draft(t);
         foreach (var old in t.Scratch.ToList()) d.Remove(Collections.Scratch, old.Id);
         foreach (var s in t.SessionsInWeek(from))
-            d.Put(Collections.Scratch, Edits.CopyOf(s, Week.DateOf(Monday, s.Date.DayOfWeek), Edits.CopyId(s.Id, Monday)));
+            d.Put(Collections.Scratch, Edits.CopyOf(t, s, Week.DateOf(Monday, s.Date.DayOfWeek), Edits.CopyId(s.Id, Monday)));
         return d.ToBatch($"Copied week {Week.IsoNumber(from)} to the Scratch Week");
     }
 

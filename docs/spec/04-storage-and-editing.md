@@ -79,7 +79,10 @@ command (`cccc backup <path>`), so the existing rclone off-site sync keeps worki
 ## Export and import
 
 - **Export** a project as `.cccc2` — a zip holding `project.json` (the state) and `format.txt`, whose
-  marker is `cccc2 2` since the Scratch Week. `cccc2 1` files still read (with an empty Scratch Week).
+  marker is `cccc2 3` since former classes, spaces and facilitators (`cccc2 2` added the Scratch Week).
+  Older files still read, with nothing former and, from `cccc2 1`, an empty Scratch Week. The store's
+  own format moved with it, to 3, so a build that knows nothing of former ones refuses rather than offer
+  them ahead again.
 - **Import** a `.cccc2`, or an old `.cccc` of any schema up to 24 (see
   [`06-importing-old-files.md`](06-importing-old-files.md)), as a **new** project. Import never
   overwrites a project in place.

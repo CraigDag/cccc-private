@@ -22,7 +22,9 @@ week or building it), so the pattern has no remaining job. What this removes:
 - `Locate` and the frozen-copy hash: a register belongs to one session id, forever.
 
 A week that has wholly ended is still **locked** (the freeze rule survives as a rule, not as a copy):
-nothing about it changes except registers, which the right people may still file. Undo cannot unlock it.
+nothing about it changes except registers, which the right people may still file, and merging two
+classes, which re-points a class and nothing else (see [`03-the-rules.md`](03-the-rules.md)). Undo cannot
+unlock it.
 
 ## 2. Changes are stored as an operation log, not as whole-file snapshots
 
@@ -85,4 +87,5 @@ No desktop hosts, no platform abstractions, no floor plan (it has been off the s
 - **Danish name order** for every name a person reads (Æ Ø Å after Z, `Aa` as `Å`), without touching
   `CurrentCulture`.
 - The design through line: colours as roles (identity, accent, warning, greys), spines, washes, discs,
-  dashed for missing, the four dark palettes, mint accent by default.
+  dashed for missing. The palettes are new: two looks, Paper and Night, with a coral accent (the current
+  app took them in 1.68.0).

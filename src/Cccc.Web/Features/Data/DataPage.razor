@@ -25,7 +25,8 @@ else
     {
         case "rooms":
             <AddBar Kind="k" OnAdd="() => Show<RoomForm>(null)" />
-            <Rows Items="@Filter(t.Rooms.Select(r => Row.Of(r.Id, r.Name, r.Colour, Looks.Count(t.Sessions.Count(s => s.RoomId == r.Id && s.Date >= W.Today), "class ahead", "classes ahead") + (r.Category is { Length: > 0 } c ? " · " + c : ""))))" OnOpen="id => Show<RoomForm>(id)" />
+            <Rows Items="@Filter(t.Rooms.Current().Select(r => Row.Of(r.Id, r.Name, r.Colour, Looks.Count(t.Sessions.Count(s => s.RoomId == r.Id && s.Date >= W.Today), "class ahead", "classes ahead") + (r.Category is { Length: > 0 } c ? " · " + c : ""))))" OnOpen="id => Show<RoomForm>(id)" />
+            <FormerList One="space" Many="spaces" Searching="@(_search.Trim().Length > 0)" Items="@Filter(t.Rooms.Where(r => r.IsFormer()).Select(r => Row.Of(r.Id, r.Name, r.Colour, FormerWords.Detail(t, r, W.Today))))" OnOpen="id => Show<RoomForm>(id)" />
             break;
         case "programmes":
             <AddBar Kind="k" OnAdd="() => Show<ProgrammeForm>(null)" />
@@ -41,11 +42,13 @@ else
             break;
         case "facilitators":
             <AddBar Kind="k" OnAdd="() => Show<FacilitatorForm>(null)"><button type="button" class="btn" @onclick="() => D.Show<ImportPeopleForm>(new Dictionary<string, object?> { [nameof(ImportPeopleForm.Students)] = false })" data-testid="import-people">Import from a spreadsheet…</button></AddBar>
-            <Rows Items="@Filter(t.Facilitators.Select(f => Row.Of(f.Id, f.Name + (f.IsGuest ? " (guest)" : ""), f.Colour, f.Initials + (f.MaxWeeklyHours is { } m ? " · up to " + DomainWeek.Duration(m) + " a week" : ""))))" OnOpen="id => Show<FacilitatorForm>(id)" />
+            <Rows Items="@Filter(t.Facilitators.Current().Select(f => Row.Of(f.Id, f.Name + (f.IsGuest ? " (guest)" : ""), f.Colour, f.Initials + (f.MaxWeeklyHours is { } m ? " · up to " + DomainWeek.Duration(m) + " a week" : ""))))" OnOpen="id => Show<FacilitatorForm>(id)" />
+            <FormerList One="facilitator" Many="facilitators" Searching="@(_search.Trim().Length > 0)" Items="@Filter(t.Facilitators.Where(f => f.IsFormer()).Select(f => Row.Of(f.Id, f.Name + (f.IsGuest ? " (guest)" : ""), f.Colour, FormerWords.Detail(t, f, W.Today))))" OnOpen="id => Show<FacilitatorForm>(id)" />
             break;
         case "classes":
             <AddBar Kind="k" OnAdd="() => Show<ClassForm>(null)" />
-            <Rows Items="@Filter(t.Classes.Select(c => Row.Of(c.Id, c.Name, c.Colour, WorkloadWords.For(c.Workload) + (t.Areas.Find(c.AreaId) is { } a ? " · " + a.Name : ""))))" OnOpen="id => Show<ClassForm>(id)" />
+            <Rows Items="@Filter(t.Classes.Current().Select(c => Row.Of(c.Id, c.Name, c.Colour, WorkloadWords.For(c.Workload) + (t.Areas.Find(c.AreaId) is { } a ? " · " + a.Name : ""))))" OnOpen="id => Show<ClassForm>(id)" />
+            <FormerList One="class" Many="classes" Searching="@(_search.Trim().Length > 0)" Items="@Filter(t.Classes.Where(c => c.IsFormer()).Select(c => Row.Of(c.Id, c.Name, c.Colour, FormerWords.Detail(t, c, W.Today))))" OnOpen="id => Show<ClassForm>(id)" />
             break;
         case "areas":
             <AddBar Kind="k" OnAdd="() => Show<AreaForm>(null)" />

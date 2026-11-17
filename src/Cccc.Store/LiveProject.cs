@@ -146,6 +146,9 @@ public sealed class LiveProject
             var ops = new List<Op>();
             var skipped = new List<string>();
             var today = _today();
+            // Each operation is checked on its own, beside the rest of the step it belongs to: a merge's
+            // re-pointing of an ended week is allowed only beside the class it merges away or brings back.
+            var context = step.Batch.Inverse();
             foreach (var op in step.Batch.Ops.Reverse())
             {
                 if (!Apply.StillAsWritten(State, op))
@@ -156,7 +159,7 @@ public sealed class LiveProject
                 var inverse = op.Inverse() with { Before = Collections.Named(op.Collection).Read(State, op.Id) };
                 try
                 {
-                    Edits.CheckLocks(State, new Batch("", [inverse]), today);
+                    Edits.CheckLock(inverse, context, today);
                     ops.Add(inverse);
                 }
                 catch (EditRefused)
@@ -250,14 +253,14 @@ public sealed class LiveProject
     /// entities). The copy every tab already holds stays the one copy, so nothing is left in memory to write
     /// the old words back on the next snapshot. Erasing a person needs it. Returns how many stored values changed.
     /// </summary>
-    public int Rewrite(Func<string, string> scrub)
+    public int Rewrite(Func<string, string> scrub, Func<string, string>? relabel = null)
     {
         int changed;
         Changed result;
         lock (_gate)
         {
             _store.Snapshot(Id, Sequence, State, _clock());
-            changed = _store.Rewrite(Id, scrub);
+            changed = _store.Rewrite(Id, scrub, relabel);
             (State, Sequence) = _store.Load(Id);
             _undo.Clear();
             _redo.Clear();
@@ -328,12 +331,12 @@ public sealed class LiveProjects(ProjectStore store, Func<DateTimeOffset> clock,
     /// not the same: a tab still holding that copy (an administrator looking at another timetable) would
     /// write the old words back with its next change. A deleted one is loaded only for this, and let go after.
     /// </summary>
-    public int RewriteEverywhere(Func<string, string> scrub)
+    public int RewriteEverywhere(Func<string, string> scrub, Func<string, string>? relabel = null)
     {
         int changed = 0;
         foreach (var p in store.List(includeDeleted: true))
         {
-            changed += Get(p.Id).Rewrite(scrub);
+            changed += Get(p.Id).Rewrite(scrub, relabel);
             if (p.Deleted is not null) Forget(p.Id);
         }
         return changed;

@@ -28,7 +28,7 @@ public static class Cover
         var splits = Hours.ByFacilitator(t, Occurrences.HappeningInWeek(t, gap.Date));
         var teaching = Teaching.At(t, gap.Date, gap.Start, gap.End, except: gap.Session.Id);
         var assigned = gap.Session.FacilitatorIds.ToHashSet();
-        return t.Facilitators
+        return t.Facilitators.Current()
             .Where(f => !Occurrences.IsAway(t, f.Id, gap.Date, gap.Start, gap.End))
             .Where(f => !assigned.Contains(f.Id) || !gap.AwayIds.Contains(f.Id))
             .Select(f => new CoverCandidate(f, teaching.GetValueOrDefault(f.Id), splits.GetValueOrDefault(f.Id) ?? HoursSplit.None))

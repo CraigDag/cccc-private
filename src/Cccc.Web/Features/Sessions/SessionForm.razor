@@ -59,9 +59,10 @@ else
                 <label class="field"><span>Class</span>
                     <select @bind="ClassText" @bind:after="OnClassChosen" data-testid="session-class">
                         <option value="">No class</option>
-                        @foreach (var c in t.Classes.OrderBy(c => c.Name, NameOrder.Comparer))
+                        @* A former class is offered nowhere, but a class already on one keeps showing it. *@
+                        @foreach (var c in t.Classes.Where(c => !c.IsFormer() || c.Id == _classId).OrderBy(c => c.Name, NameOrder.Comparer))
                         {
-                            <option value="@c.Id">@c.Name</option>
+                            <option value="@c.Id">@c.Name@(c.IsFormer() ? " (former)" : "")</option>
                         }
                     </select>
                 </label>
@@ -195,7 +196,7 @@ else
                 }
                 <select @onchange="AddPerson" aria-label="Add a facilitator" data-testid="session-add-facilitator">
                     <option value="" selected>Add a facilitator…</option>
-                    @foreach (var f in t.Facilitators.Where(f => _people.All(p => p.Id != f.Id)).OrderBy(f => f.IsGuest).ThenBy(f => f.Name, NameOrder.Comparer))
+                    @foreach (var f in t.Facilitators.Current().Where(f => _people.All(p => p.Id != f.Id)).OrderBy(f => f.IsGuest).ThenBy(f => f.Name, NameOrder.Comparer))
                     {
                         <option value="@f.Id">@f.Name@(f.IsGuest ? " (guest)" : "")@(Elsewhere(f.Id, _start, _end) is { } e ? " — " + e : "")</option>
                     }
@@ -352,7 +353,7 @@ else
 
     private static string Hm(TimeOnly? t) => t is { } x ? Cccc.Domain.Week.Hm(x) : "";
 
-    private IEnumerable<Room> SpacesInOrder() => T.Rooms
+    private IEnumerable<Room> SpacesInOrder() => T.Rooms.Where(r => !r.IsFormer() || r.Id == _roomId)
         .OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer);
 
     private IReadOnlyDictionary<Guid, Occurrence> BusyRooms() => Spaces.InUse(T, _date, _start, _end, except: _id);

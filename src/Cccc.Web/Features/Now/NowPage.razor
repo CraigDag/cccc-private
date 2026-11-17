@@ -118,11 +118,13 @@
             }
             @* A departures board for the building: a row a space, grouped by kind, saying what is in it, until
                when, and what comes next. A board rather than tiles, so any number of spaces reads without gaps. *@
-            @if (t.Rooms.Count > 0)
+            @* A former space is on the board only on a day something is still in it. *@
+            @{ var spaces = t.Rooms.Where(r => !r.IsFormer() || happening.Any(o => o.Session.RoomId == r.Id)).ToList(); }
+            @if (spaces.Count > 0)
             {
             <h2 class="now-section">The building</h2>
             <div class="board" aria-label="Every space now">
-                @{ var parts = t.Rooms.OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer).GroupBy(Sections.Of).ToList(); }
+                @{ var parts = spaces.OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer).GroupBy(Sections.Of).ToList(); }
                 @foreach (var part in parts)
                 {
                     @if (parts.Count > 1)

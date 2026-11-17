@@ -119,8 +119,8 @@
 
     private async Task Duplicate(Session s)
     {
-        var copy = Edits.CopyOf(s, s.Date, Guid.NewGuid());
-        if (W.Commit(M.Edit(t => Edits.PutSession(t, copy, $"Duplicated {s.DisplayTitle}")))) await OnChosen.InvokeAsync(copy.Id);
+        var id = Guid.NewGuid();
+        if (W.Commit(M.Edit(t => Edits.PutSession(t, Edits.CopyOf(t, s, s.Date, id), $"Duplicated {s.DisplayTitle}")))) await OnChosen.InvokeAsync(id);
     }
 
     private async Task Delete(Session s)

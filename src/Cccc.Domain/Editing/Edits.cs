@@ -19,12 +19,24 @@ public static class Edits
     /// <summary>
     /// Refuses a batch that changes a session in a week that has wholly ended. Registers are the
     /// exception: they may still be filed for an ended week. Locking is checked against BOTH the
-    /// session's old and new date, so nothing can be moved into or out of a locked week.
+    /// session's old and new date, so nothing can be moved into or out of a locked week. The one change
+    /// that may reach a session there is a merge of two classes (<see cref="MergeClass"/>), and its undo.
     /// </summary>
     public static void CheckLocks(Timetable t, Batch batch, DateOnly today)
     {
-        foreach (var op in batch.Ops.Where(o => o.Collection == Collections.Sessions.Name))
+        foreach (var op in batch.Ops) CheckLock(op, batch, today);
+    }
+
+    /// <summary>
+    /// Refuses one operation that changes a locked week, read with the batch it belongs to: undo checks
+    /// each operation it puts back on its own, and a merge's re-pointing is only allowed beside the
+    /// class it merges away (or, undone, beside the class it brings back).
+    /// </summary>
+    public static void CheckLock(Op op, Batch context, DateOnly today)
+    {
+        if (op.Collection == Collections.Sessions.Name)
         {
+            if (IsMergeRepoint(op, context)) return;
             foreach (var node in new[] { op.Before, op.After })
             {
                 if (node is null) continue;
@@ -37,12 +49,33 @@ public static class Edits
                     throw new EditRefused("A class cannot be moved into the Scratch Week. Copy to Scratch Week puts a copy there and leaves the class where it is.");
             }
         }
-        foreach (var op in batch.Ops.Where(o => o.Collection == Collections.Scratch.Name && o.After is not null))
+        else if (op.Collection == Collections.Scratch.Name && op.After is not null)
         {
             var s = System.Text.Json.JsonSerializer.Deserialize<Session>(op.After!, ModelJson.Options)!;
             if (!Week.IsScratch(s.Date))
                 throw new EditRefused("A class in the Scratch Week stays in it. Place onto a week… puts the plan onto a real week.");
         }
+    }
+
+    /// <summary>
+    /// A session whose only change is the class it counts as, from a class the same batch deletes or to
+    /// one the same batch puts back: two entries for one activity becoming one, which corrects the
+    /// catalogue rather than what ran. Who, where, when and the title cannot change this way.
+    /// </summary>
+    private static bool IsMergeRepoint(Op op, Batch context)
+    {
+        if (op.Before is not System.Text.Json.Nodes.JsonObject before || op.After is not System.Text.Json.Nodes.JsonObject after) return false;
+        var was = System.Text.Json.JsonSerializer.Deserialize<Session>(before, ModelJson.Options)!.ClassId;
+        var now = System.Text.Json.JsonSerializer.Deserialize<Session>(after, ModelJson.Options)!.ClassId;
+        if (was == now) return false;
+        var b = before.DeepClone().AsObject();
+        var a = after.DeepClone().AsObject();
+        b.Remove("classId");
+        a.Remove("classId");
+        if (!System.Text.Json.Nodes.JsonNode.DeepEquals(b, a)) return false;
+        var classes = context.Ops.Where(o => o.Collection == Collections.Classes.Name).ToList();
+        return (was is { } w && classes.Any(o => o.Id == w && o.IsRemove))
+            || (now is { } n && classes.Any(o => o.Id == n && o.IsAdd));
     }
 
     // ---- Sessions ---------------------------------------------------------------------------------
@@ -156,8 +189,11 @@ public static class Edits
         return new Guid(bytes);
     }
 
-    /// <summary>A copy of a session on another date: nothing week-specific travels (cancelled, cover, moved, register).</summary>
-    public static Session CopyOf(Session s, DateOnly date, Guid id) => s with
+    /// <summary>
+    /// A copy of a session on another date: nothing week-specific travels (cancelled, cover, moved,
+    /// register), and nothing former (<see cref="Former.Strip"/>). Every copy goes through here.
+    /// </summary>
+    public static Session CopyOf(Timetable t, Session s, DateOnly date, Guid id) => Former.Strip(t, s) with
     {
         Id = id,
         Date = date,
@@ -209,7 +245,7 @@ public static class Edits
             // class back here and empty the day it was moved to. That copy gets a new id instead.
             var id = CopyId(s.Id, to);
             if (d.Current.Sessions.Contains(id)) id = Guid.NewGuid();
-            d.Put(Collections.Sessions, CopyOf(s, date, id));
+            d.Put(Collections.Sessions, CopyOf(d.Current, s, date, id));
         }
     }
 
@@ -247,7 +283,7 @@ public static class Edits
     {
         var d = new Draft(t);
         foreach (var s in t.Sessions.Where(s => s.Date == from).OrderBy(s => s.Start))
-            d.Put(Collections.Sessions, CopyOf(s, to, Guid.NewGuid()));
+            d.Put(Collections.Sessions, CopyOf(t, s, to, Guid.NewGuid()));
         return d.ToBatch($"Copied {Week.ShortDate(from)} onto {Week.ShortDate(to)}");
     }
 
@@ -309,49 +345,161 @@ public static class Edits
         return d.ToBatch(old is null ? $"Added the class {c.Name}" : $"Changed the class {c.Name}");
     }
 
-    /// <summary>Deleting a class leaves its sessions with their titles and no class, and takes it off every time rule.</summary>
+    /// <summary>
+    /// Every class from today on, and every one in the Scratch Week: what deleting a class, a space or a
+    /// facilitator takes it off. The days before today keep it, this week's included, because they ran.
+    /// </summary>
+    private static IEnumerable<(Collection<Session> In, Session S)> FromToday(Timetable t, DateOnly today) =>
+        t.Sessions.Where(s => s.Date >= today).Select(s => (Collections.Sessions, s))
+            .Concat(t.Scratch.Select(s => (Collections.Scratch, s)));
+
+    /// <summary>
+    /// Deleting a class takes it off every class from today on, which keep the name they showed. One that
+    /// ran before today is kept as former for those days, still on its time rules so their credit stands;
+    /// one that never ran is gone, and off every time rule.
+    /// </summary>
     public static Batch RemoveClass(Timetable t, Guid id, DateOnly today)
     {
+        var c = t.Classes[id] ?? throw new EditRefused("That class has gone.");
         var d = new Draft(t);
-        foreach (var (into, s) in Reachable(t, today).Where(x => x.S.ClassId == id))
-            d.Put(into, s with { ClassId = null });
+        foreach (var (into, s) in FromToday(t, today).Where(x => x.S.ClassId == id))
+            d.Put(into, s with { ClassId = null, Title = string.IsNullOrWhiteSpace(s.Title) ? c.Name : s.Title });
+        if (Former.Of(t, c, today).Before > 0)
+        {
+            if (!c.IsFormer()) d.Put(Collections.Classes, c with { FormerSince = today });
+            return d.ToBatch($"Deleted the class {c.Name}, kept for the days it ran");
+        }
         foreach (var r in t.TimeRules.Where(r => r.ClassIds.Contains(id)))
             d.Put(Collections.TimeRules, r with { ClassIds = r.ClassIds.Remove(id) });
         d.Remove(Collections.Classes, id);
-        return d.ToBatch("Deleted a class");
-    }
-
-    /// <summary>Deleting a room is a stated orphaning: its sessions keep running, with no room.</summary>
-    public static Batch RemoveRoom(Timetable t, Guid id, DateOnly today)
-    {
-        var d = new Draft(t);
-        foreach (var (into, s) in Reachable(t, today).Where(x => x.S.RoomId == id))
-            d.Put(into, s with { RoomId = null });
-        foreach (var e in t.Events.Where(e => e.RoomId == id))
-            d.Put(Collections.Events, e with { RoomId = null });
-        d.Remove(Collections.Rooms, id);
-        return d.ToBatch("Deleted a space");
+        return d.ToBatch($"Deleted the class {c.Name}");
     }
 
     /// <summary>
-    /// Removing a facilitator takes them off every session ahead (ended weeks keep who taught them),
-    /// every event, and removes their absences.
+    /// Deleting a space is a stated orphaning: its classes from today on keep running, with no space. One
+    /// used before today is kept as former, so those days still say where they were, and so does an event
+    /// that was wholly over by today.
+    /// </summary>
+    public static Batch RemoveRoom(Timetable t, Guid id, DateOnly today)
+    {
+        var r = t.Rooms[id] ?? throw new EditRefused("That space has gone.");
+        var d = new Draft(t);
+        foreach (var (into, s) in FromToday(t, today).Where(x => x.S.RoomId == id))
+            d.Put(into, s with { RoomId = null });
+        bool keep = Former.Of(t, r, today).Before > 0;
+        foreach (var e in t.Events.Where(e => e.RoomId == id && !(keep && EventSchedule.LastDay(e) < today)))
+            d.Put(Collections.Events, e with { RoomId = null });
+        if (keep)
+        {
+            if (!r.IsFormer()) d.Put(Collections.Rooms, r with { FormerSince = today });
+            return d.ToBatch($"Deleted the space {r.Name}, kept for the days it was used");
+        }
+        d.Remove(Collections.Rooms, id);
+        return d.ToBatch($"Deleted the space {r.Name}");
+    }
+
+    /// <summary>
+    /// Removing a facilitator takes them off every class from today on and every event not over by
+    /// today. One who taught before today is kept as former, with every absence that began before today,
+    /// so those days keep who taught, who was away and so who earned the hours; one who never taught is
+    /// gone, absences and all. The label never names them: erasure cannot reach a label's words.
     /// </summary>
     public static Batch RemoveFacilitator(Timetable t, Guid id, DateOnly today)
     {
+        var f = t.Facilitators[id] ?? throw new EditRefused("That facilitator has gone.");
         var d = new Draft(t);
-        foreach (var (into, s) in Reachable(t, today).Where(x => x.S.FacilitatorIds.Contains(id) || x.S.CoverIds.Contains(id)))
+        foreach (var (into, s) in FromToday(t, today).Where(x => x.S.FacilitatorIds.Contains(id) || x.S.CoverIds.Contains(id)))
             d.Put(into, s with
             {
                 Facilitators = [.. s.Facilitators.Where(a => a.FacilitatorId != id)],
                 CoverIds = s.CoverIds.Remove(id),
             });
-        foreach (var e in t.Events.Where(e => e.FacilitatorIds.Contains(id)))
+        bool keep = Former.Of(t, f, today).Before > 0;
+        foreach (var e in t.Events.Where(e => e.FacilitatorIds.Contains(id) && !(keep && EventSchedule.LastDay(e) < today)))
             d.Put(Collections.Events, e with { FacilitatorIds = e.FacilitatorIds.Remove(id) });
-        foreach (var a in t.Absences.Where(a => a.Is(AbsentPerson.Facilitator, id)))
+        foreach (var a in t.Absences.Where(a => a.Is(AbsentPerson.Facilitator, id) && !(keep && a.From < today)))
             d.Remove(Collections.Absences, a.Id);
+        if (keep)
+        {
+            if (!f.IsFormer()) d.Put(Collections.Facilitators, f with { FormerSince = today });
+            return d.ToBatch("Removed a facilitator, kept for the days they taught");
+        }
         d.Remove(Collections.Facilitators, id);
         return d.ToBatch("Removed a facilitator");
+    }
+
+    /// <summary>
+    /// Brings a former class, space or facilitator back into use: offered again from now on. Nothing it was
+    /// taken off comes back with it; that is what Undo is for.
+    /// </summary>
+    public static Batch BringBack(Timetable t, IRetirable x) => x switch
+    {
+        Class c => new Draft(t).Put(Collections.Classes, c with { FormerSince = null }).ToBatch($"Brought back the class {c.Name}"),
+        Room r => new Draft(t).Put(Collections.Rooms, r with { FormerSince = null }).ToBatch($"Brought back the space {r.Name}"),
+        Facilitator f => new Draft(t).Put(Collections.Facilitators, f with { FormerSince = null }).ToBatch("Brought back a facilitator"),
+        _ => throw new ArgumentException("Only a class, a space or a facilitator can be former.", nameof(x)),
+    };
+
+    /// <summary>
+    /// Two classes that are one activity become one: every class on the timetable that counts as
+    /// <paramref name="mergedId"/> counts as <paramref name="survivorId"/> from then on, the weeks that have
+    /// ended included, so no total over the year is split between two names for the same thing. It is the
+    /// one change besides a register that reaches into an ended week, and there it changes only which
+    /// class a session counts as: who, where, when and its title stay as they ran. In a week not ended, a
+    /// class still called by the merged name takes the survivor's; a title of its own stays. The merged
+    /// class leaves every time rule and is gone. The survivor's area, workload and time rules decide what
+    /// those hours count towards, before today as well; <see cref="MergeDifferences"/> says so first.
+    /// </summary>
+    public static Batch MergeClass(Timetable t, Guid mergedId, Guid survivorId, DateOnly today)
+    {
+        if (mergedId == survivorId) throw new EditRefused("Choose another class to keep.");
+        var merged = t.Classes[mergedId] ?? throw new EditRefused("That class has gone.");
+        var survivor = t.Classes[survivorId] ?? throw new EditRefused("The class to keep has gone.");
+        if (survivor.IsFormer()) throw new EditRefused($"{survivor.Name} is a former class. Bring it back first, or keep another.");
+        var d = new Draft(t);
+        bool Named(Session s) => s.Title.Trim() == merged.Name.Trim();
+        foreach (var s in t.Sessions.Where(s => s.ClassId == mergedId))
+            d.Put(Collections.Sessions, s with { ClassId = survivorId, Title = !Week.HasEnded(s.Date, today) && Named(s) ? survivor.Name : s.Title });
+        foreach (var s in t.Scratch.Where(s => s.ClassId == mergedId))
+            d.Put(Collections.Scratch, s with { ClassId = survivorId, Title = Named(s) ? survivor.Name : s.Title });
+        foreach (var r in t.TimeRules.Where(r => r.ClassIds.Contains(mergedId)))
+            d.Put(Collections.TimeRules, r with { ClassIds = r.ClassIds.Remove(mergedId) });
+        d.Remove(Collections.Classes, mergedId);
+        return d.ToBatch($"Merged {merged.Name} into {survivor.Name}");
+    }
+
+    /// <summary>
+    /// What a merge changes beyond the name, in words for the person before they press: how many classes
+    /// will count as the survivor, and where the two disagree on area, workload or a time rule, which
+    /// the survivor's settings decide from then on, the days already run included.
+    /// </summary>
+    public static IReadOnlyList<string> MergeDifferences(Timetable t, Guid mergedId, Guid survivorId)
+    {
+        var merged = t.Classes[mergedId];
+        var survivor = t.Classes[survivorId];
+        if (merged is null || survivor is null || mergedId == survivorId) return [];
+        int n = t.Sessions.Count(s => s.ClassId == mergedId) + t.Scratch.Count(s => s.ClassId == mergedId);
+        var said = new List<string> { $"{(n == 1 ? "1 class" : $"{n} classes")} will count as {survivor.Name}, the days already run included." };
+        var (wasArea, nowArea) = (t.Areas.Find(merged.AreaId), t.Areas.Find(survivor.AreaId));
+        if (wasArea?.Id != nowArea?.Id)
+            said.Add((wasArea, nowArea) switch
+            {
+                (null, { } a) => $"Their hours start counting towards {a.Name}.",
+                ({ } a, null) => $"Their hours stop counting towards {a.Name}.",
+                _ => $"Their hours count towards {nowArea!.Name}, not {wasArea!.Name}.",
+            });
+        // Workload words only when counting really changes: an open session and a not-counted class
+        // are both outside a student's hours, so merging one into the other moves no total.
+        bool wasCounted = merged.Workload == Workload.Counted, nowCounted = survivor.Workload == Workload.Counted;
+        if (wasCounted != nowCounted)
+            said.Add(nowCounted ? "They start counting towards a student's hours." : "They stop counting towards a student's hours.");
+        foreach (var r in t.TimeRules.OrderBy(r => r.DisplayName, NameOrder.Comparer))
+        {
+            bool had = r.ClassIds.Contains(mergedId), has = r.ClassIds.Contains(survivorId);
+            if (had && !has) said.Add($"{r.DisplayName} is no longer credited for them.");
+            else if (!had && has) said.Add($"{r.DisplayName} is credited for them too.");
+        }
+        return said;
     }
 
     /// <summary>

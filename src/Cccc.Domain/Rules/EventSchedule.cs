@@ -15,6 +15,9 @@ public static class EventSchedule
     public const int MaxOccurrences = 1000;
     public const int HorizonYears = 5;
 
+    /// <summary>The last day it is on: the last date its repeat gives, plus its span.</summary>
+    public static DateOnly LastDay(SchoolEvent e) => RuleDates(e).LastOrDefault(e.Date).AddDays(e.SpanDays - 1);
+
     public static IEnumerable<DateOnly> RuleDates(SchoolEvent e)
     {
         if (e.Repeat is not { } rule)

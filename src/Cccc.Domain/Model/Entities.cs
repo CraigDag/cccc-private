@@ -8,6 +8,17 @@ public interface IEntity
     Guid Id { get; }
 }
 
+/// <summary>
+/// A class, a space or a facilitator: something the weeks already run still name after the school stops
+/// using it. Deleting one that was used before today keeps it as FORMER from that day, so those weeks keep
+/// its name, colour, area and hours, while nothing ahead offers it (<see cref="Rules.Former"/>).
+/// </summary>
+public interface IRetirable : IEntity
+{
+    /// <summary>The day it stopped being used, or null while it is in use.</summary>
+    DateOnly? FormerSince { get; }
+}
+
 /// <summary>The project's own settings. A single entity with the fixed id <see cref="TheId"/>.</summary>
 public sealed record Settings : IEntity
 {
@@ -60,12 +71,13 @@ public sealed record Closure : IEntity
     public bool Covers(DateOnly date) => date >= From && date <= To;
 }
 
-public sealed record Room : IEntity
+public sealed record Room : IRetirable
 {
     public Guid Id { get; init; } = Guid.NewGuid();
     public string Name { get; init; } = "";
     public string? Category { get; init; }
     public string Colour { get; init; } = "#3F51B5";
+    public DateOnly? FormerSince { get; init; }
 }
 
 /// <summary>A programme. Still <c>Strand</c> in the old code and file.</summary>
@@ -117,7 +129,7 @@ public sealed record Student : IEntity
 
 public sealed record AvailabilityWindow(DayOfWeek Day, TimeOnly Start, TimeOnly End);
 
-public sealed record Facilitator : IEntity
+public sealed record Facilitator : IRetirable
 {
     public Guid Id { get; init; } = Guid.NewGuid();
     public string Name { get; init; } = "";
@@ -127,6 +139,7 @@ public sealed record Facilitator : IEntity
     public ImmutableList<AvailabilityWindow> Availability { get; init; } = [];
     public TimeSpan? MaxWeeklyHours { get; init; }
     public TimeSpan? MaxGap { get; init; }
+    public DateOnly? FormerSince { get; init; }
 
     /// <summary>The first letters of the first two words of the name.</summary>
     public string Initials
@@ -157,13 +170,14 @@ public enum Workload
     NotCounted,
 }
 
-public sealed record Class : IEntity
+public sealed record Class : IRetirable
 {
     public Guid Id { get; init; } = Guid.NewGuid();
     public string Name { get; init; } = "";
     public string Colour { get; init; } = "#5E35B1";
     public Guid? AreaId { get; init; }
     public Workload Workload { get; init; }
+    public DateOnly? FormerSince { get; init; }
 }
 
 public enum TimeRuleKind { Preparation, Break }

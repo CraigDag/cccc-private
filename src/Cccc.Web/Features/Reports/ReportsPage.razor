@@ -118,7 +118,7 @@ else
                     var shortNow = t.Students.Count(s => Hours.ForStudent(t, W.Today, thisWeek, s.Id).Short);
                     <div class="card"><small>Short of the @DomainWeek.Duration(goal) target</small><b data-testid="students-short">@shortNow</b><small>@(shortNow == 1 ? "student" : "students") this week · <a href="reports/students">Student hours</a></small></div>
                 }
-                <div class="card"><small>People</small><b>@t.Students.Count</b><small>@(t.Students.Count == 1 ? "student" : "students") · @Looks.Count(t.Facilitators.Count(f => !f.IsGuest), "facilitator") · @Looks.Count(t.Groups.Count, "group")</small></div>
+                <div class="card"><small>People</small><b>@t.Students.Count</b><small>@(t.Students.Count == 1 ? "student" : "students") · @Looks.Count(t.Facilitators.Count(f => !f.IsGuest && !f.IsFormer()), "facilitator") · @Looks.Count(t.Groups.Count, "group")</small></div>
             </div>
             break;
     }
