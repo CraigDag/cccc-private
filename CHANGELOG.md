@@ -36,6 +36,8 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   down the side and the hours across, made to be pinned up. Printed for one group or person, every
   other class in a space is a grey bar, so a busy space never looks free on paper. A school with many
   spaces gets a second sheet for the day rather than a space left off.
+- **A new, empty timetable says where to start**: what to put in, in the order the plan needs it,
+  each ticked as it is done, or *Bring in a file…* to fill everything at once.
 - **"Space" and "class" everywhere** a person reads, rather than "room" and "session": a Big Top is
   not a room.
 

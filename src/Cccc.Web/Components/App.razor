@@ -12,6 +12,12 @@
     <HeadOutlet @rendermode="PageRenderMode" />
 </head>
 <body>
+    @if (PageRenderMode is not null)
+    {
+        @* Nothing behind sign-in is drawn until its circuit is connected (see PageRenderMode), so this says
+           something meanwhile; the stylesheet hides it the moment the shell arrives. *@
+        <div class="loading boot">Opening the timetable…</div>
+    }
     <Routes @rendermode="PageRenderMode" />
     <ReconnectModal />
     <script src="@Assets["js/shell.js"]"></script>
@@ -23,7 +29,13 @@
 @code {
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
-    // The sign-in pages are plain pages; everything behind sign-in is one interactive circuit.
+    // The sign-in pages are plain pages; everything behind sign-in is one interactive circuit, drawn only
+    // once that circuit is connected. Drawing it on the server first (prerendering) left a moment in which
+    // the page looked ready and was not: Plan pressed in it on a cold server changed the address to /plan
+    // and left Now on the screen for as long as anybody watched, because the circuit started on the address
+    // the page was loaded with (measured 17 November 2026). It also built every workspace twice.
+    private static readonly IComponentRenderMode Interactive = new InteractiveServerRenderMode(prerender: false);
+
     private IComponentRenderMode? PageRenderMode =>
-        HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
+        HttpContext.AcceptsInteractiveRouting() ? Interactive : null;
 }

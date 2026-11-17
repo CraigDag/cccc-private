@@ -1,0 +1,44 @@
+@* A new timetable has nothing in it, and an empty board or a blank plan reads as broken. This says what
+   to put in first, in the order the plan needs it, ticking each off as it is done; or how to bring the
+   current app's file in instead, which fills everything at once. *@
+@{
+    var t = W.T;
+    var steps = new (string Title, string Hint, string Slug, int Count, string One, string Many)[]
+    {
+        ("Spaces", "where classes happen: halls, studios, the gym", "rooms", t.Rooms.Count, "space", "spaces"),
+        // A group belongs to a programme, so the way in is the programmes until there is one.
+        ("Programmes and groups", "who classes are for", t.Programmes.Count == 0 ? "programmes" : "groups", t.Groups.Count, "group", "groups"),
+        ("Facilitators", "who teaches", "facilitators", t.Facilitators.Count, "facilitator", "facilitators"),
+        ("Classes", "the kinds of class, such as Acrobatics, Aerial or Lunch", "classes", t.Classes.Count, "class", "classes"),
+        ("Semesters", "when the year's terms run", "semesters", t.Semesters.Count, "semester", "semesters"),
+    };
+}
+<section class="start-here" data-testid="start-here">
+    <h2>Start here</h2>
+    @if (!W.Access.MayUseAdminTools)
+    {
+        <p>Nothing has been put on this timetable yet. An administrator fills it in.</p>
+    }
+    else
+    {
+        <p>This timetable is empty. Put in what the plan is made of, in this order, then draw classes onto the plan. Or bring in the school's file from the current app, and everything comes across at once.</p>
+        <ol class="start-steps">
+            @foreach (var s in steps)
+            {
+                <li class="@(s.Count > 0 ? "done" : "")" data-testid="start-step">
+                    <a href="@("data/" + s.Slug)">@s.Title</a>
+                    <span class="ss-hint">@s.Hint</span>
+                    <small>@(s.Count == 0 ? "none yet" : $"{s.Count} {(s.Count == 1 ? s.One : s.Many)}")</small>
+                </li>
+            }
+            <li class="@(t.Sessions.Count > 0 ? "done" : "")" data-testid="start-step">
+                <a href="plan">The plan</a>
+                <span class="ss-hint">press on empty time in a space's row and drag across it, or press + Class</span>
+            </li>
+        </ol>
+        <a class="btn primary" href="admin/projects">Bring in a file…</a>
+    }
+</section>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+}

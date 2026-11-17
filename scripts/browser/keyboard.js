@@ -15,9 +15,18 @@ async function check(what, fn) { try { await fn(); ok(what); } catch (e) { bad(w
   await page.fill('[data-testid=signin-passphrase]', 'northlight admin');
   await page.click('[data-testid=signin-submit]');
   await page.waitForSelector('[data-testid=now-page]');
+  // Plan is pressed the moment Now appears, deliberately with no wait. When the page was drawn on the
+  // server first it looked ready before its circuit was, and on a cold server this press changed the
+  // address to /plan and left Now on the screen (17 November 2026). The plan's blocks did appear for a
+  // moment, so the check is that Now is gone once things settle, not that a block was ever drawn.
+  // Run it against a freshly started preview for this step to mean anything.
   await page.click('[data-testid=nav-plan]');
-  await page.waitForSelector('[data-testid=timeline] [data-testid=block]');
-  await page.waitForTimeout(600);
+  await check('Plan pressed the moment the page appears goes to the plan and stays', async () => {
+    await page.waitForSelector('[data-testid=plan-page] [data-testid=timeline] [data-testid=block]', { timeout: 8000 });
+    await page.waitForTimeout(1500);
+    const s = await page.evaluate(() => ({ at: location.pathname, now: !!document.querySelector('[data-testid=now-page]'), plan: !!document.querySelector('[data-testid=plan-page]') }));
+    if (s.now || !s.plan) throw new Error('at ' + s.at + ' the screen shows ' + (s.now ? 'Now' : 'no plan'));
+  });
   const block = () => page.locator('[data-testid=timeline] [data-testid=block]').nth(2);
 
   await check('Space chooses a block and the side panel opens', async () => {

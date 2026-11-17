@@ -120,7 +120,11 @@
 
     <div class="plan-body @(V.Chosen is not null || V.IssuesOpen ? "with-side" : "")">
         <div class="plan-main">
-            @if (m.Week.Count == 0)
+            @if (W.T.Sessions.Count == 0)
+            {
+                <StartHere />
+            }
+            else if (m.Week.Count == 0)
             {
                 <div class="notice" data-testid="week-empty">
                     <b>This week is blank.</b> A week ahead has no classes until somebody fills it.
@@ -130,7 +134,11 @@
                     }
                 </div>
             }
-            @if (V.Scale == Scale.Day)
+            @if (W.T.Sessions.Count == 0 && m.Rows.Count == 0)
+            {
+                @* An empty timetable with nothing to draw rows for: the start panel says it all. *@
+            }
+            else if (V.Scale == Scale.Day)
             {
                 <Timeline M="m" W="W" Gestures="_gestures" Day="V.Day" Lens="V.Lens" Chosen="V.Chosen" Editable="editable" OpenEvent="OpenEvent" />
             }

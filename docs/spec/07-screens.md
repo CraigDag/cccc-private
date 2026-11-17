@@ -42,6 +42,15 @@ Nothing depends on a web font: the laptop may be offline.
 - **On a phone** the places move to a bar along the bottom (Now, Plan, Registers, Find, More).
 - **A quiet foot line**: who else is here and the last change. The version is in the person's menu.
 - **One drawer at a time**, focus trapped, Escape closes, OK before Cancel.
+- **Nothing behind sign-in is drawn until its connection is up** (no prerendering): the page says
+  *Opening the timetable…* for that moment. Drawn on the server first, a page looked ready before it
+  was, and Plan pressed in that moment on a cold server left Now on the screen at `/plan`.
+  `scripts/browser/keyboard.js` presses Plan with no wait, on purpose.
+- **An empty timetable says where to start**: on Now and on the plan, *Start here* lists what the
+  plan is made of in the order it needs it (spaces, programmes and groups, facilitators, classes,
+  semesters, then the plan itself), each ticked once it has something and linking to its list, with
+  *Bring in a file…* beside them. Somebody who is not an administrator is told an administrator fills
+  it in. The board is left out until there are spaces.
 
 ## Now (`/`)
 

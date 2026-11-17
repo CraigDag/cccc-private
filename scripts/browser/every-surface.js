@@ -211,6 +211,39 @@ const log = (...a) => console.log(...a);
     log('     ', r.status(), r.headers()['content-disposition'], (await r.body()).length);
   });
 
+  // Last, because it changes which timetable everybody has open.
+  await step('a blank timetable says where to start, and ticks off a space', async () => {
+    await page.goto(B + '/admin/projects');
+    await page.waitForSelector('[data-testid=projects] li');
+    const rows = await page.locator('[data-testid=projects] li').count();
+    await page.click('[data-testid=project-new-blank]');
+    await page.waitForFunction(n => document.querySelectorAll('[data-testid=projects] li').length > n, rows);
+    await page.locator('[data-testid=projects] li', { hasText: 'New timetable' }).locator('[data-testid=project-open]').click();
+    await page.waitForSelector('[data-testid=projects] li:has-text("New timetable") .badge');
+    await page.goto(B + '/');
+    await page.waitForSelector('[data-testid=start-here]');
+    const steps = await page.locator('[data-testid=start-step]').count();
+    const done = await page.locator('[data-testid=start-step].done').count();
+    if (steps !== 6 || done !== 0) throw new Error(`a blank timetable shows ${steps} steps with ${done} ticked`);
+    if (await page.locator('.board').count()) throw new Error('the building board is drawn with no spaces in it');
+    await page.goto(B + '/plan');
+    await page.waitForSelector('[data-testid=start-here]');
+    if (await page.locator('[data-testid=timeline]').count()) throw new Error('an empty timeline is drawn under Start here');
+    await page.goto(B + '/');
+    await page.waitForSelector('[data-testid=start-here]');
+    await page.locator('[data-testid=start-step] a').first().click();
+    await page.waitForSelector('[data-testid=data-add]');
+    await page.click('[data-testid=data-add]');
+    await page.fill('[data-testid=room-name]', 'Loft');
+    await page.click('[data-testid=dialog-ok]');
+    await page.waitForSelector('[data-testid=data-row]');
+    await page.goto(B + '/');
+    await page.waitForSelector('[data-testid=start-step].done');
+    const first = await page.locator('[data-testid=start-step]').first();
+    if (!/\bdone\b/.test(await first.getAttribute('class') || '')) throw new Error('adding a space ticked another step: ' + await page.locator('[data-testid=start-step].done').textContent());
+    log('     ', (await first.textContent()).replace(/\s+/g, ' ').trim());
+  });
+
   log('errors', JSON.stringify(errors));
   await browser.close();
   if (errors.length) failed++;

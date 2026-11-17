@@ -72,7 +72,11 @@
                     </ul>
                 }
             }
-            @if (happening.Count == 0)
+            @if (t.Sessions.Count == 0)
+            {
+                <StartHere />
+            }
+            else if (happening.Count == 0)
             {
                 var next = t.Sessions.Where(s => s.Date > today && !s.Cancelled).OrderBy(s => s.Date).ThenBy(s => s.Start).FirstOrDefault();
                 <div class="notice" data-testid="nothing-today">
@@ -86,6 +90,8 @@
             }
             @* A departures board for the building: a row a space, grouped by kind, saying what is in it, until
                when, and what comes next. A board rather than tiles, so any number of spaces reads without gaps. *@
+            @if (t.Rooms.Count > 0)
+            {
             <h2 class="now-section">The building</h2>
             <div class="board" aria-label="Every space now">
                 @foreach (var part in t.Rooms.OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer).GroupBy(r => r.Category ?? "Other spaces"))
@@ -140,6 +146,7 @@
                     }
                 }
             </div>
+            }
             @if (happening.Where(o => o.Session.RoomId is null).ToList() is { Count: > 0 } roomless)
             {
                 <h2 class="now-section">Without a space</h2>

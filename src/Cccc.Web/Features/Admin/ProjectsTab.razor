@@ -16,7 +16,7 @@
             Bring in a file…
             <InputFile OnChange="Import" accept=".cccc,.cccc2" style="display:none" data-testid="import-file" />
         </label>
-        <button type="button" class="btn" @onclick="NewBlank">Start a blank timetable</button>
+        <button type="button" class="btn" @onclick="NewBlank" data-testid="project-new-blank">Start a blank timetable</button>
         <button type="button" class="btn quiet" @onclick="NewSample">Add the made-up sample school</button>
     </div>
     <p class="hint">Bring in the school's <code>.cccc</code> from the current app (every version up to schema @LegacyImport.NewestSchema), or a <code>.cccc2</code> downloaded from here. The file is read in memory and stored only as the new timetable.</p>
@@ -54,7 +54,7 @@
                     <small class="muted">Last changed @W.Clock.Describe(p.LastChanged) by @W.NameOf(p.LastChangedBy)</small></span>
                 @if (p.Id != open)
                 {
-                    <button type="button" class="btn" @onclick="() => Choice.Choose(p.Id)">Open for everybody</button>
+                    <button type="button" class="btn" @onclick="() => Choice.Choose(p.Id)" data-testid="project-open">Open for everybody</button>
                 }
                 <button type="button" class="btn quiet" @onclick="() => D.Show<HistoryDialog>(new Dictionary<string, object?> { [nameof(HistoryDialog.ProjectId)] = p.Id })">History…</button>
                 <button type="button" class="btn quiet" @onclick="() => D.Show<RenameDialog>(new Dictionary<string, object?> { [nameof(RenameDialog.ProjectId)] = p.Id })">Rename…</button>
