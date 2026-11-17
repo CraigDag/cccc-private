@@ -112,6 +112,12 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   taken is never replaced. Coaches never see it.
 - **It reads the current app's newest files** (1.67.0 onwards, with their Scratch Week), through
   *Bring in a file…* and when following.
+- **Every hour explained**: press a facilitator's figure on Reports ▸ Facilitator hours (a week, or the
+  total across the weeks chosen), *21h 30m this week* under their name on their week in the plan, or
+  *How it adds up* on My week, and every class and time rule in it is listed a day at a time: their own
+  part of a class, a class they covered (saying who they covered), and each time rule's credit, adding
+  up to the figure pressed. *Classes*, *Cover* and *Time rules* show one kind and how much of the total
+  it is. A coach sees their own; an administrator anybody's.
 - **Copying a week again no longer takes a class out of another week**: if a copied class had since been
   moved to a different week, copying the first week a second time pulled it back out of there.
 

@@ -1,4 +1,5 @@
 @using DomainWeek = Cccc.Domain.Week
+@inject Dialogs D
 @{
     var t = W.T;
     var byWeek = Weeks.ToDictionary(m => m, m => Hours.ByFacilitator(t, Occurrences.HappeningInWeek(t, m)));
@@ -27,15 +28,24 @@
                             var h = byWeek[m].GetValueOrDefault(f.Id)?.Total ?? TimeSpan.Zero;
                             total += h;
                             bool over = f.MaxWeeklyHours is { } max && h > max;
-                            <td class="num" style="@(over ? "color:var(--warning);font-weight:700" : "")" title="@(over ? "Over their limit of " + DomainWeek.Duration(f.MaxWeeklyHours!.Value) : "")">@(h == TimeSpan.Zero ? "–" : DomainWeek.Duration(h))</td>
+                            <td class="num" style="@(over ? "color:var(--warning);font-weight:700" : "")" title="@(over ? "Over their limit of " + DomainWeek.Duration(f.MaxWeeklyHours!.Value) : "")">
+                                @if (h == TimeSpan.Zero)
+                                {
+                                    <span>–</span>
+                                }
+                                else
+                                {
+                                    <button type="button" class="link" title="@("What makes up " + f.Name + "’s " + DomainWeek.Duration(h) + " in week " + DomainWeek.IsoNumber(m))" @onclick="() => Explain(f.Id, [m])" data-testid="hours-cell">@DomainWeek.Duration(h)</button>
+                                }
+                            </td>
                         }
-                        <td class="num"><b>@DomainWeek.Duration(total)</b></td>
+                        <td class="num"><button type="button" class="link" title="@("Every line of " + f.Name + "’s hours in these weeks")" @onclick="() => Explain(f.Id, Weeks)" data-testid="hours-total"><b>@DomainWeek.Duration(total)</b></button></td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
-    <p class="hint">Teaching plus every time rule. Cover counts for whoever was in the room; a class still waiting for cover counts for nobody. Over a limit is shown, never refused.</p>
+    <p class="hint">Teaching plus every time rule. Cover counts for whoever was in the room; a class still waiting for cover counts for nobody. Over a limit is shown, never refused. Press a figure to see every class and time rule that makes it up.</p>
 }
 else
 {
@@ -58,7 +68,7 @@ else
                             var x = splits.SelectMany(s => s.Rules).Where(rt => rt.RuleId == r.Id).Aggregate(TimeSpan.Zero, (a, rt) => a + rt.Time);
                             <td class="num">@(x == TimeSpan.Zero ? "–" : DomainWeek.Duration(x))</td>
                         }
-                        <td class="num"><b>@DomainWeek.Duration(total)</b></td>
+                        <td class="num"><button type="button" class="link" @onclick="() => Explain(f.Id, Weeks)" data-testid="breakdown-total"><b>@DomainWeek.Duration(total)</b></button></td>
                         <td class="num">@(f.MaxWeeklyHours is { } max ? DomainWeek.Duration(max * Weeks.Count) : "")</td>
                     </tr>
                 }
@@ -70,4 +80,7 @@ else
     [CascadingParameter] public Workspace W { get; set; } = default!;
     [Parameter, EditorRequired] public IReadOnlyList<DateOnly> Weeks { get; set; } = [];
     private bool _breakdown;
+
+    private void Explain(Guid facilitatorId, IReadOnlyList<DateOnly> weeks) =>
+        D.Show<HoursLines>(new Dictionary<string, object?> { [nameof(HoursLines.FacilitatorId)] = facilitatorId, [nameof(HoursLines.Weeks)] = weeks });
 }

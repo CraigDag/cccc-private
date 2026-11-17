@@ -149,6 +149,13 @@ their own classes with *Only the ones I can take* ticked, and unticking it shows
 everybody reads every register. When nobody is in the room because the facilitator is away, the *In
 the room* column says *Nobody yet: … away* rather than nothing.
 
+**A figure of a facilitator's hours opens the lines that make it** (`Reports/HoursLines`): a week's
+figure or the total on Reports ▸ Facilitator hours, *21h 30m this week* under a facilitator's name when
+the plan is narrowed to them, and *How it adds up* on My week. The drawer lists every class and time
+rule a day at a time (a week heading each when several weeks were asked for), with the total and their
+limit at the top; *Classes*, *Cover* and *Time rules* narrow it and say how much of the total that is.
+
+
 ## Following the current app
 
 When the open timetable follows the current app ([`04`](04-storage-and-editing.md)), every screen still

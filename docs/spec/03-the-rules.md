@@ -100,6 +100,15 @@ old app has a class that carries the reasoning, it is named in brackets so the h
     finding C1).
   - Reported **beside** teaching under the rule's own name, and counted towards the limit.
   - It is a facilitator's number with no student equivalent and reaches no area target.
+- **Every hour of a facilitator's can be explained, one line each** (`Hours.Lines`, the current app's
+  1.65.0): each class they were in the room for (their own part of it; a class covered under whoever
+  covered it, naming who they stood in for) and each time rule's credit, a credit straight after the
+  class it was earned on. Built from the same two lists as every total, so the lines add up to the
+  figure on Reports, My week and the plan; a test holds that for every facilitator in every week of
+  the made-up school. Craig, 2026-11-16, could not find an hour and a half of a coach's week on the
+  timetable: it was a class covered and a rule's credit, neither of which a week's timetable shows
+  under that person. Who may see them is `Access.MayHaveTheWeekOf`: an administrator anybody's,
+  everybody else their own.
 - **Student load counts `Counted` classes only** — plus a session whose class no longer exists — and
   **a session awaiting cover still counts** for a student (welfare and curriculum, not contract; Craig,
   2026-08-22). Do not "fix" it to match the facilitator rule. A line the total does not count says so,

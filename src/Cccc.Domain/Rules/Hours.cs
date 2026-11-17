@@ -17,6 +17,36 @@ public sealed record HoursSplit(TimeSpan Teaching, ImmutableList<RuleTime> Rules
 /// <summary>One credit a time rule gave one person for one occurrence.</summary>
 public sealed record Credit(TimeRule Rule, Occurrence Occurrence, Guid FacilitatorId, TimeSpan Time);
 
+/// <summary>What a line of a facilitator's hours is.</summary>
+public enum HoursLineKind
+{
+    /// <summary>A class of their own they were in the room for.</summary>
+    Teaching,
+    /// <summary>A class they were in the room for as cover.</summary>
+    Covering,
+    /// <summary>Time a time rule credited them.</summary>
+    Rule,
+}
+
+/// <summary>
+/// One piece of time in a facilitator's hours (<see cref="Hours.Lines"/>): a class they were in the room
+/// for, from <see cref="From"/> to <see cref="Until"/> (their own part of it), or a time rule's credit,
+/// whose times are those of the class it was earned on.
+/// </summary>
+public sealed record HoursLine(Occurrence Occurrence, HoursLineKind Kind, TimeOnly From, TimeOnly Until, TimeSpan Time)
+{
+    public DateOnly Date => Occurrence.Date;
+
+    /// <summary>The rule that credited the time, on a <see cref="HoursLineKind.Rule"/> line.</summary>
+    public TimeRule? Rule { get; init; }
+
+    /// <summary>The assigned people away whom this line's teaching stood in for, on a covering line.</summary>
+    public ImmutableList<Guid> Covering { get; init; } = [];
+
+    /// <summary>On a preparation line, the teaching the percentage was taken of.</summary>
+    public TimeSpan Of { get; init; }
+}
+
 /// <summary>
 /// Hours. Facilitator hours go to whoever is actually in the room; a session awaiting cover counts for
 /// no facilitator. Student load counts Counted classes only, and DOES count a session awaiting cover
@@ -97,6 +127,38 @@ public static class Hours
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Every piece of time in a facilitator's hours over these occurrences, one line each, in day and time
+    /// order, a credit straight after the class it was earned on. Built from the same two lists the totals
+    /// are (<see cref="Teaching"/>'s windows and <see cref="Credits"/>), so the lines add up to
+    /// <see cref="For"/>'s total: Craig, 2026-11-16, could not find an hour and a half of a coach's week
+    /// on the timetable, and the answer was a class covered and a rule's credit, neither of which the
+    /// week's own timetable shows under that person.
+    /// </summary>
+    public static IReadOnlyList<HoursLine> Lines(Timetable t, IReadOnlyList<Occurrence> occurrences, Guid facilitatorId)
+    {
+        var lines = new List<HoursLine>();
+        foreach (var o in occurrences.Where(o => o.Happens))
+        {
+            var time = TimeWindows.Length(o, facilitatorId);
+            if (time <= TimeSpan.Zero) continue;
+            var (from, until) = TimeWindows.InRoom(o, facilitatorId);
+            bool covering = o.Session.CoverIds.Contains(facilitatorId);
+            lines.Add(new HoursLine(o, covering ? HoursLineKind.Covering : HoursLineKind.Teaching, from, until, time)
+            {
+                Covering = covering ? o.AwayIds : [],
+            });
+        }
+        foreach (var c in Credits(t, occurrences).Where(c => c.FacilitatorId == facilitatorId))
+            lines.Add(new HoursLine(c.Occurrence, HoursLineKind.Rule, c.Occurrence.Start, c.Occurrence.End, c.Time)
+            {
+                Rule = c.Rule,
+                Of = c.Rule.Kind == TimeRuleKind.Preparation ? TimeWindows.Length(c.Occurrence, facilitatorId) : TimeSpan.Zero,
+            });
+        return [.. lines.OrderBy(l => l.Date).ThenBy(l => l.Occurrence.Start).ThenBy(l => l.Occurrence.Session.Id)
+                        .ThenBy(l => l.Kind == HoursLineKind.Rule).ThenBy(l => l.Rule?.Id)];
     }
 
     public static HoursSplit For(Timetable t, IReadOnlyList<Occurrence> occurrences, Guid facilitatorId) =>

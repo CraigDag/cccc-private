@@ -1,0 +1,135 @@
+@* A facilitator's hours, one line for every piece of time in them, adding up to the figure that opened it:
+   each class they were in the room for (their own part of it, and a class covered under whoever covered
+   it) and each time rule's credit. Craig, 2026-11-16, could not find an hour and a half of a coach's week
+   on the timetable; it was a class covered and a rule's credit, neither of which a week's timetable shows
+   under that person. The lines are Hours.Lines, made from the same two lists as every total, so they
+   cannot disagree with Reports, My week or the plan. Who may see them is the rule for whose week may be
+   printed: an administrator anybody's, everybody else their own. *@
+@using DomainWeek = Cccc.Domain.Week
+@using Cccc.Web.Features.Week
+@{
+    var t = W.T;
+    var person = t.Facilitators[FacilitatorId];
+}
+@if (person is null)
+{
+    <DialogFrame Title="This facilitator has gone"><p>Somebody removed them while this was open.</p></DialogFrame>
+}
+else if (!W.Access.MayHaveTheWeekOf(FacilitatorId))
+{
+    <DialogFrame Title="Hours"><p>Somebody else's hours are for administrators.</p></DialogFrame>
+}
+else
+{
+    bool mine = W.Access.FacilitatorId == FacilitatorId;
+    var weeks = Weeks.Distinct().Order()
+        .Select(m => (Monday: m, Lines: Hours.Lines(t, Occurrences.HappeningInWeek(t, m), FacilitatorId))).ToList();
+    var all = weeks.SelectMany(w => w.Lines).ToList();
+    var shown = all.Where(Shown).ToList();
+    var total = Sum(all);
+    <DialogFrame Title="@(mine ? "Your hours" : person.Name + "’s hours")" Class="wide">
+        <p class="hl-head">
+            <span class="muted" data-testid="hours-lines-span">@Span(weeks.Select(w => w.Monday).ToList())</span>
+            <b class="hl-total" data-testid="hours-lines-total">@DomainWeek.Duration(total)</b>
+            @if (person.MaxWeeklyHours is { } max)
+            {
+                var limit = max * weeks.Count;
+                <span class="@(total > limit ? "hl-over" : "muted")">@(total > limit ? "over" : "within") @(mine ? "your" : "their") limit@(weeks.Count == 1 ? " of" : " over these weeks,") @DomainWeek.Duration(limit)</span>
+            }
+        </p>
+        @if (all.Count > 0)
+        {
+            <div class="seg" role="group" aria-label="Which lines" data-testid="hours-lines-show">
+                <button type="button" class="@(_show == Show.All ? "on" : "")" @onclick="() => _show = Show.All">Everything</button>
+                <button type="button" class="@(_show == Show.Classes ? "on" : "")" @onclick="() => _show = Show.Classes">Classes</button>
+                <button type="button" class="@(_show == Show.Cover ? "on" : "")" @onclick="() => _show = Show.Cover">Cover</button>
+                <button type="button" class="@(_show == Show.Rules ? "on" : "")" @onclick="() => _show = Show.Rules">Time rules</button>
+            </div>
+        }
+        @if (all.Count == 0)
+        {
+            <p class="muted" data-testid="hours-lines-none">No hours @(weeks.Count == 1 ? "this week" : "in these weeks"): @(mine ? "you were" : person.Name + " was") in the room for no class that happened, and no time rule credited anything.</p>
+        }
+        else if (shown.Count == 0)
+        {
+            <p class="muted">Nothing of that kind @(weeks.Count == 1 ? "this week" : "in these weeks").</p>
+        }
+        <div class="hl-weeks" data-testid="hours-lines">
+            @foreach (var w in weeks)
+            {
+                var lines = w.Lines.Where(Shown).ToList();
+                if (lines.Count == 0) continue;
+                @if (weeks.Count > 1)
+                {
+                    <h3 class="hl-week"><span>Week @DomainWeek.IsoNumber(w.Monday) <small class="muted">@DomainWeek.Range(w.Monday)</small></span><span class="hl-len">@DomainWeek.Duration(Sum(lines))</span></h3>
+                }
+                @foreach (var day in lines.GroupBy(l => l.Date))
+                {
+                    <div class="hl-day">@day.Key.ToString("dddd d MMMM", System.Globalization.CultureInfo.InvariantCulture)</div>
+                    <ul class="hl-lines">
+                        @foreach (var l in day)
+                        {
+                            <li class="hl-row @(l.Kind == HoursLineKind.Rule ? "rule" : "")" data-testid="hours-line" data-kind="@l.Kind">
+                                <span class="hl-time">@TimeOf(l)</span>
+                                <span class="hl-what"><b>@WhatOf(t, l)</b> <small>@DetailOf(t, l)</small></span>
+                                <span class="hl-len">@(l.Kind == HoursLineKind.Rule ? "+" : "")@DomainWeek.Duration(l.Time)</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+        </div>
+        @if (_show != Show.All && shown.Count > 0)
+        {
+            <p class="hl-part" data-testid="hours-lines-part"><b>@DomainWeek.Duration(Sum(shown))</b> of the @DomainWeek.Duration(total) is @(_show switch { Show.Classes => "teaching their own classes", Show.Cover => "cover", _ => "time rules" }).</p>
+        }
+        <p class="hint">A class counts the time somebody was in the room for it: their own part, and a class they covered goes to them rather than to the person away. A class still waiting for cover is nobody's. Time rules add what People &amp; places ▸ Time rules says, for each person in the room. These are the figures on Reports ▸ Facilitator hours and My week.</p>
+    </DialogFrame>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid FacilitatorId { get; set; }
+    /// <summary>The Mondays of the weeks to explain: one for a week's figure, several for a total across them.</summary>
+    [Parameter] public IReadOnlyList<DateOnly> Weeks { get; set; } = [];
+
+    private enum Show { All, Classes, Cover, Rules }
+    private Show _show;
+
+    private bool Shown(HoursLine l) => _show switch
+    {
+        Show.Classes => l.Kind == HoursLineKind.Teaching,
+        Show.Cover => l.Kind == HoursLineKind.Covering,
+        Show.Rules => l.Kind == HoursLineKind.Rule,
+        _ => true,
+    };
+
+    private static TimeSpan Sum(IEnumerable<HoursLine> lines) => lines.Aggregate(TimeSpan.Zero, (a, l) => a + l.Time);
+
+    private static string Span(IReadOnlyList<DateOnly> mondays) => mondays.Count switch
+    {
+        0 => "No weeks",
+        1 => DomainWeek.ForDocuments(mondays[0]),
+        _ => $"{mondays.Count} weeks, week {DomainWeek.IsoNumber(mondays[0])} to week {DomainWeek.IsoNumber(mondays[^1])} ({DomainWeek.ShortDate(mondays[0])} to {DomainWeek.ShortDate(mondays[^1].AddDays(6))} {mondays[^1].AddDays(6).Year})",
+    };
+
+    /// <summary>A class's line carries the person's own part of it; a preparation credit belongs to the class above it, so it has none.</summary>
+    private static string TimeOf(HoursLine l) =>
+        l is { Kind: HoursLineKind.Rule, Rule.Kind: TimeRuleKind.Preparation } ? "" : $"{DomainWeek.Hm(l.From)}–{DomainWeek.Hm(l.Until)}";
+
+    private static string WhatOf(Timetable t, HoursLine l) => l.Rule?.DisplayName ?? Looks.Title(t, l.Occurrence.Session);
+
+    private static string DetailOf(Timetable t, HoursLine l)
+    {
+        var s = l.Occurrence.Session;
+        string Names(IEnumerable<Guid> ids) => string.Join(" and ", ids.Select(id => t.Facilitators.Find(id)?.Name ?? "somebody since removed").Order(NameOrder.Comparer));
+        return l switch
+        {
+            { Kind: HoursLineKind.Covering } => l.Covering.IsEmpty ? "as cover" : "covering " + Names(l.Covering),
+            { Kind: HoursLineKind.Teaching } when (l.From, l.Until) != (s.Start, s.End) => $"their part of {Looks.When(s)}",
+            { Kind: HoursLineKind.Teaching } => "",
+            { Rule.Kind: TimeRuleKind.Preparation } => $"for {Looks.Title(t, s)}, {l.Rule.Percent}% of {DomainWeek.Duration(l.Of)}",
+            { Rule.Condition: TimeRuleCondition.TeachesBeforeAndAfter } => $"{Looks.Title(t, s)}, teaching before and after it",
+            _ => $"{Looks.Title(t, s)}, teaching that day",
+        };
+    }
+}

@@ -881,3 +881,27 @@ details.field summary { cursor: pointer; font-size: 13px; }
 @media (max-width: 360px) {
     .day-strip .btn.icon { display: none; }
 }
+
+/* A person's hours, line by line (Reports/HoursLines.razor): time, what, length, a day at a time. */
+.hl-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 14px; }
+.hl-total { font-family: var(--serif); font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.hl-over { color: var(--warning); font-weight: 650; }
+.hl-weeks { margin-top: 6px; }
+.hl-week { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 20px 0 2px; padding-bottom: 4px; border-bottom: 1px solid var(--divider); font-size: 15px; }
+.hl-day { margin: 12px 0 2px; color: var(--text-muted); font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+.hl-lines { list-style: none; margin: 0; padding: 0; }
+.hl-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--rule); }
+.hl-row:first-child { border-top: 0; }
+.hl-row .hl-what { overflow-wrap: anywhere; }
+.hl-row .hl-what b { font-weight: 600; }
+.hl-row.rule .hl-what b { font-weight: 500; color: var(--text-muted); }
+.hl-row.rule .hl-len { color: var(--text-muted); }
+.hl-time, .hl-len { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hl-time { color: var(--text-muted); }
+.hl-len { text-align: right; font-weight: 600; }
+.hl-part { margin: 14px 0 0; }
+@media (max-width: 560px) {
+  .hl-row { grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; }
+  .hl-time { grid-column: 1 / -1; font-size: 12px; }
+  .hl-time:empty { display: none; }
+}

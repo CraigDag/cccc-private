@@ -35,6 +35,12 @@
             <h1 class="display" data-testid="plan-title">@(m.RowsAreDays ? V.Focus!.Name + "’s week" : V.Scale == Scale.Day ? Long(V.Day) : "Week " + Cccc.Domain.Week.IsoNumber(V.Monday))</h1>
             <div class="muted">
                 @(V.Scale == Scale.Day && !m.RowsAreDays ? $"Week {Cccc.Domain.Week.IsoNumber(V.Monday)} · " : m.RowsAreDays ? Cccc.Domain.Week.ForDocuments(V.Monday) + " · " : Cccc.Domain.Week.Range(V.Monday) + " · ")@(semester?.Name ?? "Outside every semester")
+                @* A facilitator's week says their hours, and every line of them is one press away: the place
+                   somebody looks when a figure on a report does not match the timetable they can see. *@
+                @if (V.Focus is { Kind: "facilitator" } who && W.Access.MayHaveTheWeekOf(who.Id))
+                {
+                    <text> · </text><button type="button" class="link" @onclick="() => ExplainHours(who.Id)" data-testid="focus-hours">@Cccc.Domain.Week.Duration(Hours.For(t, Occurrences.HappeningInWeek(t, V.Monday), who.Id).Total) this week</button>
+                }
                 @if (m.Locked)
                 {
                     <span class="badge" title="A week that has ended does not change, except its registers" data-testid="locked">Ended · read only</span>
@@ -247,6 +253,12 @@
     private PlanGestures _gestures = default!;
     private DotNetObjectReference<PlanGestures>? _keys;
     private bool _moreOpen;
+
+    private void ExplainHours(Guid id) => D.Show<Cccc.Web.Features.Reports.HoursLines>(new Dictionary<string, object?>
+    {
+        [nameof(Cccc.Web.Features.Reports.HoursLines.FacilitatorId)] = id,
+        [nameof(Cccc.Web.Features.Reports.HoursLines.Weeks)] = new[] { V.Monday },
+    });
 
     public static string Long(DateOnly d) => d.ToString("dddd d MMMM", System.Globalization.CultureInfo.InvariantCulture);
 

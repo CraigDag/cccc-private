@@ -29,6 +29,7 @@ else
         <div class="card @(Me.MaxWeeklyHours is { } max && split.Total > max ? "warn" : "")">
             <small>Hours this week</small><b>@Cccc.Domain.Week.Duration(split.Total)</b>
             <small>Teaching @Cccc.Domain.Week.Duration(split.Teaching)@string.Concat(split.Rules.Select(r => $" · {r.Name} {Cccc.Domain.Week.Duration(r.Time)}"))@(Me.MaxWeeklyHours is { } lim ? $" · limit {Cccc.Domain.Week.Duration(lim)}" : "")</small>
+            <small><button type="button" class="link" @onclick="() => ExplainHours(Me.Id)" data-testid="my-hours-lines">How it adds up</button></small>
         </div>
         <div class="card @(missing.Count > 0 ? "warn" : "")">
             <small>Registers to take</small><b data-testid="still-to-take-count">@missing.Count</b>
@@ -64,6 +65,12 @@ else
     private void OpenSession(Guid id) => D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.SessionId)] = id });
 
     private void OpenEvent(Guid id) => D.Show<Cccc.Web.Features.Events.EventForm>(new Dictionary<string, object?> { [nameof(Cccc.Web.Features.Events.EventForm.EventId)] = id });
+
+    private void ExplainHours(Guid id) => D.Show<Cccc.Web.Features.Reports.HoursLines>(new Dictionary<string, object?>
+    {
+        [nameof(Cccc.Web.Features.Reports.HoursLines.FacilitatorId)] = id,
+        [nameof(Cccc.Web.Features.Reports.HoursLines.Weeks)] = new[] { _view.Monday },
+    });
 
     private void Take(Guid id) => D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = id });
 }
