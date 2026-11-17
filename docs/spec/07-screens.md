@@ -45,7 +45,10 @@ Nothing depends on a web font: the laptop may be offline.
 - **Every page is drawn again as each minute turns**, so a screen left open all day (Now on the office
   wall) keeps up with the clock beside it, and with the date after midnight.
 - **Find's keys act on what has been typed**, never on the list last drawn: Enter straight after the
-  last letter opens the top match for all of it.
+  last letter opens the top match for all of it. **And nothing typed straight after Ctrl+K or / is
+  lost**: Find opens after a round trip and its box takes the focus after another, so `shell.js` keeps
+  the keys typed in between (a rubbed-out letter too) and puts them in the box when it is focused. The
+  round trip decides, not the typing speed: invisible on the school's network, real over Tailscale.
 - **Nothing behind sign-in is drawn until its connection is up** (no prerendering): the page says
   *Opening the timetable…* for that moment. Drawn on the server first, a page looked ready before it
   was, and Plan pressed in that moment on a cold server left Now on the screen at `/plan`.
@@ -168,6 +171,12 @@ one target every week). Administrators only (`Access.MayUseAdminTools`): a stude
 and curriculum number.
 
 
+**Start next year…** is on every timetable in Administration ▸ Projects (`Admin/NextYearForm`). The
+form is the list, not the button: each semester's week number this year and next (the same, and a line
+saying so when a semester moves 53 weeks to keep it), what carries over, what stays with this year, the
+closures as a tick left off, and the groups arriving as they are. *Make next year* puts the new year in
+the list beside this one, which stays open for everybody until somebody opens the new one ([`03`](03-the-rules.md)).
+
 ## Following the current app
 
 When the open timetable follows the current app ([`04`](04-storage-and-editing.md)), every screen still
@@ -176,7 +185,8 @@ current app* badge (amber, *Behind the current app*, when the file could not be 
 Registers and Cover say in a line that it is changed in the current app, within a minute (My week only
 when it is behind); a form that would change it shows that line and only Close; Add buttons and the
 morning list's buttons are not drawn. The foot line says so, System has a card for it, Projects marks
-the timetable and offers no Delete on it, and Erase a person explains the order. A change brought
+the timetable and offers no Delete on it (but does offer *Start next year…*, which makes a timetable of
+its own and changes nothing here), and Erase a person explains the order. A change brought
 across reads *the current app* wherever a name goes.
 
 `FOLLOW=1 scripts/preview.sh` tries it on made-up data: `tools/OldFormatSchool` writes a school in the

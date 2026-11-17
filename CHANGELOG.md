@@ -127,6 +127,15 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   of theirs a day at a time: one that did not count says why (closed, cancelled, an open session, not
   counted), and a class still waiting for cover counts, as it does today. The Reports overview says how
   many students are short this week. Administrators only.
+- **Start next year from this one** (Administration ▸ Projects) makes next year as a new timetable
+  beside this one, which stays exactly as it was, registers and all. It lists first what carries over
+  (the first timetabled week's classes, onto the same week next year, then blank weeks; the spaces, the
+  people and groups, the catalogue, the rules and the settings) and what stays with this year (registers,
+  every other week, this year's events and absences). Closures are a tick, off by default. **Every
+  semester starts in the same week number next year**: the current app moves everything 52 weeks on,
+  which after 2026 (a year with a week 53) would start next autumn a week early.
+- **Typing straight after Ctrl+K is no longer lost**: the first letters of a name typed the moment Find
+  was asked for could vanish before its box appeared, more often from home than in the building.
 - **Copying a week again no longer takes a class out of another week**: if a copied class had since been
   moved to a different week, copying the first week a second time pulled it back out of there.
 

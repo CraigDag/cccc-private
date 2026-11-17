@@ -90,6 +90,22 @@ async function check(what, fn) { try { await fn(); ok(what); } catch (e) { bad(w
     const chip = (await page.locator('[data-testid=focus-chip]').textContent()).replace('×', '').trim();
     if (chip !== 'Studio B') throw new Error('typed "Studio B" and Enter, and the plan narrowed to ' + chip);
   });
+  await check('what is typed straight after Ctrl+K reaches the box, before the box has even opened', async () => {
+    // Find opens after a round trip and its box takes the focus after another. Keys sent in the same moment
+    // as Ctrl+K arrive before either, so this cannot pass by the server being quick: they are kept and put
+    // into the box when it is focused, a mistyped letter rubbed out with them.
+    await page.click('[data-testid=focus-chip] button');
+    await page.waitForSelector('[data-testid=focus-chip]', { state: 'detached', timeout: 4000 });
+    await page.evaluate(() => {
+      const key = (k, o = {}) => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...o }));
+      key('k', { ctrlKey: true });
+      for (const k of ['C', 'l', 'e', 'x', 'Backspace', 'o']) key(k);
+    });
+    await page.waitForFunction(() => document.querySelector('[data-testid=find-input]')?.value === 'Cleo', null, { timeout: 4000 });
+    await page.waitForFunction(() => document.querySelector('[data-testid=find-hit] .find-label')?.textContent.startsWith('Cleo'), null, { timeout: 4000 });
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('[data-testid=find]', { state: 'detached', timeout: 4000 });
+  });
   await check('/ opens Find, Escape closes it', async () => {
     await page.click('[data-testid=plan-title]');
     await page.keyboard.press('/');

@@ -1,0 +1,121 @@
+@* Start next year from this one (NextYear): the form's job is the list, not the button. Rolling a year
+   over keeps some things and leaves others with this year, and which is which is the only thing somebody
+   needs to know before pressing it, so every line is a count read off NextYear.For, the same plan Make
+   carries out. The new year is a timetable of its own beside this one; this one is not changed, which is
+   why the form is allowed on a timetable that follows the current app. *@
+@inject LiveProjects Live
+@inject ProjectStore Store
+@inject Dialogs D
+@using Cccc.Domain.Editing
+@using Cccc.Web.Features.Week
+@using DomainWeek = Cccc.Domain.Week
+@{
+    var info = Store.Find(ProjectId);
+    var t = info is { Deleted: null } ? Live.Get(ProjectId).State : null;
+    var plan = t is null ? null : NextYear.For(t);
+}
+@if (t is null || info is null)
+{
+    <DialogFrame Title="This timetable has gone"><p>It was deleted while this was open.</p></DialogFrame>
+}
+else if (!W.Access.MayUseAdminTools)
+{
+    <DialogFrame Title="Start next year"><p>This is for administrators.</p></DialogFrame>
+}
+else if (plan is null)
+{
+    <DialogFrame Title="Start next year">
+        <p data-testid="next-year-no-semesters">@info.Name has no semesters, so it has no year to roll forward. Add them in People &amp; places ▸ Semesters first: next year starts each one in the same week number.</p>
+    </DialogFrame>
+}
+else
+{
+    <DialogFrame Title="Start next year" Class="wide" ChangesTheTimetable="false" OnOk="Make" OkLabel="Make next year" OkEnabled="@(_name.Trim().Length > 0)">
+        <p>Next year is made as <b>a new timetable beside @info.Name</b>, which stays exactly as it is, registers and all. Open the new one for everybody when the year starts.</p>
+        <label class="field"><span>Next year's name (seen inside the app only)</span><TypedText Value="@_name" ValueChanged="s => _name = s" Label="Next year's name" data-testid="next-year-name" /></label>
+
+        <h3 class="ny-head">Every semester starts in the same week number</h3>
+        <ul class="ny-list" data-testid="next-year-semesters">
+            @foreach (var m in plan.Semesters)
+            {
+                <li data-testid="next-year-semester" data-from="@DomainWeek.IsoNumber(m.From.FirstMonday)" data-to="@DomainWeek.IsoNumber(m.To.FirstMonday)" data-days="@m.Days"><b>@m.From.Name</b>: week @DomainWeek.IsoNumber(m.From.FirstMonday) of @m.From.FirstMonday.Year becomes week @DomainWeek.IsoNumber(m.To.FirstMonday) of @m.To.FirstMonday.Year, starting @DomainWeek.ShortDate(m.To.FirstMonday) @m.To.FirstMonday.Year, @Looks.Count(m.To.WeekCount, "week").</li>
+            }
+        </ul>
+        @foreach (var m in plan.Semesters.Where(m => m.Days > 364))
+        {
+            <p class="hint" data-testid="next-year-week-53">@m.From.Name moves 53 weeks, not 52: @IsoYear(m.From.FirstMonday) has a week 53, so 52 weeks on would have started it in week @DomainWeek.IsoNumber(m.From.FirstMonday.AddDays(364)).</p>
+        }
+        <p class="hint">If a semester's name carries its year, rename it in the new timetable.</p>
+
+        <h3 class="ny-head">Carried over</h3>
+        <ul class="ny-list" data-testid="next-year-keeps">
+            <li data-testid="next-year-first-week">@FirstWeek(plan)</li>
+            <li>The building: @Looks.Count(t.Rooms.Count, "space").</li>
+            <li>The people: @Looks.Count(t.Facilitators.Count, "facilitator"), and @Looks.Count(t.Students.Count, "student") in @Looks.Count(t.Groups.Count, "group").</li>
+            <li>The classes, disciplines and areas, the time rules and the settings.</li>
+            @if (plan.ScratchClasses > 0)
+            {
+                <li>The Scratch Week's @Looks.Count(plan.ScratchClasses, "class", "classes").</li>
+            }
+            @if (plan.EventsKept + plan.AbsencesKept > 0)
+            {
+                <li data-testid="next-year-dated">@Both(plan.EventsKept, "event", plan.AbsencesKept, "absence") with a date in next year, where they are.</li>
+            }
+        </ul>
+
+        <h3 class="ny-head">Left with this year</h3>
+        <ul class="ny-list" data-testid="next-year-drops">
+            <li><span data-testid="next-year-registers">@Looks.Count(plan.Registers, "register")</span> taken.</li>
+            <li>@Looks.Count(plan.OtherClasses, "class", "classes") in the other weeks.</li>
+            <li>@Both(plan.EventsDropped, "event", plan.AbsencesDropped, "absence") from this year.</li>
+        </ul>
+
+        @if (plan.Closures > 0)
+        {
+            <label class="check ny-check"><input type="checkbox" @bind="_closures" data-testid="next-year-closures" />
+                <span>Keep the @Looks.Count(plan.Closures, "closure"), each moved with its semester
+                    <small class="muted">Week-numbered ones such as the autumn break land in the same week; Christmas and Easter do not, so check every one. Left off, next year starts with none.</small></span></label>
+        }
+        <p class="notice" data-testid="next-year-groups">The groups arrive as they are: nothing here can know who has graduated. If a cohort has finished, remove it in People &amp; places ▸ Groups and add the new intake.</p>
+    </DialogFrame>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid ProjectId { get; set; }
+    /// <summary>Told the new timetable's id once it is made, so the list can offer to open it.</summary>
+    [Parameter] public Action<Guid>? Made { get; set; }
+
+    private string _name = "";
+    private bool _closures;
+
+    protected override void OnInitialized() => _name = NextYear.SuggestName(Store.Find(ProjectId)?.Name ?? "");
+
+    private static string FirstWeek(NextYear.Plan plan) => plan.FirstWeek is { } from && plan.FirstWeekTo is { } to
+        ? $"The classes of week {DomainWeek.IsoNumber(from)} ({DomainWeek.Range(from)}): {Looks.Count(plan.Classes, "class", "classes")}, onto week {DomainWeek.IsoNumber(to)} of next year ({DomainWeek.Range(to)}). Every week after it is blank until somebody copies a week onto it."
+        : "No classes: this timetable has none to carry over.";
+
+    private static int IsoYear(DateOnly d) => System.Globalization.ISOWeek.GetYear(d.ToDateTime(TimeOnly.MinValue));
+
+    private static string Both(int a, string aWord, int b, string bWord) => (a, b) switch
+    {
+        (0, 0) => $"No {aWord}s or {bWord}s",
+        (_, 0) => Looks.Count(a, aWord),
+        (0, _) => Looks.Count(b, bWord),
+        _ => $"{Looks.Count(a, aWord)} and {Looks.Count(b, bWord)}",
+    };
+
+    private void Make()
+    {
+        if (Store.Find(ProjectId) is not { Deleted: null } || _name.Trim().Length == 0) return;
+        try
+        {
+            var name = _name.Trim();
+            var next = NextYear.Make(Live.Get(ProjectId).State, name, _closures);
+            var id = Store.Create(name, next, W.Access.By, W.Clock.Now);
+            D.Close();
+            W.Say($"Made {name}, a timetable beside this one. Open it for everybody when the year starts.");
+            Made?.Invoke(id);
+        }
+        catch (EditRefused e) { W.Say(e.Message); }
+    }
+}

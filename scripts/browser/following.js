@@ -126,6 +126,22 @@ async function signIn(browser, who, viewport) {
     await row.locator('[data-testid=project-open]').waitFor({ state: 'detached' });
   });
 
+  await step('next year can be started from the followed timetable, as one of its own that follows nothing', async () => {
+    await page.goto(B + '/admin/projects');
+    const row = page.locator('[data-testid=projects] > li', { has: page.locator('[data-testid=project-following]') });
+    await row.locator('[data-testid=project-next-year]').click();
+    await page.waitForSelector('[data-testid=next-year-semesters]');
+    // The followed timetable is the open one, and still the form offers to make next year: it changes nothing here.
+    if (!(await page.locator('[data-testid=dialog-ok]').count())) throw new Error('the form only closes');
+    await page.fill('[data-testid=next-year-name]', 'Followed, next year');
+    await page.click('[data-testid=dialog-ok]');
+    await page.waitForSelector('[data-testid=dialog]', { state: 'detached' });
+    const made = page.locator('[data-testid=projects] > li', { hasText: 'Followed, next year' });
+    await made.waitFor();
+    if (await made.locator('[data-testid=project-following]').count()) throw new Error('next year says it follows the current app');
+    if (await page.locator('[data-testid=project-following]').count() !== 1) throw new Error('the followed timetable is no longer the one following');
+  });
+
   await step('somebody erased over there is offered for erasing from this app\'s history, and then gone from it', async () => {
     log('     ' + overThere('remove', FILE, 'Cleo').trim());
     await page.goto(B + '/admin/erase');

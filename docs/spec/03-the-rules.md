@@ -193,6 +193,31 @@ apart on every change**: nothing real is dated into the Scratch Week, and nothin
 except by being placed. Deleting a space, person, group, programme or class, and renaming a class,
 reach the plan as they reach the weeks that are not locked.
 
+## Next year (`NextYear`, the current app's *Start next year from this one*)
+
+Next year is this year's shape with an empty history. Two differences from the current app, each for a
+reason:
+
+- **A new timetable beside this one**, never this one changed: this year's registers, absences and
+  history stay where they happened, and nobody has to remember to keep a copy first. So the form is
+  allowed on a timetable that follows the current app: it changes nothing there.
+- **Every semester starts in the same week number next year** (`NextYear.SameWeekNextYear`), moving by
+  its own 52 or 53 weeks, and whatever is dated inside a semester moves with it. Moving everything 52
+  weeks, as the current app does, starts the year a week early after a year with an ISO week 53: week 34
+  of 2026 plus 52 weeks is week 33 of 2027.
+
+What carries over and what stays is the current app's. The spaces, the people, the groups (unchanged:
+nothing can know who has graduated), the catalogue, the time rules, the settings and the Scratch Week
+carry over; the timetable carries over as **its first timetabled week only**
+(`NextYear.FirstTimetabledWeek`: the first at or after the year's start that has a class), copied as
+Copy week copies, so nothing that happened that week travels, because a week ahead is blank until
+somebody fills it; registers and every other week stay with this year. **Events and absences are dated
+to the calendar and never move**: one with a date in the new year is kept (an audition already booked,
+a leave across the summer), the rest stay with this year. **Closures are a tick, off by default**: kept,
+each moves with its semester, so week-numbered ones land right and Christmas and Easter do not.
+`NextYear.For` is the plan the form shows and `Make` carries it out, so the two cannot describe
+different years, and a test fails when a collection is added to the timetable without a decision here.
+
 ## Drawing the week (`WeekLanes`, `the-week-calendar.md`)
 
 - A block names its class's title, time, group, room — in that order of importance — and is coloured

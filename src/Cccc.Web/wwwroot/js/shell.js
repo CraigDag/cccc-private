@@ -20,13 +20,33 @@
     });
 
     // Ctrl+K or / opens Find from anywhere; choosing a link in an open menu closes the menu.
+    // Find opens after a round trip to the server, and its box takes the focus after another, so what
+    // somebody types straight after Ctrl+K would land on nothing and be lost: the round trip decides, not
+    // the typing speed, so it is invisible on the school's network and real over Tailscale. Until the box
+    // has the focus, keys are kept here and put into it when trap() focuses it.
+    let findTyped = null, findUntil = 0, findOpener = null;
     document.addEventListener('keydown', e => {
         const tag = (e.target.tagName || '').toLowerCase();
         const typing = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
         if (((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) || (!typing && e.key === '/' && !e.ctrlKey && !e.metaKey)) {
             const b = document.querySelector('[data-find-open]');
-            if (b && !document.querySelector('[data-testid=dialog]')) { e.preventDefault(); b.click(); }
+            if (b && !document.querySelector('[data-testid=dialog]')) {
+                e.preventDefault();
+                findTyped = ''; findUntil = Date.now() + 3000; findOpener = e;
+                b.click();
+            }
         }
+    }, true);
+    document.addEventListener('keydown', e => {
+        if (findTyped === null || e === findOpener) return;
+        const box = document.querySelector('[data-testid=find-input]');
+        if (Date.now() > findUntil || (box && document.activeElement === box)) { findTyped = null; return; }
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.key.length === 1) findTyped += e.key;
+        else if (e.key === 'Backspace') findTyped = findTyped.slice(0, -1);
+        else return;
+        e.preventDefault();
+        e.stopPropagation();
     }, true);
     document.addEventListener('click', e => {
         document.querySelectorAll('details[open]').forEach(d => {
@@ -97,6 +117,10 @@
             const f = focusables(panel).filter(el => !el.hasAttribute('data-close'));
             const first = panel.querySelector('[autofocus]') || f.find(el => el.matches('input, select, textarea')) || f[0];
             if (first) first.focus();
+            if (findTyped !== null && first && first.getAttribute('data-testid') === 'find-input') {
+                if (findTyped) { first.value = findTyped; first.dispatchEvent(new Event('input', { bubbles: true })); }
+                findTyped = null;
+            }
         },
         trapped() { return !!(trapped && document.body.contains(trapped)); },
         keys(ref) { keysRef = ref; },

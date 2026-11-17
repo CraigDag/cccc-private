@@ -61,6 +61,7 @@
                 }
                 <button type="button" class="btn quiet" @onclick="() => D.Show<HistoryDialog>(new Dictionary<string, object?> { [nameof(HistoryDialog.ProjectId)] = p.Id })">History…</button>
                 <button type="button" class="btn quiet" @onclick="() => D.Show<RenameDialog>(new Dictionary<string, object?> { [nameof(RenameDialog.ProjectId)] = p.Id })">Rename…</button>
+                <button type="button" class="btn quiet" @onclick="() => NextYearOf(p.Id)" data-testid="project-next-year">Start next year…</button>
                 <a class="btn quiet" href="@($"download/project/{p.Id}")" target="_blank" rel="noopener" data-testid="project-download">Download</a>
                 @if (p.Id != open && p.Id != followed)
                 {
@@ -133,6 +134,12 @@
 
     private void NewSample() =>
         Store.Create("Northlight (made-up sample)", SampleSchool.Create(W.Today, W.Today), W.Access.By, W.Clock.Now);
+
+    private void NextYearOf(Guid id) => D.Show<NextYearForm>(new Dictionary<string, object?>
+    {
+        [nameof(NextYearForm.ProjectId)] = id,
+        [nameof(NextYearForm.Made)] = (Action<Guid>)(made => _ = InvokeAsync(StateHasChanged)),
+    });
 
     private void Delete(ProjectInfo p)
     {
