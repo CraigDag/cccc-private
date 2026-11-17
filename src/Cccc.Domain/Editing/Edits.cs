@@ -38,9 +38,9 @@ public static class Edits
     // ---- Sessions ---------------------------------------------------------------------------------
 
     /// <summary>Adds or replaces a session, normalising its people and its roster exceptions.</summary>
-    public static Batch PutSession(Timetable t, Session s, string label = "Saved a session")
+    public static Batch PutSession(Timetable t, Session s, string label = "Saved a class")
     {
-        if (s.End <= s.Start) throw new EditRefused("A session must end after it starts.");
+        if (s.End <= s.Start) throw new EditRefused("A class must end after it starts.");
         s = TimeWindows.Normalise(s) with
         {
             CoverIds = [.. s.CoverIds.Distinct()],
@@ -62,7 +62,7 @@ public static class Edits
             d.Remove(Collections.Sessions, id).Remove(Collections.Registers, id);
             n++;
         }
-        return d.ToBatch(label ?? (n == 1 ? "Deleted a session" : $"Deleted {n} sessions"));
+        return d.ToBatch(label ?? (n == 1 ? "Deleted a class" : $"Deleted {n} classes"));
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public static class Edits
     /// </summary>
     public static Batch Move(Timetable t, Guid sessionId, DateOnly date, TimeOnly start, TimeOnly end)
     {
-        var s = t.Sessions[sessionId] ?? throw new EditRefused("That session has gone.");
+        var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");
         start = Snap(start);
         end = Snap(end);
         if (end <= start) end = start.AddMinutes(SnapMinutes);
@@ -90,7 +90,7 @@ public static class Edits
     /// <summary>Reschedules one occurrence, remembering where it was for the reader.</summary>
     public static Batch Reschedule(Timetable t, Guid sessionId, DateOnly date, TimeOnly start, TimeOnly end, string? note)
     {
-        var s = t.Sessions[sessionId] ?? throw new EditRefused("That session has gone.");
+        var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");
         if (Week.MondayOf(date) != s.WeekMonday) throw new EditRefused("A reschedule stays inside its week. To move it to another week, copy it there.");
         var moved = TimeWindows.Shift(s, start - s.Start) with
         {
@@ -105,14 +105,14 @@ public static class Edits
 
     public static Batch SetCancelled(Timetable t, Guid sessionId, bool cancelled, string? note)
     {
-        var s = t.Sessions[sessionId] ?? throw new EditRefused("That session has gone.");
+        var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");
         return PutSession(t, s with { Cancelled = cancelled, CancelNote = cancelled ? note : null },
             cancelled ? $"Cancelled {s.DisplayTitle}" : $"Put {s.DisplayTitle} back on");
     }
 
     public static Batch SetCover(Timetable t, Guid sessionId, IEnumerable<Guid> coverIds, string? note)
     {
-        var s = t.Sessions[sessionId] ?? throw new EditRefused("That session has gone.");
+        var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");
         var ids = coverIds.Distinct().ToImmutableList();
         return PutSession(t, s with { CoverIds = ids, CoverNote = ids.IsEmpty ? null : note },
             ids.IsEmpty ? $"Took the cover off {s.DisplayTitle}" : $"Assigned cover for {s.DisplayTitle}");
@@ -250,10 +250,10 @@ public static class Edits
     public static Batch FileRegister(Timetable t, Guid sessionId, IEnumerable<Guid> present, IEnumerable<Guid> excused,
         RegisterReader reader, string filedBy, DateTimeOffset at)
     {
-        var s = t.Sessions[sessionId] ?? throw new EditRefused("That session has gone.");
+        var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");
         if (!Registers.MayChange(reader, s))
             throw new EditRefused("Only somebody in the room for this class, or an administrator, can change its register.");
-        if (s.Audience.IsEveryone) throw new EditRefused("A session for everyone has nobody on it, so it has no register.");
+        if (s.Audience.IsEveryone) throw new EditRefused("A class for everyone has nobody on it, so it has no register.");
         var r = Registers.File(t, s, present, excused, filedBy, at);
         return new Draft(t).Put(Collections.Registers, r).ToBatch($"Took the register for {s.DisplayTitle}");
     }

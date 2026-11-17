@@ -11,6 +11,8 @@ public sealed class PlanGestures
     /// <summary>A block let go: its id, the row it landed on, and its new start and end in minutes.</summary>
     public Func<Guid, string, int, int, Task> OnMove { get; init; } = (_, _, _, _) => Task.CompletedTask;
     public Func<string, int, Task> OnAddAt { get; init; } = (_, _) => Task.CompletedTask;
+    /// <summary>Empty time dragged across: the row, and the start and end in minutes, snapped.</summary>
+    public Func<string, int, int, Task> OnDraw { get; init; } = (_, _, _) => Task.CompletedTask;
     public Func<string, Task> OnKey { get; init; } = _ => Task.CompletedTask;
 
     [JSInvokable] public Task Choose(string id) => Guid.TryParse(id, out var g) ? OnChoose(g) : Task.CompletedTask;
@@ -19,5 +21,6 @@ public sealed class PlanGestures
     [JSInvokable] public Task Move(string id, string row, int start, int end) =>
         Guid.TryParse(id, out var g) ? OnMove(g, row, start, end) : Task.CompletedTask;
     [JSInvokable] public Task AddAt(string row, int minute) => OnAddAt(row, minute);
+    [JSInvokable] public Task Draw(string row, int start, int end) => end > start ? OnDraw(row, start, end) : Task.CompletedTask;
     [JSInvokable] public Task Key(string name) => OnKey(name);
 }

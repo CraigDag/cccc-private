@@ -30,7 +30,6 @@ public sealed class WeekView
     /// <summary>Guest classes start hidden on every visit and that is remembered nowhere.</summary>
     public bool ShowGuests { get; set; }
     public bool ShowEvents { get; set; } = true;
-    public HashSet<Guid> Chosen { get; } = [];
     /// <summary>The day the narrow (phone) list shows.</summary>
     public DateOnly? Day { get; set; }
 
@@ -48,7 +47,6 @@ public sealed class WeekView
         var m = Week.MondayOf(anyDate);
         if (m == Monday) return;
         Monday = m;
-        Chosen.Clear();
         Day = null;
         Moved?.Invoke();
     }

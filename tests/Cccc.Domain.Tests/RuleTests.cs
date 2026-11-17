@@ -390,3 +390,31 @@ public class NameOrderTests
         Assert.Equal(["Anna", "Zara", "Ægir", "Øyvind", "Aage", "Åse"], names);
     }
 }
+
+public class SpacesTests
+{
+    [Fact]
+    public void ASpaceIsInUseOnlyByAClassThatHappensAndOverlaps()
+    {
+        var b = new Build();
+        var hall = b.Room("Hall");
+        var gym = b.Room("Gym");
+        var loft = b.Room("Loft");
+        var guests = b.Programme("Visitors", guest: true);
+        var visiting = b.Group("Visiting troupe", guests);
+        var morning = b.Session(Monday, "09:00", "11:00", null, hall);
+        var cancelled = b.Session(Monday, "10:00", "12:00", null, gym);
+        b.Put(cancelled with { Cancelled = true });
+        b.Session(Monday, "10:00", "12:00", Audience.ForGroup(visiting.Id), loft);
+
+        var at10 = Spaces.InUse(b.T, Monday, new TimeOnly(10, 0), new TimeOnly(11, 0));
+        Assert.Equal(morning.Id, at10[hall.Id].Session.Id);
+        Assert.False(at10.ContainsKey(gym.Id), "a cancelled class leaves its space free");
+        Assert.True(at10.ContainsKey(loft.Id), "a guest class still fills its space: hiding is drawing, never counting");
+
+        // Ending as another starts is not an overlap, and the class being edited never blocks itself.
+        Assert.False(Spaces.InUse(b.T, Monday, new TimeOnly(11, 0), new TimeOnly(12, 0)).ContainsKey(hall.Id));
+        Assert.False(Spaces.InUse(b.T, Monday, new TimeOnly(9, 30), new TimeOnly(10, 0), except: morning.Id).ContainsKey(hall.Id));
+        Assert.Empty(Spaces.InUse(b.T, Monday.AddDays(1), new TimeOnly(9, 0), new TimeOnly(17, 0)));
+    }
+}

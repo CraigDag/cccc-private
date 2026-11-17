@@ -1,12 +1,12 @@
 @inject Dialogs D
-@inject WeekView V
+@inject Cccc.Web.Features.Plan.PlanView PV
 @{
     var t = W.T;
     var existing = SessionId is { } sid ? t.Sessions[sid] : null;
 }
 @if (SessionId is not null && existing is null)
 {
-    <DialogFrame Title="This session has gone">
+    <DialogFrame Title="This class has gone">
         <p>Somebody removed it while it was open here.</p>
     </DialogFrame>
 }
@@ -40,7 +40,7 @@ else if (!_editable && existing is not null)
             </dl>
             @if (_lockedWeek)
             {
-                <p class="muted">This week has ended, so the session does not change. Its register still can.</p>
+                <p class="muted">This week has ended, so the class does not change. Its register still can.</p>
             }
         </ChildContent>
         <Extra>
@@ -53,7 +53,7 @@ else if (!_editable && existing is not null)
 }
 else
 {
-    <DialogFrame Title="@(existing is null ? "Add a session" : "Edit " + Cccc.Web.Features.Week.Looks.Title(t, existing))" OnOk="Save" OkEnabled="@(_why is null)" Class="wide">
+    <DialogFrame Title="@(existing is null ? "Add a class" : "Edit " + Cccc.Web.Features.Week.Looks.Title(t, existing))" OnOk="Save" OkEnabled="@(_why is null)" Class="wide">
         <ChildContent>
             <div class="form-grid">
                 <label class="field"><span>Class</span>
@@ -114,15 +114,39 @@ else
                         }
                     </fieldset>
                 }
+                @{ var busy = BusyRooms(); }
                 <label class="field"><span>Space</span>
                     <select @bind="RoomText" @bind:after="Check" data-testid="session-room">
                         <option value="">No space</option>
-                        @foreach (var r in t.Rooms.OrderBy(r => r.Name, NameOrder.Comparer))
+                        @foreach (var part in SpacesInOrder().GroupBy(r => r.Category ?? "Other spaces"))
                         {
-                            <option value="@r.Id">@r.Name</option>
+                            <optgroup label="@part.Key">
+                                @foreach (var r in part)
+                                {
+                                    <option value="@r.Id">@r.Name@(busy.TryGetValue(r.Id, out var b) ? $" — busy: {Cccc.Web.Features.Week.Looks.Title(t, b.Session)} {Hm(b.Start)}–{Hm(b.End)}" : "")</option>
+                                }
+                            </optgroup>
                         }
                     </select>
                 </label>
+                @* Who is in what space and when, asked from the form: the spaces nobody is using at the time chosen. *@
+                @if (_end > _start && SpacesInOrder().Where(r => !busy.ContainsKey(r.Id) && r.Id != _roomId).ToList() is var free)
+                {
+                    <div class="free-spaces span2" data-testid="free-spaces">
+                        @if (free.Count == 0)
+                        {
+                            <span class="muted">Every other space is in use then.</span>
+                        }
+                        else
+                        {
+                            <span class="muted">Free then:</span>
+                            @foreach (var r in free)
+                            {
+                                <button type="button" class="space-pick" style="--c:@r.Colour" @onclick="() => { _roomId = r.Id; Check(); }" data-testid="free-space">@r.Name</button>
+                            }
+                        }
+                    </div>
+                }
             </div>
 
             <fieldset class="field span2"><legend>Facilitators</legend>
@@ -212,8 +236,12 @@ else
     [Parameter] public Guid? SessionId { get; set; }
     [Parameter] public DateOnly? Date { get; set; }
     [Parameter] public TimeOnly? Start { get; set; }
+    /// <summary>When the class was drawn on the plan by dragging across empty time, where the drag ended.</summary>
+    [Parameter] public TimeOnly? End { get; set; }
     [Parameter] public Guid? Group { get; set; }
     [Parameter] public Guid? Room { get; set; }
+    /// <summary>A new class added from a person's row or week starts with that person on it.</summary>
+    [Parameter] public Guid? Facilitator { get; set; }
 
     private sealed class Person { public Guid Id; public TimeOnly? From; public TimeOnly? Until; }
 
@@ -253,7 +281,7 @@ else
             {
                 Date = Date ?? W.Today,
                 Start = start,
-                End = start.AddHours(1.5),
+                End = End is { } e && e > start ? e : start.AddHours(1.5),
                 Audience = Group is { } g ? Audience.ForGroup(g) : Audience.ForGroup(Guid.Empty),
                 RoomId = Room,
             };
@@ -267,12 +295,18 @@ else
         _programmeId = s.Audience.ProgrammeId;
         _groups.UnionWith(s.Audience.GroupIds);
         _people.AddRange(s.Facilitators.Select(a => new Person { Id = a.FacilitatorId, From = a.From, Until = a.Until }));
+        if (_original is null && Facilitator is { } fid && W.T.Facilitators[fid] is not null && _people.All(x => x.Id != fid)) _people.Add(new Person { Id = fid });
         _added.UnionWith(s.AddedStudentIds); _leftOff.UnionWith(s.LeftOffStudentIds);
         _notes = s.Notes; _provisional = s.Provisional;
         Check();
     }
 
     private static string Hm(TimeOnly? t) => t is { } x ? Cccc.Domain.Week.Hm(x) : "";
+
+    private IEnumerable<Room> SpacesInOrder() => W.T.Rooms
+        .OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer);
+
+    private IReadOnlyDictionary<Guid, Occurrence> BusyRooms() => Spaces.InUse(W.T, _date, _start, _end, except: _id);
 
     private void OnClassChosen()
     {
@@ -360,10 +394,11 @@ else
         var label = (isNew ? "Added " : "Changed ") + Cccc.Web.Features.Week.Looks.Title(W.T, p) + " on " + Cccc.Domain.Week.ShortDate(p.Date);
         if (W.Commit(t => Edits.PutSession(t, p, label)))
         {
-            if (changedUnderneath) W.Warn("Somebody else changed this session while it was open here; yours is the version kept. Undo puts theirs back.");
-            if (Cccc.Domain.Week.MondayOf(p.Date) != V.Monday) V.GoTo(p.Date);
-            V.Chosen.Clear();
-            V.Chosen.Add(p.Id);
+            if (changedUnderneath) W.Warn("Somebody else changed this class while it was open here; yours is the version kept. Undo puts theirs back.");
+            // The plan follows what was just saved, and shows it chosen, so it is plain where it went.
+            if (PV.Started && p.Date != PV.Day && (PV.Scale == Cccc.Web.Features.Plan.Scale.Day || Cccc.Domain.Week.MondayOf(p.Date) != PV.Monday)) PV.GoTo(p.Date);
+            PV.Chosen = p.Id;
+            PV.Changed();
             D.Close();
         }
     }
@@ -373,7 +408,7 @@ else
         var label = "Deleted " + Cccc.Web.Features.Week.Looks.Title(W.T, _base) + " on " + Cccc.Domain.Week.ShortDate(_base.Date);
         if (W.Commit(t => Edits.RemoveSessions(t, [_id], label)))
         {
-            V.Chosen.Remove(_id);
+            if (PV.Chosen == _id) { PV.Chosen = null; PV.Changed(); }
             D.Close();
         }
     }

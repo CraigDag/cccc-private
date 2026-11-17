@@ -47,9 +47,11 @@ Nothing depends on a web font: the laptop may be offline.
 
 A big serif clock line (*Tuesday 17 November, 11:42*). For somebody linked to a facilitator, **You
 today** comes first: their own classes today, their part of a shared one, marked *now*, *covering* or
-*you are away*; choosing one opens their week with that class chosen. Then the spaces, grouped by their
-category, each a card: what is on now (class, group, initials, a bar showing how far through), or
-*Free until 13:00*; then what is next. Choosing a card opens that space's week. Beside them, **Today
+*you are away*; choosing one opens their week with that class chosen. Then **the building as a board**, like
+departures at a station: a row a space, grouped by category, each with a thin bar of its whole day (its
+classes in their colours, a tick at now), what is in it now (class, group, initials, how far through)
+or *Free*, until when, and what is next. A board rather than tiles, so ten spaces or forty read without
+gaps. Choosing a row opens that space's week. Beside them, **Today
 needs**: cover still needed, registers waiting for the reader, clashes today, today's events and what
 is still to come.
 
@@ -75,7 +77,7 @@ is still to come.
   roster count, state tags, the clash or cover note, and its verbs: Edit, Register, Cancel/Restore,
   Cover, Duplicate, Delete.
 - **Copy** (day, week, clear the weeks after), **Print** (the four documents, narrowed as the screen
-  is) and **Show** (open training, guest groups) sit in one *More* menu. Guest groups start hidden on
+  is) and **Show** (open sessions, guest groups) sit in one *More* menu. Guest groups start hidden on
   every visit and a count says how many classes that hides; hiding is drawing, never counting.
 - **On a phone** the timeline scrolls inside its box, with the names held at the left, and opens
   scrolled to the class somebody came to look at, else an hour before now, else the first class. The
@@ -92,6 +94,19 @@ rest of the week is one card a class too, with its state on the right.
 
 **Space**, never *room*, wherever a person reads it: the Plan's lens, the forms, People & places, the
 printed sheets and the file names. A Big Top is not a room. The code keeps `Room`, which nobody reads.
+
+**Class**, never *session*, for a thing on the timetable: *+ Class*, *Add a class*, *Copy this week's 27
+classes*, the printed list's column. The one survivor is the class kind *Open session* (open training
+and anything else nobody is required at), which is a name rather than a word for a timetabled thing.
+The code keeps `Session`.
+
+## Adding a class
+
+The form says which spaces are in use at the date and times in it (*Aerial Hall — busy: Aerial
+09:00–11:00*) and offers the free ones as chips to press: *Free then: Big Top, Gym, Loft*. Hidden guest
+classes still make a space busy. On the plan, pressing on empty time and dragging across it draws the
+class there and opens the form with that space (or group, or person, or day) and those times; a
+double-click does the same with an hour and a half.
 
 ## Printed documents
 

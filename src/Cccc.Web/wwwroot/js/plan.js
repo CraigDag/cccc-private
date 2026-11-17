@@ -1,6 +1,7 @@
 // The plan timeline's pointer work: time runs left to right, rows are spaces, groups or people. Click
 // to look, double-click to edit, drag sideways to move in time, drag onto another space's row to move
-// rooms, drag an end to stretch. All of it happens here and costs ONE round trip at the end.
+// it there, drag an end to stretch, drag across empty time to draw a new class. All of it happens here
+// and costs ONE round trip at the end.
 (function () {
     const SNAP = 15;
     const snap = m => Math.round(m / SNAP) * SNAP;
@@ -59,12 +60,64 @@
         });
     }
 
+    // Press on empty time and drag across it to draw a class there; let go and the add form opens with
+    // that space (or group, person or day) and those times. A press without a drag is a click, which
+    // puts the chosen class down. Mouse and pen only: a finger dragging the timeline is scrolling it.
+    function draw(root, e, track, row) {
+        const ref = root.__ref;
+        const f = frame(root);
+        const rect = track.getBoundingClientRect();
+        const mpp = (f.end - f.start) / rect.width;
+        const at = x => f.start + (x - rect.left) * mpp;
+        const m0 = at(e.clientX);
+        let ghost = null, a = 0, b = 0;
+        track.setPointerCapture(e.pointerId);
+        const done = () => {
+            track.removeEventListener('pointermove', move);
+            track.removeEventListener('pointerup', up);
+            track.removeEventListener('pointercancel', done);
+            if (ghost) ghost.remove();
+        };
+        const move = ev => {
+            if (!ghost && Math.abs(ev.clientX - e.clientX) < 6) return;
+            const m1 = at(ev.clientX);
+            a = Math.max(f.start, Math.floor(Math.min(m0, m1) / SNAP) * SNAP);
+            b = Math.min(f.end, Math.ceil(Math.max(m0, m1) / SNAP) * SNAP);
+            if (b - a < SNAP) b = a + SNAP;
+            if (!ghost) {
+                // Drawn over the page, not inside the timeline, so the page's own rendering never meets it.
+                ghost = document.createElement('div');
+                ghost.className = 'draw-ghost';
+                document.body.appendChild(ghost);
+            }
+            const r = track.getBoundingClientRect();
+            const px = r.width / (f.end - f.start);
+            ghost.style.left = (r.left + (a - f.start) * px) + 'px';
+            ghost.style.width = ((b - a) * px) + 'px';
+            ghost.style.top = (r.top + 3) + 'px';
+            ghost.style.height = Math.min(r.height - 6, 40) + 'px';
+            ghost.dataset.when = label(a) + '–' + label(b);
+        };
+        const up = () => {
+            const drew = !!ghost;
+            done();
+            if (drew) ref.invokeMethodAsync('Draw', row.dataset.row, a, b);
+            else ref.invokeMethodAsync('ChooseNone');
+        };
+        track.addEventListener('pointermove', move);
+        track.addEventListener('pointerup', up);
+        track.addEventListener('pointercancel', done);
+    }
+
     function down(root, e) {
         if (e.button !== 0) return;
         const ref = root.__ref;
         const blk = e.target.closest('.blk');
         if (!blk) {
-            if (e.target.closest('.tl-track')) ref.invokeMethodAsync('ChooseNone');
+            const track = e.target.closest('.tl-track');
+            const row = track && track.closest('.tl-row[data-row]');
+            if (track && row && root.dataset.edit === '1' && e.pointerType !== 'touch') draw(root, e, track, row);
+            else if (track) ref.invokeMethodAsync('ChooseNone');
             return;
         }
         const editable = root.dataset.edit === '1' && blk.dataset.move === '1';

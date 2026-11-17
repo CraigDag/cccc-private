@@ -147,7 +147,7 @@ public static class Sheets
                 });
                 table.Header(h =>
                 {
-                    foreach (var name in new[] { "Day", "Time", "Session", "For", "Space", "In the room", "" })
+                    foreach (var name in new[] { "Day", "Time", "Class", "For", "Space", "In the room", "" })
                         h.Cell().BorderBottom(0.75f).BorderColor(Ink).PaddingVertical(2).Text(name).SemiBold();
                 });
                 foreach (var d in m.Days)

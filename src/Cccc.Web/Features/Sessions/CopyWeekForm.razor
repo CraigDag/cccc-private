@@ -5,7 +5,7 @@
     int count = Edits.SessionCountIn(t, Monday);
 }
 <DialogFrame Title="@("Copy " + DomainWeek.ForDocuments(Monday))" OnOk="Save" OkEnabled="@(_chosen.Count > 0)" OkLabel="@($"Copy onto {_chosen.Count} week{(_chosen.Count == 1 ? "" : "s")}")" Class="wide">
-    <p>Copies this week's @count sessions onto the weeks you tick. <b>A week you tick is replaced, not added to</b>, so nothing is doubled. A week that has ended, or already holds a register, is never replaced.</p>
+    <p>Copies this week's @count classes onto the weeks you tick. <b>A week you tick is replaced, not added to</b>, so nothing is doubled. A week that has ended, or already holds a register, is never replaced.</p>
     @if (count == 0)
     {
         <p class="form-error">This week is blank, so copying it would empty the weeks you tick.</p>
@@ -20,7 +20,7 @@
             <label class="@(w.May ? "" : "off")">
                 <input type="checkbox" disabled="@(!w.May)" checked="@_chosen.Contains(w.Monday)" @onchange="e => Toggle(w.Monday, (bool)e.Value!)" />
                 <span class="grow">Week @DomainWeek.IsoNumber(w.Monday), @DomainWeek.ShortDate(w.Monday)@(t.SemesterFor(w.Monday) is { } s ? " · " + s.Name : "")</span>
-                <small>@(w.HasRegisters ? "has registers, kept" : w.Blank ? "blank" : $"{w.Count} sessions, replaced")</small>
+                <small>@(w.HasRegisters ? "has registers, kept" : w.Blank ? "blank" : $"{w.Count} classes, replaced")</small>
             </label>
         }
     </div>

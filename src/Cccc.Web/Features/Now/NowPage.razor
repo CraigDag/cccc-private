@@ -21,6 +21,9 @@
     var closure = Occurrences.ClosureFor(t, today, null);
     var semester = t.SemesterFor(today);
     int needs = cover.Count + registers.Count + clashes.Count;
+    // Every space's little day bar shares one frame: the school day, widened to whatever is on today.
+    int day0 = Math.Min(8 * 60, happening.Select(o => PlanModel.Minutes(o.Start) / 60 * 60).DefaultIfEmpty(8 * 60).Min());
+    int day1 = Math.Max(18 * 60, happening.Select(o => (PlanModel.Minutes(o.End) + 59) / 60 * 60).DefaultIfEmpty(18 * 60).Max());
 }
 
 <div class="now" data-testid="now-page">
@@ -81,39 +84,62 @@
                     }
                 </div>
             }
-            @foreach (var part in t.Rooms.OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer).GroupBy(r => r.Category ?? "Other spaces"))
-            {
-                <h2 class="now-section">@part.Key</h2>
-                <div class="spaces">
+            @* A departures board for the building: a row a space, grouped by kind, saying what is in it, until
+               when, and what comes next. A board rather than tiles, so any number of spaces reads without gaps. *@
+            <h2 class="now-section">The building</h2>
+            <div class="board" aria-label="Every space now">
+                @foreach (var part in t.Rooms.OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer).GroupBy(r => r.Category ?? "Other spaces"))
+                {
+                    <div class="board-section">@part.Key</div>
                     @foreach (var room in part)
                     {
                         var here = happening.Where(o => o.Session.RoomId == room.Id).ToList();
                         var current = here.FirstOrDefault(o => PlanModel.Minutes(o.Start) <= now && now < PlanModel.Minutes(o.End));
                         var next = here.FirstOrDefault(o => PlanModel.Minutes(o.Start) > now);
-                        <button type="button" class="space @(current is null ? "free" : "busy")" style="--c:@room.Colour" @onclick="() => OpenPlan(today, RoomFocus(room), current?.Session.Id)" data-testid="space-card">
-                            <span class="space-name">@room.Name</span>
-                            @if (current is not null)
-                            {
-                                int s0 = PlanModel.Minutes(current.Start), e0 = PlanModel.Minutes(current.End);
-                                <span class="space-now" style="--k:@(Looks.ColourOf(t, current.Session) ?? "var(--ink)")">
-                                    <b>@Looks.Title(t, current.Session)</b>
-                                    <small>@Looks.Audience(t, current.Session)@(Looks.Initials(t, current) is { Length: > 0 } ini ? " · " + ini : "")</small>
-                                    <span class="space-progress"><span style="width:@(Math.Clamp((now - s0) * 100 / Math.Max(1, e0 - s0), 0, 100))%"></span></span>
-                                    <small>until @Cccc.Domain.Week.Hm(current.End)@(current.NeedsCover ? " · needs cover" : "")</small>
+                        <button type="button" class="board-row @(current is null ? "free" : "busy")" style="--c:@room.Colour" @onclick="() => OpenPlan(today, RoomFocus(room), current?.Session.Id)" data-testid="space-row">
+                            <span class="b-space">
+                                <span class="b-name">@room.Name</span>
+                                <span class="b-day" aria-hidden="true">
+                                    @foreach (var o in here)
+                                    {
+                                        <i style="left:@Pct(PlanModel.Minutes(o.Start) - day0, day1 - day0)%; width:@Pct(PlanModel.Minutes(o.End) - PlanModel.Minutes(o.Start), day1 - day0)%; --k:@(Looks.ColourOf(t, o.Session) ?? "var(--border)")"></i>
+                                    }
+                                    @if (now >= day0 && now <= day1)
+                                    {
+                                        <i class="b-tick" style="left:@Pct(now - day0, day1 - day0)%"></i>
+                                    }
                                 </span>
-                            }
-                            else
-                            {
-                                <span class="space-free">@(next is null ? (here.Count == 0 ? "Free all day" : "Free for the rest of the day") : "Free until " + Cccc.Domain.Week.Hm(next.Start))</span>
-                            }
-                            @if (next is not null)
-                            {
-                                <span class="space-next"><small>Next</small> @Cccc.Domain.Week.Hm(next.Start) @Looks.Title(t, next.Session)</span>
-                            }
+                            </span>
+                            <span class="b-now">
+                                @if (current is not null)
+                                {
+                                    int s0 = PlanModel.Minutes(current.Start), e0 = PlanModel.Minutes(current.End);
+                                    <span class="b-class" style="--k:@(Looks.ColourOf(t, current.Session) ?? "var(--ink)")">
+                                        <b>@Looks.Title(t, current.Session)</b>
+                                        <small>@Looks.Audience(t, current.Session)@(Looks.Initials(t, current) is { Length: > 0 } ini ? " · " + ini : "")</small>
+                                        @if (current.NeedsCover)
+                                        {
+                                            <small class="b-cover"> · needs cover</small>
+                                        }
+                                    </span>
+                                    <span class="space-progress" aria-hidden="true"><span style="width:@(Math.Clamp((now - s0) * 100 / Math.Max(1, e0 - s0), 0, 100))%"></span></span>
+                                }
+                                else
+                                {
+                                    <span class="b-free">Free</span>
+                                }
+                            </span>
+                            <span class="b-until">@(current is not null ? "until " + Cccc.Domain.Week.Hm(current.End) : next is not null ? "until " + Cccc.Domain.Week.Hm(next.Start) : here.Count == 0 ? "all day" : "rest of the day")</span>
+                            <span class="b-next">
+                                @if (next is not null)
+                                {
+                                    <small>Next</small>@($" {Cccc.Domain.Week.Hm(next.Start)} {Looks.Title(t, next.Session)}")
+                                }
+                            </span>
                         </button>
                     }
-                </div>
-            }
+                }
+            </div>
             @if (happening.Where(o => o.Session.RoomId is null).ToList() is { Count: > 0 } roomless)
             {
                 <h2 class="now-section">Without a space</h2>
@@ -177,6 +203,7 @@
     [CascadingParameter] public Workspace W { get; set; } = default!;
 
     private static Focus RoomFocus(Room r) => new("room", r.Id, r.Name);
+    private static string Pct(int minutes, int span) => (Math.Clamp(minutes * 100.0 / Math.Max(1, span), 0, 100)).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
     private static Focus PersonFocus(Facilitator f) => new("facilitator", f.Id, f.Name);
 
     private void OpenPlan(DateOnly day, Focus? focus, Guid? chosen)

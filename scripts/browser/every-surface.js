@@ -19,7 +19,7 @@ const log = (...a) => console.log(...a);
   await page.waitForTimeout(800);
 
   await step('Now shows every space', async () => {
-    const n = await page.locator('[data-testid=space-card]').count();
+    const n = await page.locator('[data-testid=space-row]').count();
     log('     spaces', n);
     if (n === 0) throw new Error('no spaces on Now');
   });
@@ -85,6 +85,36 @@ const log = (...a) => console.log(...a);
     await page.waitForSelector('[data-testid=dialog]', { state: 'detached' });
     await page.waitForFunction(n => document.querySelectorAll('[data-testid=timeline] [data-testid=block]').length > n, n);
     log('     blocks', n, '->', await page.locator('[data-testid=timeline] [data-testid=block]').count());
+  });
+
+  await step('draw a class across empty time', async () => {
+    const tl = page.locator('[data-testid=timeline]');
+    const f0 = +await tl.getAttribute('data-start'), f1 = +await tl.getAttribute('data-end');
+    const row = page.locator('.tl-row[data-row]', { hasText: 'Big Top' });
+    const n = await row.locator('[data-testid=block]').count();
+    const track = await row.locator('.tl-track').boundingBox();
+    const x = m => track.x + (m - f0) / (f1 - f0) * track.width, y = track.y + 20;
+    log("     frame", f0, f1);
+    // the latest free stretch on Big Top's row: from 17:00 for an hour and a half
+    await page.mouse.move(x(17 * 60 + 5), y); await page.mouse.down();
+    for (let i = 1; i <= 10; i++) await page.mouse.move(x(17 * 60 + 5) + (x(18 * 60 + 25) - x(17 * 60 + 5)) * i / 10, y);
+    await page.mouse.up();
+    await page.waitForSelector('[data-testid=dialog]');
+    const times = await page.locator('[data-testid=dialog] input[type=time]').evaluateAll(xs => xs.slice(0, 2).map(i => i.value));
+    const space = await page.locator('[data-testid=session-room]').evaluate(s => s.options[s.selectedIndex].text);
+    log('     drawn', times.join('–'), 'in', space);
+    if (times[0] !== '17:00' || times[1] !== '18:30' || !space.startsWith('Big Top')) throw new Error('the form does not hold what was drawn');
+    const free = page.locator('[data-testid=free-space]').first();
+    const freeName = await free.textContent();
+    await free.click();
+    await page.waitForFunction(n => { const s = document.querySelector('[data-testid=session-room]'); return s.options[s.selectedIndex].text.startsWith(n); }, freeName);
+    await page.selectOption('[data-testid=session-room]', { label: space });
+    await page.selectOption('[data-testid=session-class]', { index: 1 });
+    await page.selectOption('[data-testid=session-group]', { index: 1 });
+    await page.click('[data-testid=dialog-ok]');
+    await page.waitForSelector('[data-testid=dialog]', { state: 'detached' });
+    await page.waitForFunction(n => [...document.querySelectorAll('.tl-row[data-row]')].find(r => r.textContent.includes('Big Top')).querySelectorAll('[data-testid=block]').length > n, n);
+    await page.waitForSelector('[data-testid=inspector]');
   });
 
   await step('turn the lens: groups, people, the week', async () => {

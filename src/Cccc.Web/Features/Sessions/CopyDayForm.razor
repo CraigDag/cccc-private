@@ -1,6 +1,6 @@
 @inject Dialogs D
 <DialogFrame Title="Copy a day" OnOk="Save" OkEnabled="@(_why is null)" OkLabel="Copy">
-    <p>Copies every session of one day onto another. The day it lands on keeps what it already has; the copies are added beside them.</p>
+    <p>Copies every class of one day onto another. The day it lands on keeps what it already has; the copies are added beside them.</p>
     <label class="field"><span>Copy</span>
         <select @bind="_from" @bind:after="Check">
             @foreach (var d in DomainWeek.Days(Monday))

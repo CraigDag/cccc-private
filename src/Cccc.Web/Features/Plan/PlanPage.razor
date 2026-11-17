@@ -61,7 +61,7 @@
                             <a href="@PrintLink("students")" target="_blank" rel="noopener">A calendar per student</a>
                         }
                         <div class="menu-label">Show</div>
-                        <button type="button" @onclick="() => { V.ShowOpen = !V.ShowOpen; V.Changed(); }" data-testid="toggle-open">@(V.ShowOpen ? "✓ " : "")Open training</button>
+                        <button type="button" @onclick="() => { V.ShowOpen = !V.ShowOpen; V.Changed(); }" data-testid="toggle-open">@(V.ShowOpen ? "✓ " : "")Open sessions</button>
                         <button type="button" @onclick="() => { V.ShowGuests = !V.ShowGuests; V.Changed(); }" data-testid="toggle-guests">@(V.ShowGuests ? "✓ " : "")Guest groups</button>
                     </div>
                 }
@@ -188,7 +188,8 @@
             OnChooseNone = () => Do(() => V.Chosen = null),
             OnOpen = id => Do(() => OpenSession(id)),
             OnMove = (id, row, start, end) => Do(() => Move(id, row, start, end)),
-            OnAddAt = (row, minute) => Do(() => AddAt(row, minute)),
+            OnAddAt = (row, minute) => Do(() => AddAt(row, minute, null)),
+            OnDraw = (row, start, end) => Do(() => AddAt(row, start, end)),
             OnKey = name => Do(() => Key(name)),
         };
     }
@@ -242,20 +243,25 @@
         V.Chosen = id;
     }
 
-    private void AddAt(string row, int minute)
+    /// <summary>Double-click or drag on empty time: the add form, filled in with what the row says (the space,
+    /// group or person, or the day on one person's week) and the time pointed at.</summary>
+    private void AddAt(string row, int start, int? end)
     {
-        Guid? id = Guid.TryParse(row, out var g) ? g : null;
+        if (!W.Access.MayEdit || _m is { Locked: true }) return;
         if (PlanModel.FromDayKey(row) is { } date)
         {
-            AddSession(date, Minute(minute));
+            AddSession(date, Minute(start), end is { } e1 ? Minute(e1) : null);
             return;
         }
+        Guid? id = Guid.TryParse(row, out var g) ? g : null;
         D.Show<SessionForm>(new Dictionary<string, object?>
         {
             [nameof(SessionForm.Date)] = V.Day,
-            [nameof(SessionForm.Start)] = Minute(minute),
+            [nameof(SessionForm.Start)] = Minute(start),
+            [nameof(SessionForm.End)] = end is { } e ? Minute(e) : null,
             [nameof(SessionForm.Room)] = V.Lens == Lens.Spaces ? id : null,
             [nameof(SessionForm.Group)] = V.Lens == Lens.Groups ? id : null,
+            [nameof(SessionForm.Facilitator)] = V.Lens == Lens.People && id is { } p && W.T.Facilitators[p] is not null ? p : null,
         });
     }
 
@@ -294,13 +300,15 @@
         if (DateOnly.TryParse(e.Value?.ToString(), out var d)) V.GoTo(d);
     }
 
-    private void AddSession(DateOnly? date, TimeOnly? start) =>
+    private void AddSession(DateOnly? date, TimeOnly? start, TimeOnly? end = null) =>
         D.Show<SessionForm>(new Dictionary<string, object?>
         {
             [nameof(SessionForm.Date)] = date ?? V.Day,
             [nameof(SessionForm.Start)] = start,
+            [nameof(SessionForm.End)] = end,
             [nameof(SessionForm.Group)] = V.Focus is { Kind: "group" } f ? f.Id : null,
             [nameof(SessionForm.Room)] = V.Focus is { Kind: "room" } r ? r.Id : null,
+            [nameof(SessionForm.Facilitator)] = V.Focus is { Kind: "facilitator" } p ? p.Id : null,
         });
 
     private void OpenSession(Guid id) =>

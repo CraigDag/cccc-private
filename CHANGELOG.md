@@ -4,8 +4,9 @@
 
 The whole app rebuilt. Everything the school uses today is here, with these differences you would notice:
 
-- **It opens on Now**: the building this minute. Every space is a card saying what is in it and until
-  when (with a bar showing how far through), or *Free until 13:00*, and what comes next. Beside them,
+- **It opens on Now**: the building this minute, like a departures board. Every space is a row saying
+  what is in it and until when (with a bar showing how far through), or that it is free, what comes
+  next, and a thin bar of its whole day. Beside them,
   what needs somebody today: cover, registers waiting for you, clashes, today's events. A coach linked
   to their name sees **their own day** at the top.
 - **Plan shows a day with time running across** and the spaces down the side, so a free space and a
@@ -15,13 +16,17 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
 - **Find instead of filters.** The box at the top (or Ctrl+K, or /) finds any student, facilitator,
   space, group or thing to do. Choosing a person shows their week, a day to a row; choosing a space
   shows its week.
+- **Draw a class straight onto the plan**: press on empty time in a space's row and drag across it,
+  and the add form opens with that space and those times. Adding a class says which spaces are busy
+  then, and offers the free ones to press.
 - **A class opens beside the plan**, not over it: when, where, who it is for and how many, who teaches
   and who is away, what is wrong with it, and Edit, Register, Cover, Cancel, Duplicate and Delete.
   Forms slide in from the right, so the plan stays in sight.
 - **Registers start with today's classes as big cards**, made to be tapped on a phone in the room.
 - **Two looks**: Paper (light, like a printed programme) and Night (dark), following the device unless
   you choose one in your menu.
-- **"Space" everywhere** a person reads, rather than "room": a Big Top is not a room.
+- **"Space" and "class" everywhere** a person reads, rather than "room" and "session": a Big Top is
+  not a room.
 
 - **Every change is kept the moment it is made.** There is no Save. Two people can work on the same week
   at once and each sees the other's changes straight away.
