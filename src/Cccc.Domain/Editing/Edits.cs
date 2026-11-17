@@ -118,7 +118,7 @@ public static class Edits
         start = Snap(start);
         end = Snap(end);
         if (end <= start) end = start.AddMinutes(SnapMinutes);
-        var delta = start - s.Start;
+        var delta = Week.Span(s.Start, start);
         bool stretched = end - start != s.Length;
         // A move carries each person's part with it; a stretch leaves the parts where they are in the day.
         var moved = (stretched ? s : TimeWindows.Shift(s, delta)) with
@@ -135,7 +135,7 @@ public static class Edits
     {
         var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");
         if (Week.MondayOf(date) != s.WeekMonday) throw new EditRefused("A reschedule stays inside its week. To move it to another week, copy it there.");
-        var moved = TimeWindows.Shift(s, start - s.Start) with
+        var moved = TimeWindows.Shift(s, Week.Span(s.Start, start)) with
         {
             Date = date,
             Start = start,

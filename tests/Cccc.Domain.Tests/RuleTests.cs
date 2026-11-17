@@ -336,6 +336,19 @@ public class ClashTests
     }
 
     [Fact]
+    public void ALongGapIsMeasuredFromTheLatestEndSoTwoClassesThatOverlapAreNoGapAtAll()
+    {
+        var b = new Build();
+        var ada = b.Facilitator("Ada") with { MaxGap = TimeSpan.FromHours(3) };
+        b.T = b.T with { Facilitators = b.T.Facilitators.Put(ada) };
+        b.Session(Monday, "09:00", "11:00", null, null, null, In(ada));
+        b.Session(Monday, "10:00", "12:00", null, null, null, In(ada));     // overlaps: a clash, never a gap
+        b.Session(Monday, "16:00", "17:00", null, null, null, In(ada));
+        var gaps = Clashes.ForWeek(b.T, Monday).Where(c => c.Kind == ClashKind.FacilitatorLongGap).Select(c => c.Description).ToList();
+        Assert.Equal(["Ada has a 4h gap Mon 12:00–16:00 (maximum 3h) — between \"Class\" and \"Class\""], gaps);
+    }
+
+    [Fact]
     public void OverTheLimitWarnsAndCountsTimeRules()
     {
         var b = new Build();

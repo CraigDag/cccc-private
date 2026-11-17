@@ -145,7 +145,7 @@ public static class Clashes
                 {
                     var next = hours[i];
                     if (next.O.Date != freeFrom.O.Date) { freeFrom = next; continue; }
-                    var gap = next.W.Start - freeFrom.W.End;
+                    var gap = Week.Span(freeFrom.W.End, next.W.Start);
                     if (gap > TimeSpan.Zero && gap > maxGap)
                         found.Add(new Clash(ClashKind.FacilitatorLongGap,
                             $"{f.Name} has a {Week.Duration(gap)} gap {When(next.O.Date, freeFrom.W.End, next.W.Start)} (maximum {Week.Duration(maxGap)}) — between \"{freeFrom.O.Session.DisplayTitle}\" and \"{next.O.Session.DisplayTitle}\"",

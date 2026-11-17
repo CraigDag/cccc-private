@@ -99,6 +99,23 @@ public class EditDecisionTests
         var t = Apply.Batch(b.T, Edits.Move(b.T, s.Id, Monday.AddDays(2), new(9, 0), new(10, 0)));
         Assert.Equal(OccurrenceState.NeedsCover, Occurrences.Resolve(t, t.Sessions[s.Id]!).State);
     }
+
+    [Fact]
+    public void AClassMovedEarlierOrLaterTakesEachPersonsPartWithIt()
+    {
+        var b = new Build();
+        var ada = b.Facilitator("Ada");
+        var dag = b.Facilitator("Dag");
+        var s = b.Session(Monday, "13:00", "15:00", null, null, null, In(ada), In(dag, from: "14:00"));
+        // Earlier: a time of day taken from an earlier one goes round the clock, so the part must be moved by a signed difference.
+        var earlier = Apply.Batch(b.T, Edits.Move(b.T, s.Id, Monday, new(9, 0), new(11, 0))).Sessions[s.Id]!;
+        Assert.Equal((new TimeOnly(10, 0), new TimeOnly(11, 0)), TimeWindows.Assigned(earlier, dag.Id));
+        Assert.Equal((new TimeOnly(9, 0), new TimeOnly(11, 0)), TimeWindows.Assigned(earlier, ada.Id));
+        var later = Apply.Batch(b.T, Edits.Move(b.T, s.Id, Monday, new(15, 30), new(17, 30))).Sessions[s.Id]!;
+        Assert.Equal((new TimeOnly(16, 30), new TimeOnly(17, 30)), TimeWindows.Assigned(later, dag.Id));
+        var rescheduled = Apply.Batch(b.T, Edits.Reschedule(b.T, s.Id, Monday.AddDays(1), new(8, 0), new(10, 0), null)).Sessions[s.Id]!;
+        Assert.Equal((new TimeOnly(9, 0), new TimeOnly(10, 0)), TimeWindows.Assigned(rescheduled, dag.Id));
+    }
 }
 
 public class LateNewsTests

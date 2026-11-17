@@ -63,6 +63,12 @@ public static class Week
 
     public static string Hm(TimeOnly t) => t.ToString("HH:mm", CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// The time from one time of day to another: negative when it is earlier. Never <c>to - from</c>, because
+    /// one TimeOnly taken from another goes round the clock: 09:00 − 13:00 is twenty hours, not minus four.
+    /// </summary>
+    public static TimeSpan Span(TimeOnly from, TimeOnly to) => to.ToTimeSpan() - from.ToTimeSpan();
+
     /// <summary>"3h", "1h 30m", "45m".</summary>
     public static string Duration(TimeSpan t)
     {
