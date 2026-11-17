@@ -184,6 +184,12 @@ reads it first: if the copier has stopped, or cannot find the current app's file
 too, and everybody sees *Behind the current app* instead of a stale timetable called up to date. If the current app's timetable is ever renamed, its file's name changes with it:
 change `/etc/cccc-next-follow.env` and run `ssh -t cccc-ts "sudo systemctl restart cccc-next-follow.service"`.
 
+**When the current app's file format moves on** (a release whose changelog says to update every machine
+together), the rebuild cannot read the new file: following stops, the card says *saved by a newer
+version*, everybody sees *Behind the current app*, and the timetable stays as it was. Nothing is lost
+or half-read. The rebuild then needs a newer copy of the current app's loader, which is a change to
+`cccc-private` itself; after it, steps 1 and 2 (pull and build) and recreating the container take it.
+
 **The followed timetable holds the school's real data, students included**, like one brought in at
 step 5, and so does the copy in `/srv/cccc-next/follow`. Both stay on the laptop. Erasing a person has
 one more step while following: see below.
