@@ -60,13 +60,17 @@ Nothing depends on a web font: the laptop may be offline.
 
 A big serif clock line (*Tuesday 17 November, 11:42*). For somebody linked to a facilitator, **You
 today** comes first: their own classes today, their part of a shared one, marked *now*, *covering* or
-*you are away*; choosing one opens their week with that class chosen. Then **the building as a board**, like
+*you are away*, with what changed since yesterday under any class of theirs that did, and the
+classes they no longer have today struck through and saying why; choosing one opens their week with
+that class chosen. Then **the building as a board**, like
 departures at a station: a row a space, grouped by category, each with a thin bar of its whole day (its
 classes in their colours, a tick at now), what is in it now (class, group, initials, how far through)
 or *Free*, until when, and what is next. A board rather than tiles, so ten spaces or forty read without
 gaps. Choosing a row opens that space's week. Beside them, **Today
-needs**: cover still needed, registers waiting for the reader, clashes today, today's events and what
-is still to come.
+needs**: cover still needed, registers waiting for the reader, clashes today, then **Changed since
+yesterday** (since Friday on a Monday): today's classes that were moved, cancelled, given another space
+or teacher or cover, added or deleted, each saying what is different (*Was 09:00–11:00*, *Dag Øverlie
+covering*), who changed it and when, from `Recent`; then today's events and what is still to come.
 
 ## Plan (`/plan`)
 

@@ -28,6 +28,10 @@ public sealed class SchoolClock
 
     public DateOnly Today => _pinned ?? DateOnly.FromDateTime(Local(Now).DateTime);
 
+    /// <summary>The moment a day begins in Copenhagen: midnight there, whatever the offset that day.</summary>
+    public DateTimeOffset StartOf(DateOnly day) =>
+        new(TimeZoneInfo.ConvertTimeToUtc(day.ToDateTime(TimeOnly.MinValue), _zone), TimeSpan.Zero);
+
     /// <summary>A time a person reads: Copenhagen's, in words they use.</summary>
     public string Describe(DateTimeOffset t)
     {
@@ -36,6 +40,7 @@ public sealed class SchoolClock
         var time = local.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
         if (day == Today) return "today " + time;
         if (day == Today.AddDays(-1)) return "yesterday " + time;
+        if (day < Today && day > Today.AddDays(-7)) return day.DayOfWeek + " " + time;
         return local.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture) + " " + time;
     }
 }

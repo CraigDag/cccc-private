@@ -138,6 +138,27 @@ public class ProjectStoreTests
     }
 
     [Fact]
+    public void ChangesMadeSinceATimeAreThoseAtOrAfterItInOrderAndANewChangeIsSeen()
+    {
+        using var s = new Scratch();
+        var store = s.Open();
+        var id = store.Create("Year", Timetable.Empty, "ada", s.Now);
+        var live = new LiveProjects(store, () => s.Now, () => s.Today).Get(id);
+        void Add(string name) => live.Commit(new Draft(live.State).Put(Collections.Rooms, new Room { Name = name }).ToBatch(name), "ada");
+        Add("before");
+        s.Now = s.Now.AddHours(1);
+        var since = s.Now;
+        Add("at");
+        s.Now = s.Now.AddHours(1);
+        Add("after");
+
+        Assert.Equal(["at", "after"], live.ChangesMadeSince(since).Select(c => c.Batch.Label));
+        Assert.Equal(["at", "after"], store.ChangesMadeSince(id, since.ToOffset(TimeSpan.FromHours(1))).Select(c => c.Batch.Label));   // the same moment in Copenhagen
+        Add("later");
+        Assert.Equal(["at", "after", "later"], live.ChangesMadeSince(since).Select(c => c.Batch.Label));   // what was read before is not kept past a new change
+    }
+
+    [Fact]
     public void PruneFoldsOldHistoryButKeepsTheState()
     {
         using var s = new Scratch();

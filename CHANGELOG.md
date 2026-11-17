@@ -71,6 +71,12 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
 - **Finding somebody says where they are now**: under their name on the plan, the class they are in
   and until when, then what is next today (*Free until 15:00, then Aerial in Studio A*), or *Away*.
   A space says what is in it and who for; a group, its class. Press the class to look at it.
+- **Now says what changed for today since yesterday** (since Friday, on a Monday): a class moved,
+  cancelled, put in another space, given another teacher or cover, added or deleted, each saying what
+  is different, who changed it and when. A change taken back again is not listed. So a change made
+  late yesterday or first thing this morning is seen by whoever opens Now, not only by whoever made it.
+  A coach's own day at the top marks which of their classes changed, and lists the ones they no
+  longer have today (moved to another day, deleted, or given to somebody else).
 - **A page left open keeps up with the day**: Now on a screen in the office moves on by itself as
   classes start and end, and turns to the next day after midnight.
 - **Find opens what you typed**, even when Enter comes straight after the last letter (typing *Studio

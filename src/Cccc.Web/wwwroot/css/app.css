@@ -272,6 +272,18 @@ a.need { text-decoration: none; }
 .need.quiet { cursor: default; border-left-color: var(--divider); }
 .need-kind { font-size: 10px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); }
 .need.warn .need-kind { color: var(--warning); }
+.changes { display: flex; flex-direction: column; }
+.change {
+    display: flex; flex-direction: column; gap: 1px; width: 100%; padding: 8px 4px 8px 12px; text-align: left;
+    border: 0; border-left: 3px solid var(--c, var(--border)); border-bottom: 1px solid var(--divider);
+    background: none; color: var(--text); font: inherit; cursor: pointer;
+}
+.change:hover:not(:disabled) { background: var(--hover); }
+.change:disabled { cursor: default; color: var(--text); opacity: 1; }
+.change-what { font-size: 13px; font-weight: 650; color: var(--accent); }
+.change.gone b, .change.off b { text-decoration: line-through; color: var(--text-muted); }
+.change small { color: var(--text-muted); }
+.change-by { font-size: 12px; }
 
 .agenda { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .agenda-row {
@@ -284,6 +296,8 @@ a.need { text-decoration: none; }
 .agenda-row.on .agenda-time { color: var(--accent); font-weight: 700; }
 .agenda-row.off b { text-decoration: line-through; color: var(--text-muted); }
 .agenda-time { font-family: var(--serif); font-variant-numeric: tabular-nums; color: var(--text-muted); min-width: 3.2em; }
+.agenda-row .change-what { flex-basis: 100%; padding-left: calc(3.2em + 10px); }
+div.agenda-row { cursor: default; }
 
 /* ---- Plan: time across, rows down ------------------------------------------------------------- */
 

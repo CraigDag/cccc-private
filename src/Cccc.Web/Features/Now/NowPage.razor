@@ -26,6 +26,12 @@
     var closure = Occurrences.ClosureFor(t, today, null);
     var semester = t.SemesterFor(today);
     int needs = cover.Count + registers.Count + clashes.Count + (earlier.Count > 0 ? 1 : 0);
+    // Today's classes that changed since the weekday before began, from the timetable's own history, so a
+    // change made late yesterday or this morning is seen by whoever opens Now. Guest classes stay hidden.
+    var since = Recent.Since(today);
+    var changed = W.Project is { } live
+        ? Recent.ForDay(t, live.ChangesMadeSince(W.Clock.StartOf(since)), today).Where(c => !Guests.IsGuestOnly(t, (c.Now ?? c.Was)!)).ToList()
+        : [];
     // Every space's little day bar shares one frame: the school day, widened to whatever is on today.
     int day0 = Math.Min(8 * 60, happening.Select(o => PlanModel.Minutes(o.Start) / 60 * 60).DefaultIfEmpty(8 * 60).Min());
     int day1 = Math.Max(18 * 60, happening.Select(o => (PlanModel.Minutes(o.End) + 59) / 60 * 60).DefaultIfEmpty(18 * 60).Max());
@@ -50,8 +56,12 @@
                 var mine = Occurrences.Between(t, today, today)
                     .Where(o => o.Session.FacilitatorIds.Contains(me) || o.Session.CoverIds.Contains(me))
                     .OrderBy(o => o.Start).ToList();
+                // What changed for them since yesterday: on their own rows, and the classes they no longer
+                // have today (moved away, deleted, or given to somebody else) as rows of their own.
+                var changedById = changed.ToDictionary(c => c.Id);
+                var gone = ChangeWords.NoLongerTheirs(changed, me, today);
                 <h2 class="now-section">You today</h2>
-                @if (mine.Count == 0)
+                @if (mine.Count == 0 && gone.Count == 0)
                 {
                     <p class="muted" data-testid="you-today">Nothing on for you today.</p>
                 }
@@ -72,7 +82,19 @@
                             };
                             <li><button type="button" class="agenda-row @(on ? "on" : "") @(o.Happens && !o.AwayIds.Contains(me) ? "" : "off")" style="--c:@(Looks.ColourOf(t, o.Session) ?? "var(--rule)")"
                                         @onclick="() => OpenPlan(today, PersonFocus(person), o.Session.Id)">
-                                <span class="agenda-time">@Cccc.Domain.Week.Hm(a)</span><b>@Looks.Title(t, o.Session)</b> <small>@Looks.Room(t, o.Session)@(note.Length > 0 ? " · " + note : "")</small></button></li>
+                                <span class="agenda-time">@Cccc.Domain.Week.Hm(a)</span><b>@Looks.Title(t, o.Session)</b> <small>@Looks.Room(t, o.Session)@(note.Length > 0 ? " · " + note : "")</small>
+                                @if (changedById.TryGetValue(o.Session.Id, out var c) && ChangeWords.What(t, c, today) is var words && words != "Cancelled")
+                                {
+                                    <span class="change-what" data-testid="you-changed">@words</span>
+                                }
+                            </button></li>
+                        }
+                        @foreach (var c in gone)
+                        {
+                            <li><div class="agenda-row off" style="--c:@(Looks.ColourOf(t, c.Was!) ?? "var(--rule)")" data-testid="you-gone">
+                                <span class="agenda-time">@Cccc.Domain.Week.Hm(c.Was!.Start)</span><b>@Looks.Title(t, c.Was!)</b>
+                                <span class="change-what">@ChangeWords.NoLongerTheirsWhat(t, c, today)</span>
+                            </div></li>
                         }
                     </ul>
                 }
@@ -190,6 +212,27 @@
             @foreach (var c in clashes)
             {
                 <button type="button" class="need warn" @onclick="() => OpenPlan(today, null, c.SessionIds[0])" data-testid="need"><span class="need-kind">Clash</span><span>@c.Description</span></button>
+            }
+            @if (changed.Count > 0)
+            {
+                <h2 class="now-section">Changed since @(since == today.AddDays(-1) ? "yesterday" : since.DayOfWeek.ToString())</h2>
+                <div class="changes" data-testid="changes">
+                    @foreach (var c in changed.Take(6))
+                    {
+                        var s = (c.Now ?? c.Was)!;
+                        var room = Looks.Room(t, s);
+                        <button type="button" class="change @(c.Deleted ? "gone" : c.Now!.Cancelled ? "off" : "")" style="--c:@(Looks.ColourOf(t, s) ?? "var(--rule)")"
+                                disabled="@c.Deleted" @onclick="() => OpenPlan(s.Date, null, s.Id)" data-testid="change">
+                            <span class="change-what">@ChangeWords.What(t, c, today)</span>
+                            <span><b>@Looks.Title(t, s)</b> <small>@Looks.When(s)@(room.Length > 0 ? " · " + room : "")</small></span>
+                            <small class="change-by">@string.Join(" and ", c.By.Select(W.NameOf)), @W.Clock.Describe(c.At)</small>
+                        </button>
+                    }
+                    @if (changed.Count > 6)
+                    {
+                        <p class="muted">And @Looks.Count(changed.Count - 6, "more class", "more classes").</p>
+                    }
+                </div>
             }
             @if (events.Count > 0)
             {

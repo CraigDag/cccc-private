@@ -265,6 +265,25 @@ public sealed class ProjectStore
         cmd.Parameters.AddWithValue("$p", id.ToString());
         cmd.Parameters.AddWithValue("$a", after);
         cmd.Parameters.AddWithValue("$u", upTo);
+        foreach (var change in ReadRows(cmd)) yield return change;
+    }
+
+    /// <summary>
+    /// Every change made at or after <paramref name="since"/>, in order. Times are stored as UTC in one
+    /// fixed-width form, so comparing them as text is comparing them as times.
+    /// </summary>
+    public IReadOnlyList<Change> ChangesMadeSince(Guid id, DateTimeOffset since)
+    {
+        using var c = Connect();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT seq,by,at,label,ops FROM batches WHERE project=$p AND at>=$t ORDER BY seq";
+        cmd.Parameters.AddWithValue("$p", id.ToString());
+        cmd.Parameters.AddWithValue("$t", Iso(since));
+        return ReadRows(cmd).ToList();
+    }
+
+    private static IEnumerable<Change> ReadRows(SqliteCommand cmd)
+    {
         using var r = cmd.ExecuteReader();
         while (r.Read())
         {

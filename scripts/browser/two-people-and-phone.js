@@ -1,5 +1,6 @@
 // Two people at once, and the phone. The administrator drags a class an hour later; the editor's
-// screen shows it without reloading, and the editor's Undo has nothing of theirs to take back.
+// screen shows it without reloading, and the editor's Undo has nothing of theirs to take back. A class
+// the administrator cancels today is on the editor's Now at once, and Undo takes it off again.
 // Then a phone: Now, the plan as a day, a class in the drawer, a Data list and a report, each
 // measured for a page wider than the window.
 const { chromium } = require('playwright');
@@ -53,6 +54,33 @@ async function wide(page) {
   });
   console.log('     also here (editor):', (await e.locator('[data-testid=status-bar]').textContent()).replace(/\s+/g, ' ').trim());
 
+  // The drag above was undone, so nothing has changed yet. The editor waits on Now while the
+  // administrator cancels one of today's classes, then takes it back.
+  let skipped = 0;
+  await check("a class cancelled today is on the other person's Now at once, and Undo takes it off", async () => {
+    const day = await a.getAttribute('[data-testid=plan-page]', 'data-day');
+    const today = await a.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Copenhagen' }).format(new Date()));
+    if (day !== today) { skipped++; console.log('     SKIP: the plan opened on ' + day + ', not today, so there is no class of today\'s to cancel'); return; }
+    await e.goto(B + '/');
+    await e.waitForSelector('[data-testid=now-page]');
+    const before = await e.locator('[data-testid=change]').count();
+    if (before !== 0) throw new Error('Now already lists ' + before + ' changes: ' + (await e.locator('[data-testid=change]').allTextContents()).join(' | '));
+    const b = a.locator('[data-testid=timeline] [data-testid=block]').first();
+    const title = await b.getAttribute('data-title');
+    await b.click();
+    await a.waitForFunction(t => document.querySelector('[data-testid=inspector-title]')?.textContent === t, title);
+    await a.click('[data-testid=inspector-cancel]');
+    await a.waitForSelector('[data-testid=dialog]');
+    await a.click('[data-testid=dialog-ok]');
+    await a.waitForSelector('[data-testid=dialog]', { state: 'detached' });
+    await e.waitForSelector('[data-testid=change]', { timeout: 6000 });
+    const row = (await e.locator('[data-testid=change]').first().textContent()).replace(/\s+/g, ' ').trim();
+    if (!row.startsWith('Cancelled') || !row.includes(title) || !row.includes('Preview Administrator')) throw new Error('the row reads "' + row + '"');
+    console.log('     ', row);
+    await a.click('[data-testid=undo]');
+    await e.waitForSelector('[data-testid=change]', { state: 'detached', timeout: 6000 });
+  });
+
   const p = await signIn(browser, 'admin', 'northlight admin', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   await check('phone: Now fits the window and the dock is there', async () => {
     await p.waitForSelector('[data-testid=dock]');
@@ -99,6 +127,6 @@ async function wide(page) {
     await p.screenshot({ path: OUT + 'ph-find.png' });
   });
   await browser.close();
-  console.log(failed ? failed + ' failed' : 'all passed');
+  console.log(failed ? failed + ' failed' : 'all passed' + (skipped ? ` (${skipped} skipped: see SKIP above)` : ''));
   process.exit(failed ? 1 : 0);
 })();

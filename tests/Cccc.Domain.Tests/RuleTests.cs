@@ -1,4 +1,5 @@
 using Cccc.Domain;
+using Cccc.Domain.Editing;
 using Cccc.Domain.Model;
 using Cccc.Domain.Rules;
 using static Cccc.Domain.Tests.Build;
@@ -559,5 +560,102 @@ public class WhereaboutsTests
         Assert.Equal(morning.Id, Where.Space(b.T, hall.Id, Monday, At("09:00")).Now?.O.Session.Id);
         Assert.Null(Where.Space(b.T, hall.Id, Monday, At("12:15")).Now);
         Assert.Equal(lunch.Id, Where.Space(b.T, gym.Id, Monday, At("09:00")).Next?.O.Session.Id);
+    }
+}
+
+public class RecentTests
+{
+    [Fact]
+    public void TheWindowOpensOnTheWeekdayBefore()
+    {
+        Assert.Equal(Monday.AddDays(-3), Recent.Since(Monday));              // a Monday looks back to Friday
+        Assert.Equal(Monday, Recent.Since(Monday.AddDays(1)));                // a Tuesday to Monday
+        Assert.Equal(Monday.AddDays(4), Recent.Since(Monday.AddDays(6)));     // a Sunday to Friday
+    }
+
+    [Fact]
+    public void ADaysChangesAreWhatSomebodyWouldNoticeAndAChangePutBackIsNone()
+    {
+        var b = new Build();
+        var g = b.Group("BA");
+        var hall = b.Room("Hall");
+        var gym = b.Room("Gym");
+        var ada = b.Facilitator("Ada");
+        var dag = b.Facilitator("Dag");
+        var ana = b.Student("Ana", g);
+        var respaced = b.Session(Monday, "09:00", "10:00", Audience.ForGroup(g.Id), hall, null, new Assignment(ada.Id));
+        var awayFromTheDay = b.Session(Monday, "10:00", "11:00", Audience.ForGroup(g.Id), hall);
+        var movedBack = b.Session(Monday, "11:00", "12:00", Audience.ForGroup(g.Id), hall);
+        var registerOnly = b.Session(Monday, "13:00", "14:00", Audience.ForGroup(g.Id), hall, null, new Assignment(ada.Id));
+        var notesOnly = b.Session(Monday, "14:00", "15:00", Audience.ForGroup(g.Id), hall);
+        var anotherDay = b.Session(Monday.AddDays(1), "09:00", "10:00", Audience.ForGroup(g.Id), hall);
+        var deleted = b.Session(Monday, "15:00", "16:00", Audience.ForGroup(g.Id), hall);
+
+        var t = b.T;
+        var log = new List<Change>();
+        var at = new DateTimeOffset(2030, 3, 4, 7, 0, 0, TimeSpan.Zero);
+        void Do(Func<Timetable, Batch> build, string by)
+        {
+            var batch = build(t);
+            log.Add(new Change(log.Count + 1, by, at = at.AddMinutes(5), batch));
+            t = Apply.Batch(t, batch);
+        }
+        Do(t => Edits.PutSession(t, t.Sessions[respaced.Id]! with { RoomId = gym.Id }), "admin");
+        Do(t => Edits.SetCover(t, respaced.Id, [dag.Id], null), "editor");
+        Do(t => Edits.Move(t, awayFromTheDay.Id, Monday.AddDays(2), new TimeOnly(10, 0), new TimeOnly(11, 0)), "admin");
+        Do(t => Edits.Move(t, movedBack.Id, Monday, new TimeOnly(12, 0), new TimeOnly(13, 0)), "admin");
+        Do(t => Edits.Move(t, movedBack.Id, Monday, new TimeOnly(11, 0), new TimeOnly(12, 0)), "admin");
+        Do(t => Edits.FileRegister(t, registerOnly.Id, [ana.Id], [], new RegisterReader(true, null), "admin", at), "admin");
+        Do(t => Edits.PutSession(t, t.Sessions[notesOnly.Id]! with { Notes = "Bring mats" }), "admin");
+        Do(t => Edits.PutSession(t, t.Sessions[anotherDay.Id]! with { RoomId = gym.Id }), "admin");
+        Do(t => Edits.RemoveSessions(t, [deleted.Id]), "admin");
+        var added = new Session { Date = Monday, Start = new(16, 0), End = new(17, 0), Title = "Extra", Audience = Audience.ForGroup(g.Id) };
+        Do(t => Edits.PutSession(t, added), "editor");
+        var addedThenGone = new Session { Date = Monday, Start = new(17, 0), End = new(18, 0), Title = "Mistake" };
+        Do(t => Edits.PutSession(t, addedThenGone), "admin");
+        Do(t => Edits.RemoveSessions(t, [addedThenGone.Id]), "admin");
+
+        var r = Recent.ForDay(t, log, Monday);
+
+        Assert.Equal([added.Id, deleted.Id, awayFromTheDay.Id, respaced.Id], r.Select(x => x.Id));   // the latest first
+        var s = r.Single(x => x.Id == respaced.Id);
+        Assert.True(s.SpaceChanged && s.CoverChanged);
+        Assert.False(s.TimesChanged || s.DayChanged || s.TeachersChanged || s.CancelledChanged);
+        Assert.Equal(["admin", "editor"], s.By);                         // both who changed it, first come first
+        Assert.Equal(hall.Id, s.Was!.RoomId);                            // as it was when the window opened
+        Assert.True(r.Single(x => x.Id == awayFromTheDay.Id).DayChanged);  // moved away from the day is news on the day
+        Assert.True(r.Single(x => x.Id == added.Id).Added);
+        Assert.True(r.Single(x => x.Id == deleted.Id).Deleted);
+        Assert.Equal([anotherDay.Id], Recent.ForDay(t, log, Monday.AddDays(1)).Select(x => x.Id));
+    }
+}
+
+public class NoticeableTests
+{
+    [Fact]
+    public void EachThingSomebodyInTheBuildingWouldNoticeCountsOnItsOwnAndNotesDoNot()
+    {
+        var b = new Build();
+        var g = b.Group("BA");
+        var h = b.Group("MA");
+        var hall = b.Room("Hall");
+        var ada = b.Facilitator("Ada");
+        var dag = b.Facilitator("Dag");
+        var s = b.Session(Monday, "09:00", "10:00", Audience.ForGroup(g.Id), hall, null, new Assignment(ada.Id));
+        Assert.True(Recent.Noticeable(s, s with { Date = Monday.AddDays(1) }));
+        Assert.True(Recent.Noticeable(s, s with { Start = new(9, 15) }));
+        Assert.True(Recent.Noticeable(s, s with { End = new(10, 30) }));
+        Assert.True(Recent.Noticeable(s, s with { RoomId = null }));
+        Assert.True(Recent.Noticeable(s, s with { Cancelled = true }));
+        Assert.True(Recent.Noticeable(s, s with { Title = "Renamed" }));
+        Assert.True(Recent.Noticeable(s, s with { Facilitators = [new Assignment(dag.Id)] }));
+        Assert.True(Recent.Noticeable(s, s with { Facilitators = [new Assignment(ada.Id, new TimeOnly(9, 30))] }));   // her part of it
+        Assert.True(Recent.Noticeable(s, s with { CoverIds = [dag.Id] }));
+        Assert.True(Recent.Noticeable(s, s with { Audience = Audience.ForGroups([g.Id, h.Id]) }));
+        Assert.True(Recent.Noticeable(null, s));
+        Assert.True(Recent.Noticeable(s, null));
+        Assert.False(Recent.Noticeable(null, null));
+        Assert.False(Recent.Noticeable(s, s with { Notes = "Bring mats", CancelNote = "-", CoverNote = "-", AddedStudentIds = [Guid.NewGuid()] }));
+        Assert.False(Recent.Noticeable(s, s with { Facilitators = [new Assignment(ada.Id)], Audience = Audience.ForGroups([g.Id]) with { Kind = AudienceKind.Group } }));   // equal, freshly made
     }
 }

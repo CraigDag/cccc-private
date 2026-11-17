@@ -180,6 +180,29 @@ public sealed class LiveProject
     };
 
     /// <summary>Who has this project open now: "Also editing: …".</summary>
+    private (DateTimeOffset Since, long Sequence, IReadOnlyList<Change> Changes)? _recent;
+
+    /// <summary>
+    /// Every change made at or after <paramref name="since"/>, read from the store once for each new
+    /// change rather than on every drawing of every page that asks.
+    /// </summary>
+    public IReadOnlyList<Change> ChangesMadeSince(DateTimeOffset since)
+    {
+        long seq;
+        lock (_gate)
+        {
+            if (_recent is { } r && r.Since == since && r.Sequence == Sequence) return r.Changes;
+            seq = Sequence;
+        }
+        var changes = _store.ChangesMadeSince(Id, since);
+        lock (_gate)
+        {
+            // Only keep it if nothing was committed while it was being read.
+            if (Sequence == seq) _recent = (since, seq, changes);
+        }
+        return changes;
+    }
+
     public void Here(string who) => _present[who] = _clock();
 
     public void Left(string who) => _present.TryRemove(who, out _);

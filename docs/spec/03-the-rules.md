@@ -56,6 +56,16 @@ old app has a class that carries the reasoning, it is named in brackets so the h
 - Only classes that happen count, and a class ending as the moment starts is over. A student who is
   away but on a class's roster is *away from* it, not simply absent from the answer.
 
+## What changed lately (`Recent`)
+
+- **Read from the timetable's own history**, never a second record: a class is a day's if it was on
+  that day when the window opened or is on it now, so a class moved away from the day is news there
+  too. The window opens at the start of the weekday before today (on a Monday, Friday's).
+- **Only what somebody in the building would notice**: the day, the times, the space, who teaches (and
+  for which part), cover, who it is for, its name, cancelled. Registers, notes and roster exceptions
+  are not the timetable changing. A change put back inside the window, moved and moved back or
+  undone, is no change.
+
 ## Registers
 
 - **Three marks**: Present, Excused (away and the school knew), Absent (the default, by saying
