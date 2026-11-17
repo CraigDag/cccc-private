@@ -127,6 +127,8 @@ const mondayOf = day => { const d = new Date(day + 'T00:00:00Z'); return plus(da
     if (!/^A former class, since \w{3} \d{1,2} \w{3}\. Kept for the \d+ classes it ran before then.* Bringing it back offers it again; it does not put it back on the classes it was taken off\.$/.test(note))
       throw new Error('the former form says: ' + note);
     if (await page.locator('[data-testid=dialog] [data-testid=data-delete]').count()) throw new Error('a former class offers Delete');
+    await page.waitForTimeout(400); // the form's slide, for the picture only
+    await page.screenshot({ path: OUT + 'former-class-form.png' });
     await press(page, 'bring-back');
     await page.waitForSelector('[data-testid=data-former]', { state: 'detached' });
     if (!(await lists(page)).current.includes('Juggling')) throw new Error('Juggling is not back among the classes in use');
@@ -156,6 +158,7 @@ const mondayOf = day => { const d = new Date(day + 'T00:00:00Z'); return plus(da
     for (const line of ['Their hours count towards Body and movement, not Creation.', 'Prep time is no longer credited for them.'])
       if (!said.includes(line)) throw new Error(`"${line}" is not said: ${said.join(' / ')}`);
     if (said.length !== 3) throw new Error('said more than the three differences: ' + said.join(' / '));
+    await page.waitForTimeout(400); // the form's slide, for the picture only
     await page.screenshot({ path: OUT + 'merge-class.png' });
     // OK goes through although last week has ended: re-pointing is the one change let in.
     await press(page, 'dialog-ok');
