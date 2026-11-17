@@ -15,10 +15,11 @@ fi
 # FOLLOW=1 also tries "follow the current app": a made-up school in the current app's own format is written
 # to .local-follow-preview/School.cccc and followed, looked at every 5 seconds. Change it "over there" with
 #   dotnet run --no-build --project tools/OldFormatSchool -- cancel .local-follow-preview/School.cccc Aerial
-if [ "${FOLLOW:-}" = 1 ]; then
+# FOLLOW=year follows a whole made-up school year instead, at about a real school's size.
+if [ "${FOLLOW:-}" = 1 ] || [ "${FOLLOW:-}" = year ]; then
   FOLLOW_FILE="$PWD/.local-follow-preview/School.cccc"
   mkdir -p "$(dirname "$FOLLOW_FILE")"
-  dotnet run --project tools/OldFormatSchool -- make "$FOLLOW_FILE"
+  dotnet run --project tools/OldFormatSchool -- "$([ "$FOLLOW" = year ] && echo year || echo make)" "$FOLLOW_FILE"
   set -- "$@" "--Follow:File=$FOLLOW_FILE" --Follow:EverySeconds=5
 fi
 ASPNETCORE_ENVIRONMENT=Development \

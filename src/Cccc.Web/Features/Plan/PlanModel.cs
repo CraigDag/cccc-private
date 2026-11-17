@@ -1,6 +1,7 @@
 using Cccc.Domain;
 using Cccc.Domain.Model;
 using Cccc.Domain.Rules;
+using Cccc.Web.Features.Shell;
 using Cccc.Web.Infrastructure;
 
 namespace Cccc.Web.Features.Plan;
@@ -95,6 +96,9 @@ public sealed class PlanModel
     /// days of the week instead, and the timeline reads as that one thing's week.
     /// </summary>
     public bool RowsAreDays { get; init; }
+
+    /// <summary>Whether the rows are drawn under headings: only when they fall in more than one part.</summary>
+    public bool Headed => Sections.Headed(Rows.Select(r => r.Section));
     public required int HiddenGuests { get; init; }
 
     public Occurrence? Find(Guid id) => Week.FirstOrDefault(o => o.Session.Id == id);
@@ -137,9 +141,9 @@ public sealed class PlanModel
             case Lens.Spaces:
                 foreach (var r in t.Rooms.OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer))
                     if (focus is not { Kind: "room" } || focus.Id == r.Id)
-                        rows.Add(new PlanRow(r.Id.ToString(), r.Id, r.Name, r.Colour, r.Category ?? "Other spaces"));
+                        rows.Add(new PlanRow(r.Id.ToString(), r.Id, r.Name, r.Colour, Sections.Of(r)));
                 if (focus is null && range.Any(o => o.Session.RoomId is null || t.Rooms[o.Session.RoomId.Value] is null))
-                    rows.Add(new PlanRow(NoSpace, null, "No space given", null, "Other spaces"));
+                    rows.Add(new PlanRow(NoSpace, null, "No space given", null, Sections.OtherSpaces));
                 foreach (var o in range)
                 {
                     var key = o.Session.RoomId is { } rid && t.Rooms[rid] is not null ? rid.ToString() : NoSpace;
@@ -148,12 +152,11 @@ public sealed class PlanModel
                 break;
 
             case Lens.Groups:
-                var programmes = t.Programmes.ToDictionary(p => p.Id);
                 foreach (var g in t.Groups
                              .Where(g => focus is null || focus.Id == g.Id || g.ProgrammeId == focus.Id)
                              .Where(g => v.ShowGuests || focus is not null || t.Programmes.Find(g.ProgrammeId) is not { IsGuest: true })
                              .OrderBy(g => g.ProgrammeId is null).ThenBy(g => t.Programmes.Find(g.ProgrammeId)?.Name, NameOrder.Comparer).ThenBy(g => g.Name, NameOrder.Comparer))
-                    rows.Add(new PlanRow(g.Id.ToString(), g.Id, g.Name, g.Colour, t.Programmes.Find(g.ProgrammeId)?.Name ?? "No programme"));
+                    rows.Add(new PlanRow(g.Id.ToString(), g.Id, g.Name, g.Colour, Sections.Of(t, g)));
                 // A whole-building class is on for every group, so it sits on every group's row.
                 foreach (var o in range)
                     foreach (var row in rows)

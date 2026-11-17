@@ -48,6 +48,42 @@ public class PlanTests
     }
 
     [Fact]
+    public void RowsAreHeadedOnlyWhenTheyFallInMoreThanOnePart()
+    {
+        // The sample names its spaces' kinds, so they are headed, and a space without one is "Other spaces".
+        var plain = T.Rooms.First();
+        var t = T with { Rooms = T.Rooms.Put(plain with { Category = null }) };
+        var m = PlanModel.Build(t, View(Lens.Spaces), Admin, Monday);
+        Assert.True(m.Headed);
+        Assert.Equal("Other spaces", m.Rows.Single(r => r.Id == plain.Id).Section);
+        Assert.Contains(m.Rows, r => r.Section == "Hall");
+        // And a group in no programme is "No programme" beside groups that are in one.
+        var loose = T.Groups.First(g => T.Programmes.Find(g.ProgrammeId) is { IsGuest: false });
+        var groups = PlanModel.Build(T with { Groups = T.Groups.Put(loose with { ProgrammeId = null }) }, View(Lens.Groups), Admin, Monday);
+        Assert.True(groups.Headed);
+        Assert.Equal("No programme", groups.Rows.Single(r => r.Id == loose.Id).Section);
+
+        // A school that names no kinds and no programmes gets no headings at all, not one over everything.
+        var none = T with
+        {
+            Rooms = EntitySet<Room>.Of(T.Rooms.Select(r => r with { Category = null })),
+            Programmes = EntitySet<Programme>.Empty,
+            Groups = EntitySet<Group>.Of(T.Groups.Select(g => g with { ProgrammeId = null })),
+        };
+        foreach (var lens in new[] { Lens.Spaces, Lens.Groups })
+        {
+            var rows = PlanModel.Build(none, View(lens), Admin, Monday);
+            Assert.NotEmpty(rows.Rows);
+            Assert.False(rows.Headed, lens + " is headed");
+        }
+        // Nor does one space's week, a row a day, under that space's name.
+        var room = T.Rooms.First();
+        var week = PlanModel.Build(T, View(Lens.Spaces, focus: new Focus("room", room.Id, room.Name)), Admin, Monday);
+        Assert.True(week.RowsAreDays);
+        Assert.False(week.Headed);
+    }
+
+    [Fact]
     public void ADaySpacesRowsHoldOnlyThatDaysClassesAndOverlapsStack()
     {
         // Two classes in one space at one time is a clash; the plan draws both, one above the other.

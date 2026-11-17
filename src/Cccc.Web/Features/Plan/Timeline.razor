@@ -64,7 +64,10 @@
     }
     @foreach (var part in M.Rows.GroupBy(r => r.Section))
     {
-        <div class="tl-section"><span>@part.Key</span></div>
+        @if (M.Headed)
+        {
+            <div class="tl-section"><span>@part.Key</span></div>
+        }
         @foreach (var row in part)
         {
             var bars = M.Bars.Where(b => b.RowKey == row.Key && (M.RowsAreDays || b.Date == Day)).ToList();
@@ -72,7 +75,15 @@
             <div class="tl-row @(bars.Count == 0 ? "free" : "") @(M.RowsAreDays && rowDay == W.Today ? "today" : "") @(M.RowsAreDays && rowDay == Day ? "picked" : "")" data-row="@row.Key" data-testid="row">
                 <div class="tl-label" title="@row.Name">
                     <span class="spine" style="--c:@(row.Colour ?? "var(--rule)")"></span>
-                    <span class="tl-name">@row.Name</span>
+                    @if (M.RowsAreDays)
+                    {
+                        @* A day's short name on a phone, where "Wednesday 18" does not fit beside the hours. *@
+                        <span class="tl-name"><span class="day-long">@row.Name</span><span class="day-short">@rowDay.ToString("ddd d", System.Globalization.CultureInfo.InvariantCulture)</span></span>
+                    }
+                    else
+                    {
+                        <span class="tl-name">@row.Name</span>
+                    }
                     @if (bars.Count == 0)
                     {
                         <small>@(M.RowsAreDays ? "nothing" : "free")</small>

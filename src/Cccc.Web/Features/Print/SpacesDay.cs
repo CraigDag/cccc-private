@@ -1,6 +1,7 @@
 using Cccc.Domain;
 using Cccc.Domain.Model;
 using Cccc.Domain.Rules;
+using Cccc.Web.Features.Shell;
 using Cccc.Web.Features.Week;
 
 namespace Cccc.Web.Features.Print;
@@ -104,7 +105,9 @@ public static class SpacesDay
         if (bars[NoSpace].Any()) rows.Add((NoSpace, "No space given", null, ""));
         foreach (var r in t.Rooms.Where(r => onlyRooms is not { Count: > 0 } || onlyRooms.Contains(r.Id))
                      .OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer))
-            rows.Add((r.Id.ToString(), r.Name, r.Colour, r.Category ?? "Other spaces"));
+            rows.Add((r.Id.ToString(), r.Name, r.Colour, Sections.Of(r)));
+        // One heading over every space says nothing: headings only between two kinds or more.
+        bool headed = Sections.Headed(rows.Select(r => r.Section).Where(x => x.Length > 0));
 
         return rows.Select(r =>
         {
@@ -117,7 +120,7 @@ public static class SpacesDay
                 if (lane < 0) { lane = ends.Count; ends.Add(end); } else ends[lane] = end;
                 laid.Add(new SheetBar(x.O, start, end, x.Shown, lane));
             }
-            return new SheetRow(r.Key, r.Name, r.Colour, r.Section, laid, Math.Max(1, ends.Count));
+            return new SheetRow(r.Key, r.Name, r.Colour, headed ? r.Section : "", laid, Math.Max(1, ends.Count));
         }).ToList();
     }
 }

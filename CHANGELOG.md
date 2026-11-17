@@ -85,6 +85,14 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   their own.
 - **The line at "now"** moves by itself through the day, runs beneath the classes so it never crosses
   their names, and the time sits on the ruler above it.
+- **On a phone, the plan's buttons wrap onto a second line** rather than running off the edge of the
+  screen, where *Week* and a person's name could not be seen; a person's week names its days short
+  (*Wed 18*) so they fit.
+- **A whole day of registers not taken is one line on Now** (*9 from today not taken yet*, opening
+  Registers), so cover and clashes stay in sight; three or fewer are still a line each, to press.
+- **Spaces and groups are listed under headings only when there are two kinds or more**, on Now, the
+  plan, the add form and the printed day: a school that names no kinds of space gets no lone
+  *Other spaces* heading over everything.
 - **Bring in a file…** reads the current app's `.cccc` (every version) and says what came across.
 - **It can sit beside the current app**, following its timetable rather than holding a copy that goes
   out of date: each save in the current app is here within a minute, so Now (with *Changed since

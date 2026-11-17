@@ -20,7 +20,10 @@
         <tbody>
             @foreach (var part in M.Rows.GroupBy(r => r.Section))
             {
-                <tr class="wm-section"><th colspan="@(M.Days.Count + 1)"><span>@part.Key</span></th></tr>
+                @if (M.Headed)
+                {
+                    <tr class="wm-section"><th colspan="@(M.Days.Count + 1)"><span>@part.Key</span></th></tr>
+                }
                 @foreach (var row in part)
                 {
                     <tr data-row="@row.Key">

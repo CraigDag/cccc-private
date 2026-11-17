@@ -118,14 +118,25 @@ else
                 <label class="field"><span>Space</span>
                     <select @bind="RoomText" @bind:after="Check" data-testid="session-room">
                         <option value="">No space</option>
-                        @foreach (var part in SpacesInOrder().GroupBy(r => r.Category ?? "Other spaces"))
+                        @{ var parts = SpacesInOrder().GroupBy(Sections.Of).ToList(); }
+                        @foreach (var part in parts)
                         {
-                            <optgroup label="@part.Key">
+                            @if (parts.Count > 1)
+                            {
+                                <optgroup label="@part.Key">
+                                    @foreach (var r in part)
+                                    {
+                                        @SpaceOption(r, busy)
+                                    }
+                                </optgroup>
+                            }
+                            else
+                            {
                                 @foreach (var r in part)
                                 {
-                                    <option value="@r.Id">@r.Name@(busy.TryGetValue(r.Id, out var b) ? $" — busy: {Cccc.Web.Features.Week.Looks.Title(t, b.Session)} {Hm(b.Start)}–{Hm(b.End)}" : "")</option>
+                                    @SpaceOption(r, busy)
                                 }
-                            </optgroup>
+                            }
                         }
                     </select>
                 </label>
@@ -313,6 +324,9 @@ else
         .OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer);
 
     private IReadOnlyDictionary<Guid, Occurrence> BusyRooms() => Spaces.InUse(W.T, _date, _start, _end, except: _id);
+
+    private RenderFragment SpaceOption(Room r, IReadOnlyDictionary<Guid, Occurrence> busy) =>
+        @<option value="@r.Id">@r.Name@(busy.TryGetValue(r.Id, out var b) ? $" — busy: {Cccc.Web.Features.Week.Looks.Title(W.T, b.Session)} {Hm(b.Start)}–{Hm(b.End)}" : "")</option>;
 
     /// <summary>
     /// Where a facilitator is instead, for the stretch they would be in this class: away, or teaching

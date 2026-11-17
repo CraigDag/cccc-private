@@ -348,6 +348,7 @@ div.agenda-row { cursor: default; }
     padding: 6px 10px 6px 12px; background: var(--panel); border-right: 1px solid var(--divider);
 }
 .tl-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tl-name .day-short { display: none; }
 .tl-label small { margin-left: auto; padding-left: 8px; font-size: 11px; color: var(--text-quiet); }
 .tl-row.free .tl-name { color: var(--text-muted); font-weight: 500; }
 .tl-row.today .tl-name { color: var(--accent); }
@@ -835,11 +836,12 @@ details.field summary { cursor: pointer; font-size: 13px; }
     .reg-table .rt-for { grid-area: for; }
     .reg-table .rt-room { grid-area: room; color: var(--text-muted); }
     .reg-table .rt-room:empty, .reg-table .rt-for:empty { display: none; }
-    .plan-bar { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px 12px; padding: 2px 16px; scrollbar-width: none; }
-    .plan-bar::-webkit-scrollbar { display: none; }
+    /* The bar wraps rather than scrolling sideways: Week, a person's chip or the issues, off the edge of
+       the screen, were controls nobody would find. */
     .plan-bar > * { flex: none; }
+    .tl-name .day-long { display: none; }
+    .tl-name .day-short { display: inline; }
     .plan-bar .grow { display: none; }
-    .plan-bar .count.issues { order: -1; }
     .seg button { padding: 4px 10px; }
     /* A register is taken standing in a room with a phone: marks big enough for a thumb. */
     .register-row .seg.small button { min-height: 38px; padding: 4px 11px; font-size: 13px; }

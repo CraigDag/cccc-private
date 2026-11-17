@@ -122,9 +122,13 @@
             {
             <h2 class="now-section">The building</h2>
             <div class="board" aria-label="Every space now">
-                @foreach (var part in t.Rooms.OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer).GroupBy(r => r.Category ?? "Other spaces"))
+                @{ var parts = t.Rooms.OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer).GroupBy(Sections.Of).ToList(); }
+                @foreach (var part in parts)
                 {
-                    <div class="board-section">@part.Key</div>
+                    @if (parts.Count > 1)
+                    {
+                        <div class="board-section">@part.Key</div>
+                    }
                     @foreach (var room in part)
                     {
                         var here = happening.Where(o => o.Session.RoomId == room.Id).ToList();
@@ -198,9 +202,22 @@
             {
                 <button type="button" class="need warn" @onclick="() => OpenPlan(today, null, o.Session.Id)" data-testid="need"><span class="need-kind">Cover</span><b>@Looks.Title(t, o.Session)</b><small>@Looks.When(o.Session) · @Looks.Room(t, o.Session)</small></button>
             }
-            @foreach (var o in registers)
+            @* A few registers are a line each, to press; a school's whole day of them is one line, opening
+               Registers, where today's are cards to take, so cover and clashes stay in sight below. *@
+            @if (registers.Count > 3)
             {
-                <button type="button" class="need" @onclick="() => OpenPlan(today, null, o.Session.Id)" data-testid="need"><span class="need-kind">Register</span><b>@Looks.Title(t, o.Session)</b><small>@Looks.When(o.Session) · @Looks.Audience(t, o.Session)</small></button>
+                var names = registers.Select(o => Looks.Title(t, o.Session)).Distinct().ToList();
+                <a class="need" href="registers" data-testid="need-registers">
+                    <span class="need-kind">Registers</span><b>@registers.Count from today not taken yet</b>
+                    <small>@string.Join(", ", names.Take(3))@(names.Count > 3 ? $" and {names.Count - 3} more" : "")</small>
+                </a>
+            }
+            else
+            {
+                @foreach (var o in registers)
+                {
+                    <button type="button" class="need" @onclick="() => OpenPlan(today, null, o.Session.Id)" data-testid="need"><span class="need-kind">Register</span><b>@Looks.Title(t, o.Session)</b><small>@Looks.When(o.Session) · @Looks.Audience(t, o.Session)</small></button>
+                }
             }
             @if (earlier.Count > 0)
             {

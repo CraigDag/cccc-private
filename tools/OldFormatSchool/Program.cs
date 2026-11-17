@@ -3,6 +3,8 @@
 // walk-through that checks it. Made-up names only; it never reads or writes a real file.
 //
 //   make <file>            this week, every day: four classes a day for two groups
+//   year <file>            a whole school year at about a real school's size, registers taken on every
+//                          class that has been, for timing the import and following on a file that big
 //   cancel <file> <class>  cancels today's class of that name, as the current app records a one-off cancel
 //   later <file> <class>   moves today's class of that name an hour later
 //   remove <file> <first>  takes the student with that first name out of the file, as erasing them there does
@@ -13,7 +15,7 @@ using Old = CCCCScheduler.Models;
 
 if (args.Length < 2)
 {
-    Console.Error.WriteLine("Usage: make <file> | cancel <file> <class> | later <file> <class> | remove <file> <first name>");
+    Console.Error.WriteLine("Usage: make <file> | year <file> | cancel <file> <class> | later <file> <class> | remove <file> <first name>");
     return 2;
 }
 var (mode, path) = (args[0], args[1]);
@@ -58,6 +60,10 @@ if (mode == "make")
         Building = building,
     };
 }
+else if (mode == "year")
+{
+    p = Year(monday);
+}
 else if (args.Length >= 3 && mode == "remove")
 {
     p = ProjectPackage.LoadFromBytes(File.ReadAllBytes(path));
@@ -83,12 +89,108 @@ else if (args.Length >= 3 && mode is "cancel" or "later")
 }
 else
 {
-    Console.Error.WriteLine("Usage: make <file> | cancel <file> <class> | later <file> <class> | remove <file> <first name>");
+    Console.Error.WriteLine("Usage: make <file> | year <file> | cancel <file> <class> | later <file> <class> | remove <file> <first name>");
     return 2;
 }
 var bytes = ProjectPackage.SaveToBytes(p, savedBy: "made-up");
 var part = path + ".part";
 File.WriteAllBytes(part, bytes);
 File.Move(part, path, overwrite: true);
-Console.WriteLine($"{mode}: the week of {monday:yyyy-MM-dd}, written as the current app writes it.");
+Console.WriteLine($"{mode}: the week of {monday:yyyy-MM-dd}, written as the current app writes it ({bytes.Length / 1024} KB).");
 return 0;
+
+// Two programmes of three groups, ten students in each, sixteen facilitators, twelve spaces; each group
+// has two classes a day, Monday to Friday, with lunch and Wednesday's open training for the whole
+// building, for two terms of 18 weeks either side of this week. Every class that has been has its
+// register. Made-up names only, some with Æ, Ø and Å so the Danish order shows.
+static Old.ProjectFile Year(DateOnly monday)
+{
+    var rnd = new Random(7);
+    var ba = new Old.Strand { Name = "BA", ColourHex = "#2E7D32" };
+    var fd = new Old.Strand { Name = "Foundation", ColourHex = "#1565C0" };
+    var groups = new[] { ("BA 1", ba), ("BA 2", ba), ("BA 3", ba), ("Foundation A", fd), ("Foundation B", fd), ("Foundation C", fd) }
+        .Select((x, i) => new Old.Group { Name = x.Item1, StrandId = x.Item2.Id, ColourHex = new[] { "#2E7D32", "#558B2F", "#9E9D24", "#1565C0", "#0277BD", "#00838F" }[i] }).ToList();
+    string[] firsts = ["Alba", "Benno", "Cleo", "Dario", "Edda", "Finn", "Greta", "Hugo", "Ilse", "Jonas", "Kaja", "Linus", "Maja", "Nils", "Olga",
+        "Pelle", "Rune", "Sigrid", "Tove", "Ulla", "Vera", "Wilmer", "Ylva", "Øjvind", "Åse", "Ærtur", "Bodil", "Casper", "Ditte", "Egil"];
+    string[] lasts = ["Kestrel", "Marsh", "Vantor", "Fjelstad", "Brightwater", "Øverlie", "Åkerholm", "Lindqvane", "Stormbæk", "Hjelmvik",
+        "Ravnsholt", "Tidemark", "Aaskov", "Quillborg", "Eskerud", "Morrowby", "Nyhavnsen", "Sandvold", "Ulvetand", "Grønnemark"];
+    var students = Enumerable.Range(0, 60).Select(i => new Old.Student
+    {
+        FirstName = firsts[i % firsts.Length], Surname = lasts[(i * 7) % lasts.Length], GroupId = groups[i / 10].Id,
+    }).ToList();
+    string[] staff = ["Ada Brightwater", "Dag Øverlie", "Inge Sølvhøj", "Rafael Moonfield", "Tess Quarrington", "Oskar Lindqvane", "Mira Fallowmere",
+        "Henrik Ågaard", "Juno Crestwell", "Lars Tidemark", "Petra Vandersee", "Sven Haldorhus", "Nora Kittleby", "Aksel Ravnsholt", "Ines Moorcroft", "Bo Eskerud"];
+    var facilitators = staff.Select((n, i) => new Old.Facilitator { Name = n, ColourHex = $"#{(i * 37 % 200) + 40:X2}{(i * 71 % 200) + 40:X2}{(i * 53 % 200) + 40:X2}" }).ToList();
+    string[] spaceNames = ["Big Top", "Aerial Hall", "Studio A", "Studio B", "Studio C", "Studio D", "Gym", "Loft", "Dance Hall", "Black Box", "Garden", "Workshop"];
+    var rooms = spaceNames.Select(n => new Old.Room { Name = n }).ToList();
+    string[] classNames = ["Acro", "Dance", "Aerial", "Handstands", "Juggling", "Tightwire", "Clown", "Theatre", "Conditioning", "Flexibility", "Partner acro", "Trapeze"];
+    string[] classColours = ["#C0504D", "#4F81BD", "#9BBB59", "#8064A2", "#4BACC6", "#F79646", "#2C4D75", "#772C2A", "#5F7530", "#4D3B62", "#276A7C", "#B65708"];
+    var classes = classNames.Select((n, i) => new Old.ClassEntry { Name = n, ColourHex = classColours[i] }).ToList();
+    var open = new Old.ClassEntry { Name = "Open training", ColourHex = "#7F7F7F", Workload = Old.WorkloadKind.DropIn };
+    var lunch = new Old.ClassEntry { Name = "Lunch", ColourHex = "#BFBFBF", Workload = Old.WorkloadKind.NotCounted };
+    var first = monday.AddDays(-7 * 20);
+    var terms = new List<Old.TermInfo>
+    {
+        new() { Name = "Autumn", StartMonday = first, WeekCount = 18 },
+        new() { Name = "Spring", StartMonday = first.AddDays(7 * 19), WeekCount = 18 },
+    };
+    (TimeOnly, TimeOnly)[] slots = [(new(9, 0), new(11, 0)), (new(11, 15), new(12, 45)), (new(13, 30), new(15, 30)), (new(15, 45), new(17, 30))];
+    var sessions = new List<Old.ScheduleEntry>();
+    foreach (var term in terms)
+        for (int w = 0; w < term.WeekCount; w++)
+        {
+            var week = term.StartMonday.AddDays(7 * w);
+            bool past = week < monday;
+            for (int d = 0; d < 5; d++)
+            {
+                var day = (DayOfWeek)(d + 1);
+                for (int g = 0; g < groups.Count; g++)
+                    foreach (int slot in g < 3 ? new[] { 0, 2 } : new[] { 1, 3 })
+                    {
+                        var c = classes[(g * 5 + d * 3 + slot + w) % classes.Count];
+                        var e = new Old.ScheduleEntry
+                        {
+                            Title = c.Name, ClassId = c.Id, Day = day, WeekMonday = week, Start = slots[slot].Item1, End = slots[slot].Item2,
+                            Scope = Old.SessionScope.Group, GroupId = groups[g].Id, RoomId = rooms[(g % 3 + d * 2 + slot * 3 + w) % rooms.Count].Id,
+                            FacilitatorIds = [facilitators[(g % 3 * 5 + d + slot * 2 + w) % facilitators.Count].Id],
+                        };
+                        if (past)
+                        {
+                            var roll = students.Where(s => s.GroupId == groups[g].Id).Select(s => s.Id).ToList();
+                            var away = roll[rnd.Next(roll.Count)];
+                            e.Attendance.Add(new Old.AttendanceRecord
+                            {
+                                WeekMonday = week, PresentStudentIds = roll.Where(x => x != away).ToList(), RosterStudentIds = roll,
+                                FiledBy = "made-up", FiledAt = new DateTimeOffset(week.AddDays(d).ToDateTime(slots[slot].Item2), TimeSpan.Zero),
+                            });
+                        }
+                        sessions.Add(e);
+                    }
+                sessions.Add(new Old.ScheduleEntry
+                {
+                    Title = lunch.Name, ClassId = lunch.Id, Day = day, WeekMonday = week, Start = new(12, 45), End = new(13, 30),
+                    Scope = Old.SessionScope.WholeBuilding, RoomId = rooms[10].Id,
+                });
+                if (day == DayOfWeek.Wednesday)
+                    sessions.Add(new Old.ScheduleEntry
+                    {
+                        Title = open.Name, ClassId = open.Id, Day = day, WeekMonday = week, Start = new(17, 45), End = new(20, 0),
+                        Scope = Old.SessionScope.WholeBuilding, RoomId = rooms[0].Id, FacilitatorIds = [facilitators[(w + 3) % facilitators.Count].Id],
+                    });
+            }
+        }
+    var building = new Old.Building
+    {
+        Name = "Northlight", Strands = [ba, fd], Groups = groups, Students = students, Facilitators = facilitators,
+        Classes = [.. classes, open, lunch], Sessions = sessions, WeeksAreSeparate = true,
+    };
+    foreach (var r in rooms) building.Rooms.Add(r);
+    return new Old.ProjectFile
+    {
+        SchemaVersion = Old.ProjectFile.CurrentSchemaVersion,
+        Terms = terms,
+        Building = building,
+        Holidays = [new Old.Holiday { Name = "Autumn break", From = first.AddDays(7 * 7), To = first.AddDays(7 * 7 + 4) }],
+        Absences = [new Old.Absence { PersonId = facilitators[2].Id, From = monday.AddDays(7), To = monday.AddDays(9), Reason = "Course" }],
+    };
+}

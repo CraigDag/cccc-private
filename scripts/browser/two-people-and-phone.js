@@ -106,6 +106,27 @@ async function wide(page) {
     await p.click('[data-testid=dialog-x]');
     await p.waitForSelector('[data-testid=dialog]', { state: 'detached' });
   });
+  await check('phone: every control on the plan\'s bar is on the screen, narrowed to a person too', async () => {
+    // Pressable where it is drawn: its middle inside the window and nothing else on top of it.
+    const off = () => p.evaluate(() => [...document.querySelectorAll('.plan-bar button')].filter(b => {
+      const r = b.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
+      return !(x > 0 && x < innerWidth && document.elementFromPoint(x, y)?.closest('button') === b);
+    }).map(b => b.textContent.trim() || b.getAttribute('aria-label')));
+    await p.goto(B + '/plan');
+    await p.waitForSelector('[data-testid=timeline] [data-testid=block]');
+    let missing = await off();
+    if (missing.length) throw new Error('off the screen: ' + missing.join(', '));
+    await p.click('[data-testid=dock-find]');
+    await p.waitForSelector('[data-testid=find]');
+    await p.keyboard.type('Cleo');
+    await p.waitForFunction(() => document.querySelector('[data-testid=find-hit] .find-label')?.textContent.startsWith('Cleo'));
+    await p.keyboard.press('Enter');
+    await p.waitForSelector('[data-testid=focus-chip]');
+    await p.waitForTimeout(300);
+    await p.screenshot({ path: OUT + 'ph-plan-person.png' });
+    missing = await off();
+    if (missing.length) throw new Error('narrowed to a person, off the screen: ' + missing.join(', '));
+  });
   await check('phone: a Data list and its form', async () => {
     await p.goto(B + '/data/students'); await p.waitForSelector('[data-testid=data-add]');
     await p.screenshot({ path: OUT + 'ph-students.png' });
