@@ -16,11 +16,16 @@
     var cover = Cover.StillNeeded(t, today, today).Where(o => o.Date == today).ToList();
     var registers = Registers.FileableBy(Registers.MissingBetween(t, today, today, today.AddDays(1)), W.Access.Registers)
         .Where(o => PlanModel.Minutes(o.End) <= now).ToList();
+    // Registers from earlier days: somebody linked to a facilitator gets their own (My week lists them);
+    // an administrator linked to nobody gets the school's (Reports lists them). Today's are lines of their own.
+    var earlier = W.Access.FacilitatorId is { } linked ? Registers.StillToTake(t, linked, today)
+        : W.Access.MayTakeEveryRegister ? Registers.MissingBetween(t, Registers.EarlierFrom(today), today.AddDays(-1), today)
+        : Array.Empty<Occurrence>();
     var todayIds = all.Select(o => o.Session.Id).ToHashSet();
     var clashes = Clashes.ForWeek(t, today).Where(c => c.IsRing && c.SessionIds.Any(todayIds.Contains)).ToList();
     var closure = Occurrences.ClosureFor(t, today, null);
     var semester = t.SemesterFor(today);
-    int needs = cover.Count + registers.Count + clashes.Count;
+    int needs = cover.Count + registers.Count + clashes.Count + (earlier.Count > 0 ? 1 : 0);
     // Every space's little day bar shares one frame: the school day, widened to whatever is on today.
     int day0 = Math.Min(8 * 60, happening.Select(o => PlanModel.Minutes(o.Start) / 60 * 60).DefaultIfEmpty(8 * 60).Min());
     int day1 = Math.Max(18 * 60, happening.Select(o => (PlanModel.Minutes(o.End) + 59) / 60 * 60).DefaultIfEmpty(18 * 60).Max());
@@ -173,6 +178,14 @@
             @foreach (var o in registers)
             {
                 <button type="button" class="need" @onclick="() => OpenPlan(today, null, o.Session.Id)" data-testid="need"><span class="need-kind">Register</span><b>@Looks.Title(t, o.Session)</b><small>@Looks.When(o.Session) · @Looks.Audience(t, o.Session)</small></button>
+            }
+            @if (earlier.Count > 0)
+            {
+                bool own = W.Access.FacilitatorId is not null;
+                <a class="need" href="@(own ? "my-week" : $"reports/registers?from={Registers.EarlierFrom(today):yyyy-MM-dd}&to={Cccc.Domain.Week.MondayOf(today):yyyy-MM-dd}")" data-testid="need-earlier">
+                    <span class="need-kind">Registers</span><b>@earlier.Count from earlier days not taken</b>
+                    <small>@(own ? "Yours" : "The school's"), from the last eight weeks</small>
+                </a>
             }
             @foreach (var c in clashes)
             {

@@ -18,8 +18,9 @@ else
     var t = W.T;
     var m = WeekModel.Build(t, _view, W.Access, W.Today, s => s.FacilitatorIds.Contains(Me.Id) || s.CoverIds.Contains(Me.Id), Me.Id);
     var split = Hours.For(t, Occurrences.HappeningInWeek(t, _view.Monday), Me.Id);
-    var missing = Registers.MissingBetween(t, _view.Monday.AddDays(-7 * 8), W.Today.AddDays(-1), W.Today)
-        .Where(o => Registers.MayChange(W.Access.Registers, o.Session)).ToList();
+    // Counted from today, whichever week is on screen, and only this person's: an administrator's power to
+    // take every register is not a list of every register on My week.
+    var missing = Registers.StillToTake(t, Me.Id, W.Today);
     <WeekNav Monday="_view.Monday" Today="W.Today" Title="@("My week, " + Me.Name)" Go="d => _view.GoTo(d)">
         <a class="btn" href="@Prints.Link("mine", _view, W.Access, Me.Id)" target="_blank" rel="noopener">Print my week</a>
     </WeekNav>
@@ -29,7 +30,7 @@ else
             <small>Teaching @Cccc.Domain.Week.Duration(split.Teaching)@string.Concat(split.Rules.Select(r => $" · {r.Name} {Cccc.Domain.Week.Duration(r.Time)}"))@(Me.MaxWeeklyHours is { } lim ? $" · limit {Cccc.Domain.Week.Duration(lim)}" : "")</small>
         </div>
         <div class="card @(missing.Count > 0 ? "warn" : "")">
-            <small>Registers to take</small><b>@missing.Count</b>
+            <small>Registers to take</small><b data-testid="still-to-take-count">@missing.Count</b>
             <small>From the last eight weeks</small>
         </div>
     </div>
@@ -37,7 +38,7 @@ else
     {
         <div class="section">
             <h2>Registers to take</h2>
-            <ul class="pick-list">
+            <ul class="pick-list" data-testid="still-to-take">
                 @foreach (var o in missing)
                 {
                     <li><button type="button" class="pick" @onclick="() => Take(o.Session.Id)"><b>@Looks.Title(t, o.Session)</b> <small>@Looks.WhenWithDay(o.Session) · @Looks.Audience(t, o.Session)</small></button></li>

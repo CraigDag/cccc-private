@@ -55,6 +55,21 @@ public static class Registers
     public static IReadOnlyList<Occurrence> FileableBy(IEnumerable<Occurrence> missing, RegisterReader reader) =>
         missing.Where(o => MayChange(reader, o.Session)).ToList();
 
+    /// <summary>
+    /// How far back a person's registers still to take are looked for: from the Monday eight weeks before
+    /// this week's. Older gaps are the administrators' to chase, through Reports.
+    /// </summary>
+    public static DateOnly EarlierFrom(DateOnly today) => Week.MondayOf(today).AddDays(-7 * 8);
+
+    /// <summary>
+    /// The registers this person still has to take: missing (so before today), since
+    /// <see cref="EarlierFrom"/>, on a class they were assigned to or covered, which is the facilitator half
+    /// of <see cref="MayChange"/>. An administrator gets their own here, never the whole school's: My week
+    /// and Now say what is yours to do, and Reports says what the school's is.
+    /// </summary>
+    public static IReadOnlyList<Occurrence> StillToTake(Timetable t, Guid facilitatorId, DateOnly today) =>
+        FileableBy(MissingBetween(t, EarlierFrom(today), today.AddDays(-1), today), new RegisterReader(false, facilitatorId));
+
     /// <summary>Registers outstanding on a person count off the ASSIGNED roster, so covered weeks still count as theirs.</summary>
     public static int OutstandingFor(IEnumerable<Occurrence> missing, Guid facilitatorId) =>
         missing.Count(o => o.Session.FacilitatorIds.Contains(facilitatorId));

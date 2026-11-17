@@ -1,6 +1,8 @@
 @page "/reports/{Slug?}"
 @using Cccc.Web.Features.Week
 @using DomainWeek = Cccc.Domain.Week
+@using Cccc.Web.Features.Sessions
+@inject Dialogs D
 
 <PageTitle>Reports · CCCC Scheduler</PageTitle>
 @if (!W.Access.MayUseAdminTools)
@@ -81,12 +83,15 @@ else
             </div>
             <div class="section">
                 <h2>Every one (@missing.Count)</h2>
-                <div class="table-wrap"><table class="grid-table static">
+                <p class="hint">Press one to take it.</p>
+                <div class="table-wrap"><table class="grid-table">
                     <thead><tr><th>Day</th><th>Time</th><th>Class</th><th>For</th><th>Facilitators</th></tr></thead>
                     <tbody>
                         @foreach (var o in missing)
                         {
-                            <tr><td>@DomainWeek.ShortDate(o.Date)</td><td>@Looks.When(o.Session)</td><td>@Looks.Title(t, o.Session)</td><td>@Looks.Audience(t, o.Session)</td><td>@Looks.Names(t, o.Session.FacilitatorIds)</td></tr>
+                            <tr class="clickable" @onclick="() => OpenRegister(o.Session.Id)"><td>@DomainWeek.ShortDate(o.Date)</td><td>@Looks.When(o.Session)</td>
+                                <td><button type="button" class="link" @onclick="() => OpenRegister(o.Session.Id)" @onclick:stopPropagation="true" data-testid="report-register-open">@Looks.Title(t, o.Session)</button></td>
+                                <td>@Looks.Audience(t, o.Session)</td><td>@Looks.Names(t, o.Session.FacilitatorIds)</td></tr>
                         }
                     </tbody>
                 </table></div>
@@ -112,6 +117,9 @@ else
 @code {
     [CascadingParameter] public Workspace W { get; set; } = default!;
     [Parameter] public string? Slug { get; set; }
+    // Weeks given in the address (Now's "registers from earlier days" sends its own), as yyyy-MM-dd.
+    [SupplyParameterFromQuery(Name = "from")] public string? FromWeek { get; set; }
+    [SupplyParameterFromQuery(Name = "to")] public string? ToWeek { get; set; }
 
     private string Csv(string kind) =>
         $"reports/csv/{kind}?from={DomainWeek.MondayOf(_from):yyyy-MM-dd}&to={DomainWeek.MondayOf(_to).AddDays(6):yyyy-MM-dd}";
@@ -127,7 +135,13 @@ else
         var sem = W.T.SemesterNear(W.Today);
         _to = DomainWeek.MondayOf(W.Today);
         _from = sem is not null && sem.FirstMonday <= _to ? sem.FirstMonday : _to.AddDays(-7 * 7);
+        if (Day(FromWeek) is { } f && Day(ToWeek) is { } u && f <= u) (_from, _to) = (f, u);
     }
+
+    private static DateOnly? Day(string? s) =>
+        DateOnly.TryParseExact(s, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d) ? d : null;
+
+    private void OpenRegister(Guid id) => D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = id });
 
     private static DateOnly Min(DateOnly a, DateOnly b) => a < b ? a : b;
 }

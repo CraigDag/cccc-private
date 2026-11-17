@@ -261,6 +261,31 @@ public class RosterAndRegisterTests
     }
 
     [Fact]
+    public void APersonsRegistersStillToTakeAreTheirOwnMissingOnesFromTheLastEightWeeks()
+    {
+        var b = new Build();
+        var g = b.Group("BA");
+        b.Student("A", g);
+        var ada = b.Facilitator("Ada");
+        var cleo = b.Facilitator("Cleo");
+        var hers = b.Session(Monday.AddDays(-3), "09:00", "10:00", Audience.ForGroup(g.Id), null, null, In(ada));
+        var covered = b.Session(Monday.AddDays(-10), "09:00", "10:00", Audience.ForGroup(g.Id), null, null, In(cleo)) with { CoverIds = [ada.Id] };
+        b.Put(covered);
+        var earliest = b.Session(Registers.EarlierFrom(Today), "09:00", "10:00", Audience.ForGroup(g.Id), null, null, In(ada));
+        b.Session(Registers.EarlierFrom(Today).AddDays(-1), "09:00", "10:00", Audience.ForGroup(g.Id), null, null, In(ada));   // too long ago
+        b.Session(Monday.AddDays(-1), "09:00", "10:00", Audience.ForGroup(g.Id), null, null, In(cleo));                         // somebody else's
+        b.Session(Today, "08:00", "09:00", Audience.ForGroup(g.Id), null, null, In(ada));                                        // today: not missing yet
+        var taken = b.Session(Monday.AddDays(-2), "09:00", "10:00", Audience.ForGroup(g.Id), null, null, In(ada));
+        b.T = b.T with { Registers = b.T.Registers.Put(Registers.File(b.T, taken, [], [], null, DateTimeOffset.UnixEpoch)) };
+
+        var ids = Registers.StillToTake(b.T, ada.Id, Today).Select(o => o.Session.Id).ToHashSet();
+        Assert.Equal(new[] { hers.Id, covered.Id, earliest.Id }.ToHashSet(), ids);
+        // Cleo's own: the class Ada covered stays Cleo's to put right too, and the other is hers alone.
+        Assert.Equal(2, Registers.StillToTake(b.T, cleo.Id, Today).Count);
+        Assert.Equal(Monday.AddDays(-56), Registers.EarlierFrom(Today.AddDays(6)));
+    }
+
+    [Fact]
     public void PresentAndExcusedNeverOverlap()
     {
         var r = new Register { PresentIds = [Guid.Empty], ExcusedIds = [Guid.Empty] }.Normalised();

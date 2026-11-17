@@ -114,6 +114,16 @@ outlined ink with one filled accent action per screen. Registers lead with **tod
 large tappable cards, because the register is taken standing in a room with a phone; on a phone the
 rest of the week is one card a class too, with its state on the right.
 
+**What a person owes in registers is one rule, `Registers.StillToTake`**: missing registers on classes
+they were assigned to or covered, from the Monday eight weeks before this week's up to yesterday. Now's
+*Registers · N from earlier days* and My week's list both ask it, so they never disagree, and a linked
+administrator gets their own there, never the whole school's. An administrator linked to nobody gets
+the school's count on Now instead, which opens Registers outstanding on exactly those weeks
+(`reports/registers?from=…&to=…`), where every row opens its register. A coach's Registers start on
+their own classes with *Only the ones I can take* ticked, and unticking it shows everybody's, because
+everybody reads every register. When nobody is in the room because the facilitator is away, the *In
+the room* column says *Nobody yet: … away* rather than nothing.
+
 ## Words
 
 **Space**, never *room*, wherever a person reads it: the Plan's lens, the forms, People & places, the

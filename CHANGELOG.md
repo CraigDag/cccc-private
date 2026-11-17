@@ -30,6 +30,10 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   says so beside their name, the same way a busy space does.
 - **Registers start with today's classes as big cards**, made to be tapped on a phone in the room. A
   class that ended earlier today says *not taken yet* rather than *to come*.
+- **Now says when registers from earlier days are still to take**: a coach's own, matching My week's
+  list, or for an administrator the school's, opening the list of exactly those, where pressing one
+  takes it. A coach can widen Registers from their own classes to everybody's, and a class whose
+  facilitator is away says so where the names go.
 - **Two looks**: Paper (light, like a printed programme) and Night (dark), following the device unless
   you choose one in your menu. The printed sheets are in the Paper look too.
 - **Print the building's day**: *Spaces, a page a day* is the plan's Spaces view on paper, every space
