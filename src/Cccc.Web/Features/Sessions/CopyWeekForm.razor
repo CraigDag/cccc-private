@@ -20,7 +20,7 @@
             <label class="@(w.May ? "" : "off")">
                 <input type="checkbox" disabled="@(!w.May)" checked="@_chosen.Contains(w.Monday)" @onchange="e => Toggle(w.Monday, (bool)e.Value!)" />
                 <span class="grow">Week @DomainWeek.IsoNumber(w.Monday), @DomainWeek.ShortDate(w.Monday)@(t.SemesterFor(w.Monday) is { } s ? " · " + s.Name : "")</span>
-                <small>@(w.HasRegisters ? "has registers, kept" : w.Blank ? "blank" : $"{w.Count} classes, replaced")</small>
+                <small>@(w.HasRegisters ? "has registers, kept" : w.Blank ? "blank" : $"{Looks.Count(w.Count, "class", "classes")}, replaced")</small>
             </label>
         }
     </div>

@@ -21,6 +21,12 @@
             {
                 <span class="tl-tick" style="left:@Pct(h * 60 - M.FrameStart, span)%">@($"{h:00}")</span>
             }
+            @* The time now, on the ruler above its line: the line runs beneath the classes so it never crosses
+               their words, and this keeps where it is in sight on a busy day. plan.js moves both. *@
+            @if ((isToday || (M.RowsAreDays && M.Days.Contains(W.Today))) && NowMinutes is { } nowHead && nowHead >= M.FrameStart && nowHead <= M.FrameEnd)
+            {
+                <span class="tl-now-head" style="left:@Pct(nowHead - M.FrameStart, span)%" data-now-clock data-testid="now-head">@($"{nowHead / 60:00}:{nowHead % 60:00}")</span>
+            }
         </div>
     </div>
     @if (closure is not null)

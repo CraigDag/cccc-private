@@ -36,7 +36,7 @@ else if (!_editable && existing is not null)
                 {
                     <dt>Notes</dt><dd class="pre">@existing.Notes</dd>
                 }
-                <dt>On it</dt><dd>@Roster.For(t, existing).Count students</dd>
+                <dt>On it</dt><dd>@Looks.Count(Roster.For(t, existing).Count, "student")</dd>
             </dl>
             @if (_lockedWeek)
             {

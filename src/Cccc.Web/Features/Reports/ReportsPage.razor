@@ -108,8 +108,8 @@ else
                 <div class="card @(clashes.Count > 0 ? "warn" : "")"><small>Clashes this week</small><b>@clashes.Count</b></div>
                 <div class="card @(cover.Count > 0 ? "warn" : "")"><small>Still needing cover this week</small><b>@cover.Count</b></div>
                 <div class="card @(allMissing.Count > 0 ? "warn" : "")"><small>Registers missing in these weeks</small><b>@allMissing.Count</b></div>
-                <div class="card"><small>Hours in these weeks</small><b>@DomainWeek.Duration(occ.Aggregate(TimeSpan.Zero, (a, o) => a + o.Session.Length))</b><small>@occ.Count classes</small></div>
-                <div class="card"><small>People</small><b>@t.Students.Count</b><small>students · @t.Facilitators.Count(f => !f.IsGuest) facilitators · @t.Groups.Count groups</small></div>
+                <div class="card"><small>Hours in these weeks</small><b>@DomainWeek.Duration(occ.Aggregate(TimeSpan.Zero, (a, o) => a + o.Session.Length))</b><small>@Looks.Count(occ.Count, "class", "classes")</small></div>
+                <div class="card"><small>People</small><b>@t.Students.Count</b><small>@(t.Students.Count == 1 ? "student" : "students") · @Looks.Count(t.Facilitators.Count(f => !f.IsGuest), "facilitator") · @Looks.Count(t.Groups.Count, "group")</small></div>
             </div>
             break;
     }

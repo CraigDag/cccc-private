@@ -5,6 +5,7 @@
 @inject IJSRuntime JS
 @using Cccc.Legacy
 @using Cccc.Domain.Sample
+@using Cccc.Web.Features.Week
 @{
     var projects = Store.List();
     var deleted = Store.List(includeDeleted: true).Where(p => p.Deleted is not null).ToList();
@@ -103,7 +104,7 @@
             if (ProjectFiles.LooksLikeOurs(bytes))
             {
                 t = ProjectFiles.Read(bytes);
-                _report = [$"{t.Sessions.Count} classes, {t.Students.Count} students, {t.Facilitators.Count} facilitators."];
+                _report = [$"{Looks.Count(t.Sessions.Count, "class", "classes")}, {Looks.Count(t.Students.Count, "student")}, {Looks.Count(t.Facilitators.Count, "facilitator")}."];
             }
             else
             {

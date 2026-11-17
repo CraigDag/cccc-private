@@ -71,7 +71,8 @@ is still to come.
   weekend, or a week when a week is on screen; *Today*; a date box to jump.
 - **Lens**: Spaces · Groups · People. **Scale**: Day · Week.
 - The **day timeline**: rows grouped (spaces by category, groups by programme, people as facilitators
-  then students when asked for), hours across, a line at now. Click a block to look at it; double-click
+  then students when asked for), hours across, a line at now (beneath the classes, so it never crosses
+  their names, with the time in a pill on the ruler above it). Click a block to look at it; double-click
   empty time to add a class there (the row fills in the space or group); drag sideways to move in time,
   drag to another space row to move rooms, drag an end to stretch, in quarter hours, one undo step.
 - **Narrowed to one** person, space or group (from Find, or a card on Now), the day timeline's rows

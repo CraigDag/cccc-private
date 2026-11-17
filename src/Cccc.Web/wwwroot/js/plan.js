@@ -208,7 +208,7 @@
         const now = nowMinutes();
         document.querySelectorAll('.tl[data-today="1"]').forEach(root => {
             const f = frame(root);
-            root.querySelectorAll('.tl-now').forEach(line => {
+            root.querySelectorAll('.tl-now, .tl-now-head').forEach(line => {
                 line.hidden = now < f.start || now > f.end;
                 line.style.left = ((now - f.start) / (f.end - f.start) * 100) + '%';
             });

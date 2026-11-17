@@ -1,8 +1,8 @@
 @inject Dialogs D
 @{ int n = Edits.CountClearedAfter(W.T, W.Today); }
-<DialogFrame Title="Clear the weeks after this one" OnOk="Save" OkEnabled="@(n > 0)" OkLabel="@($"Clear {n} classes")">
+<DialogFrame Title="Clear the weeks after this one" OnOk="Save" OkEnabled="@(n > 0)" OkLabel="@("Clear " + Looks.Count(n, "class", "classes"))">
     <p>Empties every week after <b>this week (@DomainWeek.ForDocuments(W.Today))</b> to the end of the year, so those weeks are blank until somebody fills them. This week and every week before it keep what they have.</p>
-    <p>@(n == 0 ? "There is nothing after this week to clear." : $"{n} classes would go. Undo brings them back.")</p>
+    <p>@(n == 0 ? "There is nothing after this week to clear." : $"{Looks.Count(n, "class", "classes")} would go. Undo brings {(n == 1 ? "it" : "them")} back.")</p>
 </DialogFrame>
 @code {
     [CascadingParameter] public Workspace W { get; set; } = default!;

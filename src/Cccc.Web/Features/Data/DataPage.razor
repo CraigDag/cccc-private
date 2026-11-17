@@ -24,15 +24,15 @@ else
     {
         case "rooms":
             <AddBar Kind="k" OnAdd="() => Show<RoomForm>(null)" />
-            <Rows Items="@Filter(t.Rooms.Select(r => Row.Of(r.Id, r.Name, r.Colour, $"{t.Sessions.Count(s => s.RoomId == r.Id && s.Date >= W.Today)} sessions ahead" + (r.Category is { Length: > 0 } c ? " · " + c : ""))))" OnOpen="id => Show<RoomForm>(id)" />
+            <Rows Items="@Filter(t.Rooms.Select(r => Row.Of(r.Id, r.Name, r.Colour, Looks.Count(t.Sessions.Count(s => s.RoomId == r.Id && s.Date >= W.Today), "class ahead", "classes ahead") + (r.Category is { Length: > 0 } c ? " · " + c : ""))))" OnOpen="id => Show<RoomForm>(id)" />
             break;
         case "programmes":
             <AddBar Kind="k" OnAdd="() => Show<ProgrammeForm>(null)" />
-            <Rows Items="@Filter(t.Programmes.Select(p => Row.Of(p.Id, p.Name + (p.IsGuest ? " (guest)" : ""), p.Colour, $"{t.GroupsOf(p.Id).Count()} groups")))" OnOpen="id => Show<ProgrammeForm>(id)" />
+            <Rows Items="@Filter(t.Programmes.Select(p => Row.Of(p.Id, p.Name + (p.IsGuest ? " (guest)" : ""), p.Colour, Looks.Count(t.GroupsOf(p.Id).Count(), "group"))))" OnOpen="id => Show<ProgrammeForm>(id)" />
             break;
         case "groups":
             <AddBar Kind="k" OnAdd="() => Show<GroupForm>(null)" />
-            <Rows Items="@Filter(t.Groups.Select(g => Row.Of(g.Id, g.Name, g.Colour, (t.Programmes.Find(g.ProgrammeId)?.Name ?? "No programme") + $" · {t.Students.Count(s => s.GroupId == g.Id)} students")))" OnOpen="id => Show<GroupForm>(id)" />
+            <Rows Items="@Filter(t.Groups.Select(g => Row.Of(g.Id, g.Name, g.Colour, (t.Programmes.Find(g.ProgrammeId)?.Name ?? "No programme") + " · " + Looks.Count(t.Students.Count(s => s.GroupId == g.Id), "student"))))" OnOpen="id => Show<GroupForm>(id)" />
             break;
         case "students":
             <AddBar Kind="k" OnAdd="() => Show<StudentForm>(null)"><button type="button" class="btn" @onclick="() => D.Show<ImportPeopleForm>(new Dictionary<string, object?> { [nameof(ImportPeopleForm.Students)] = true })" data-testid="import-people">Import from a spreadsheet…</button></AddBar>
@@ -55,21 +55,21 @@ else
                 <button type="button" class="btn" @onclick="() => Show<BranchForm>(null)">Add a branch…</button>
             </AddBar>
             <h2>Branches</h2>
-            <Rows Items="@Filter(t.Branches.Select(b => Row.Of(b.Id, b.Name, b.Colour, $"{t.Disciplines.Count(d => d.BranchId == b.Id)} disciplines")))" OnOpen="id => Show<BranchForm>(id)" />
+            <Rows Items="@Filter(t.Branches.Select(b => Row.Of(b.Id, b.Name, b.Colour, Looks.Count(t.Disciplines.Count(d => d.BranchId == b.Id), "discipline"))))" OnOpen="id => Show<BranchForm>(id)" />
             <h2 style="margin-top:16px">Disciplines</h2>
-            <Rows Items="@Filter(t.Disciplines.Select(d => Row.Of(d.Id, d.Name, d.Colour, (t.Branches.Find(d.BranchId)?.Name ?? "No branch") + $" · {t.Students.Count(s => s.DisciplineId == d.Id)} students")))" OnOpen="id => Show<DisciplineForm>(id)" />
+            <Rows Items="@Filter(t.Disciplines.Select(d => Row.Of(d.Id, d.Name, d.Colour, (t.Branches.Find(d.BranchId)?.Name ?? "No branch") + " · " + Looks.Count(t.Students.Count(s => s.DisciplineId == d.Id), "student"))))" OnOpen="id => Show<DisciplineForm>(id)" />
             break;
         case "time-rules":
             <p class="hint">Time a facilitator is credited beyond teaching. Preparation: the rule's classes earn a share of their length for each person in the room, never divided between co-teachers. Break: fixed minutes to whoever meets the rule's condition that day. Reported beside teaching hours, and counted towards the limit.</p>
             <AddBar Kind="k" OnAdd="() => Show<TimeRuleForm>(null)" />
-            <Rows Items="@Filter(t.TimeRules.Select(r => Row.Of(r.Id, r.DisplayName, null, r.Kind == TimeRuleKind.Preparation ? $"{r.Percent}% of {r.ClassIds.Count} classes" : $"{r.Minutes} min on {string.Join(", ", r.Days.Select(DomainWeek.ShortDay))}")))" OnOpen="id => Show<TimeRuleForm>(id)" />
+            <Rows Items="@Filter(t.TimeRules.Select(r => Row.Of(r.Id, r.DisplayName, null, r.Kind == TimeRuleKind.Preparation ? $"{r.Percent}% of {Looks.Count(r.ClassIds.Count, "class", "classes")}" : $"{r.Minutes} min on {string.Join(", ", r.Days.Select(DomainWeek.ShortDay))}")))" OnOpen="id => Show<TimeRuleForm>(id)" />
             break;
         case "semesters":
             <AddBar Kind="k" OnAdd="() => Show<SemesterForm>(null)">
                 <button type="button" class="btn" @onclick="() => Show<ClosureForm>(null)">Add a closure…</button>
             </AddBar>
             <h2>Semesters</h2>
-            <Rows Items="@Filter(t.Semesters.OrderBy(s => s.FirstMonday).Select(s => Row.Of(s.Id, s.Name, null, $"{DomainWeek.ShortDate(s.FirstMonday)} – {DomainWeek.ShortDate(s.LastMonday.AddDays(6))}, {s.WeekCount} weeks")), sorted: false)" OnOpen="id => Show<SemesterForm>(id)" />
+            <Rows Items="@Filter(t.Semesters.OrderBy(s => s.FirstMonday).Select(s => Row.Of(s.Id, s.Name, null, $"{DomainWeek.ShortDate(s.FirstMonday)} – {DomainWeek.ShortDate(s.LastMonday.AddDays(6))}, {Looks.Count(s.WeekCount, "week")}")), sorted: false)" OnOpen="id => Show<SemesterForm>(id)" />
             <h2 style="margin-top:16px">Closures</h2>
             <Rows Items="@Filter(t.Closures.OrderBy(c => c.From).Select(c => Row.Of(c.Id, c.Name, null, DomainWeek.ShortDate(c.From) + (c.To != c.From ? " – " + DomainWeek.ShortDate(c.To) : "") + (c.Scope == ClosureScope.Groups ? (c.GroupIds.Count == 0 ? " · closes nothing (no groups chosen)" : " · " + string.Join(", ", c.GroupIds.Select(g => t.Groups[g]?.Name ?? "?"))) : " · whole building"))), sorted: false)" OnOpen="id => Show<ClosureForm>(id)" />
             break;

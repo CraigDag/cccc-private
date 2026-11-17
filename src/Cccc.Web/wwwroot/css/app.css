@@ -342,7 +342,13 @@ a.need { text-decoration: none; }
     position: relative; height: calc(var(--lanes, 1) * var(--lane) + 6px);
     background-image: repeating-linear-gradient(to right, var(--rule) 0 1px, transparent 1px calc(100% / var(--hours, 12)));
 }
-.tl-now { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--accent); z-index: 2; pointer-events: none; }
+/* Beneath the classes (z-index 1), so it never crosses a class's words; the ruler's pill says where it is. */
+.tl-now { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--accent); z-index: 0; pointer-events: none; }
+.tl-now-head {
+    position: absolute; top: 7px; transform: translateX(-50%); z-index: 1; padding: 1px 6px; border-radius: 999px;
+    background: var(--accent); color: var(--panel); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+    pointer-events: none; white-space: nowrap; box-shadow: 0 0 0 6px var(--panel);   /* hides the hour it sits on */
+}
 .tl-closed { padding: 8px 12px; background: var(--warning-soft); color: var(--warning); font-weight: 600; border-bottom: 1px solid var(--divider); }
 .tl-events .tl-label { font-size: 11px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--text-quiet); }
 .tl-event {

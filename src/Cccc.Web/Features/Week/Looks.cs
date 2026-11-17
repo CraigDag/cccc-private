@@ -17,6 +17,12 @@ public static class Looks
 
     public static string When(Session s) => $"{Week.Hm(s.Start)}–{Week.Hm(s.End)}";
 
+    /// <summary>"1 group", "3 groups": a count with its noun, singular for exactly one.</summary>
+    public static string Count(int n, string one, string? many = null) => $"{n} {(n == 1 ? one : many ?? one + "s")}";
+
+    /// <summary>"a space", "an area": a noun with the article it takes. Enough for the app's own nouns.</summary>
+    public static string A(string noun) => (noun.Length > 0 && "aeiouAEIOU".Contains(noun[0]) ? "an " : "a ") + noun;
+
     public static string WhenWithDay(Session s) => $"{Week.ShortDate(s.Date)}, {When(s)}";
 
     public static string Room(Timetable t, Session s) => t.Rooms.Find(s.RoomId)?.Name ?? "";

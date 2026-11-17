@@ -68,7 +68,8 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   takes the whole import back.
 - **Reports download as spreadsheets** (Hours, and Attendance) for whatever weeks are chosen, with
   each time rule in its own column and Æ Ø Å intact in Excel.
-- **The line at "now"** on today's column moves by itself through the day.
+- **The line at "now"** moves by itself through the day, runs beneath the classes so it never crosses
+  their names, and the time sits on the ruler above it.
 - **Bring in a file…** reads the current app's `.cccc` (every version) and says what came across.
 
 - **The end-of-day register reminder email** is here, off until it is switched on, with a Preview mode
