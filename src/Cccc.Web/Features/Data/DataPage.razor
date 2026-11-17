@@ -35,11 +35,11 @@ else
             <Rows Items="@Filter(t.Groups.Select(g => Row.Of(g.Id, g.Name, g.Colour, (t.Programmes.Find(g.ProgrammeId)?.Name ?? "No programme") + $" · {t.Students.Count(s => s.GroupId == g.Id)} students")))" OnOpen="id => Show<GroupForm>(id)" />
             break;
         case "students":
-            <AddBar Kind="k" OnAdd="() => Show<StudentForm>(null)" />
+            <AddBar Kind="k" OnAdd="() => Show<StudentForm>(null)"><button type="button" class="btn" @onclick="() => D.Show<ImportPeopleForm>(new Dictionary<string, object?> { [nameof(ImportPeopleForm.Students)] = true })" data-testid="import-people">Import from a spreadsheet…</button></AddBar>
             <Rows Items="@Filter(t.Students.Select(s => Row.Of(s.Id, s.Name, t.Groups.Find(s.GroupId)?.Colour, (t.Groups.Find(s.GroupId)?.Name ?? "No group") + (t.Disciplines.Find(s.DisciplineId) is { } dd ? " · " + dd.Name : ""))))" OnOpen="id => Show<StudentForm>(id)" />
             break;
         case "facilitators":
-            <AddBar Kind="k" OnAdd="() => Show<FacilitatorForm>(null)" />
+            <AddBar Kind="k" OnAdd="() => Show<FacilitatorForm>(null)"><button type="button" class="btn" @onclick="() => D.Show<ImportPeopleForm>(new Dictionary<string, object?> { [nameof(ImportPeopleForm.Students)] = false })" data-testid="import-people">Import from a spreadsheet…</button></AddBar>
             <Rows Items="@Filter(t.Facilitators.Select(f => Row.Of(f.Id, f.Name + (f.IsGuest ? " (guest)" : ""), f.Colour, f.Initials + (f.MaxWeeklyHours is { } m ? " · up to " + DomainWeek.Duration(m) + " a week" : ""))))" OnOpen="id => Show<FacilitatorForm>(id)" />
             break;
         case "classes":

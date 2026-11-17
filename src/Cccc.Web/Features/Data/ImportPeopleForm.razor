@@ -1,0 +1,51 @@
+@inject Dialogs D
+<DialogFrame Title="@(Students ? "Import students" : "Import facilitators")" Class="wide" OkLabel="@OkWords()" OnOk="Save" OkEnabled="@(_lines.Any(l => !l.Skipped))">
+    <ChildContent>
+        <p class="hint">
+            Copy the rows in Excel (or any spreadsheet) and paste them here, one person a line, in these columns:
+            <b>@(Students ? PeopleImport.StudentColumns : PeopleImport.FacilitatorColumns)</b>. A heading row is fine.
+            Nothing is added until you press OK, and one Undo takes the whole import back.
+        </p>
+        <label class="field"><span>Rows</span>
+            <textarea rows="8" @bind="_text" @bind:after="Preview" spellcheck="false" data-testid="import-people-text"></textarea>
+        </label>
+        <div class="bar"><button type="button" class="btn" @onclick="Preview" data-testid="import-people-preview">Preview</button></div>
+        @if (_lines.Count > 0)
+        {
+            <table class="grid-table" data-testid="import-people-preview-table">
+                <thead><tr><th>Line</th><th>Will add</th><th>Note</th></tr></thead>
+                <tbody>
+                    @foreach (var l in _lines)
+                    {
+                        <tr class="@(l.Skipped ? "off" : "")">
+                            <td class="num">@l.LineNumber</td>
+                            <td>@(l.Student is { } s ? s.Name + (s.GroupId is { } g ? " · " + W.T.Groups[g]?.Name : "") : l.Facilitator is { } f ? f.Name : "Left out: " + l.Text)</td>
+                            <td class="@(l.Note is null ? "" : l.Skipped ? "muted" : "form-error")">@l.Note</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </ChildContent>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public bool Students { get; set; }
+    private string _text = "";
+    private IReadOnlyList<ImportLine> _lines = [];
+
+    private void Preview() =>
+        _lines = Students ? PeopleImport.Students(W.T, _text) : PeopleImport.Facilitators(W.T, _text);
+
+    private string OkWords()
+    {
+        var n = _lines.Count(l => !l.Skipped);
+        return n == 0 ? "OK" : n == 1 ? "Add 1 person" : $"Add {n} people";
+    }
+
+    private void Save()
+    {
+        Preview();   // against the timetable as it is now, in case somebody added a person meanwhile
+        if (W.Commit(t => PeopleImport.Apply(t, _lines))) D.Close();
+    }
+}

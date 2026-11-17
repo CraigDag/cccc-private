@@ -128,3 +128,32 @@ public class LateNewsTests
         Assert.DoesNotContain(cleo.Id, t.Registers[s.Id]!.ExcusedIds);          // not on the list it was taken against
     }
 }
+
+public class PeopleImportTests
+{
+    [Fact]
+    public void PastedRowsFromExcelBecomeStudentsInTheirGroupsAndOneUndoableChange()
+    {
+        var b = new Build();
+        var g = b.Group("BA 1");
+        b.Student("Ada", g);                                             // "Ada Test" is already on the list
+        const string pasted = "First name\tSurname\tEmail\tGroup\nBo\tLind\tbo@example.invalid\tba 1\nAda\tTest\t\t\nCleo\tMarr\t\tBA 9\nDag\n";
+        var lines = PeopleImport.Students(b.T, pasted);
+        Assert.Equal(4, lines.Count);                                    // heading left out
+        Assert.Equal(g.Id, lines[0].Student!.GroupId);                   // group matched regardless of case
+        Assert.True(lines[1].Skipped);                                   // already there
+        Assert.Null(lines[2].Student!.GroupId);
+        Assert.Contains("No group called", lines[2].Note);
+        Assert.True(lines[3].Skipped);                                   // no surname
+        var batch = PeopleImport.Apply(b.T, lines);
+        Assert.Equal("Imported 2 people", batch.Label);
+        Assert.Equal(3, Apply.Batch(b.T, batch).Students.Count);
+    }
+
+    [Fact]
+    public void AStudentCalledFirstIsNotTakenForAHeadingAndQuotedCommasStayInOneCell()
+    {
+        var lines = PeopleImport.Students(new Build().T, "First,Last\n\"Ng, Jr\",Kim");
+        Assert.Equal(["First", "Ng, Jr"], lines.Select(l => l.Student!.FirstName));
+    }
+}
