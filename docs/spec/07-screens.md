@@ -82,7 +82,7 @@ covering*), who changed it and when, from `Recent`; then today's events and what
 - A day strip: the days of the week as chips (an empty weekend is left out), each with its number of
   classes and a dot when something on it needs attention; ‹ › or Alt+← → step a day, skipping an empty
   weekend, or a week when a week is on screen; *Today*; a date box to jump.
-- **Lens**: Spaces · Groups · People. **Scale**: Day · Week.
+- **Lens**: Spaces · Groups · People. **Scale**: Day · Week · Term.
 - The **day timeline**: rows grouped (spaces by category, groups by programme, people as facilitators
   then students when asked for), hours across, a line at now (beneath the classes, so it never crosses
   their names, with the time in a pill on the ruler above it). Click a block to look at it; double-click
@@ -99,6 +99,23 @@ covering*), who changed it and when, from `Recent`; then today's events and what
   heading to open that day.
 - **Issues** (a count beside the lens): clashes, cover needed and missing registers for what is on
   screen; choosing one opens that class.
+- The **term at a glance** (Term, or *Show the whole semester* in Ctrl+K, which also answers *term*):
+  every week of the semester a column, the semesters as chips in place of the days, and ‹ › a semester
+  at a time. Four rows for every week first: **Classes** (how many happen; *Blank*, or *Closed* and why),
+  **Different** (how many classes are new, gone or changed since the week before with anything in it,
+  or *Same*), **Issues** and **Events**. Then the lens's rows, each week's figure shaded by its share of
+  the term's fullest week, so a row reads across as the shape of its term: hours each space is in use;
+  each group's counted hours, orange when short of the target, with how many students are short; each
+  person's hours (an administrator's, and a person's own row) or how many classes (anybody else's), over
+  their limit in orange. A **Total** column beside the weeks adds each row up for the semester (the weeks
+  short or over said under it), and the classes, issues and events too. A week's heading or figure opens that week; Issues opens it with its issues
+  listed; a row's figure opens that thing's week narrowed to it. **Different** opens a list, one line a
+  class, *New*, *Gone* or *Changed* with what changed (*Was 09:00–10:30 · was in Studio A*), each
+  opening that class on its day. The next blank week ahead says **Fill…** (any blank week ahead does on
+  a hover), which opens *Copy this week to…* from the week before it with that week already ticked. A
+  week that has ended is tinted, this week is marked in the accent, a week closed all week is hatched.
+  On a phone it scrolls inside its frame with the names held at the left, opening on the week before
+  this one. A class added from the term opens on its day, chosen.
 - The side panel for a chosen class: title, when, its verbs straight under the title (Edit, Register,
   Cover, Cancel/Restore, Another time…, Duplicate, Copy to Scratch Week, Delete, so they are on a laptop's
   screen however much is said below), then where, who teaches (and who is away), the group and roster

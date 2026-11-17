@@ -30,6 +30,26 @@ public static class ChangeWords
     }
 
     /// <summary>
+    /// What a person reads about a class that is different from the week before, beside the class as it is
+    /// this week (or as it was, if it is not on this week): only what is different, the most telling first.
+    /// </summary>
+    public static string FromTheWeekBefore(Timetable t, WeekChange c)
+    {
+        if (c.Now is not { } now) return "Not on this week";
+        if (c.Was is not { } was) return "New this week";
+        var w = new List<string>();
+        if (c.DayChanged) w.Add("moved from " + was.Date.DayOfWeek);
+        if (c.TimesChanged) w.Add("was " + Looks.When(was));
+        if (c.SpaceChanged) w.Add(now.RoomId is null ? "no space now, was in " + Space(t, was) : was.RoomId is null ? "a space given" : "was in " + Space(t, was));
+        if (c.TeachersChanged) w.Add(Teachers(t, now.FacilitatorIds.Except(was.FacilitatorIds), was.FacilitatorIds.Except(now.FacilitatorIds)));
+        else if (c.PartsChanged) w.Add("a different part for " + Looks.Names(t, now.Facilitators.Where(a => !was.Facilitators.Contains(a)).Select(a => a.FacilitatorId)));
+        if (c.AudienceChanged) w.Add("now for " + Looks.Audience(t, now) + ", was " + Looks.Audience(t, was));
+        if (c.TitleChanged) w.Add("was called " + was.DisplayTitle);
+        var line = string.Join(" · ", w);
+        return line.Length == 0 ? "Changed" : char.ToUpperInvariant(line[0]) + line[1..];
+    }
+
+    /// <summary>
     /// The changed classes a facilitator had today when the window opened and does not have today now:
     /// moved to another day, deleted, or given to somebody else. Their own day lists these too.
     /// </summary>

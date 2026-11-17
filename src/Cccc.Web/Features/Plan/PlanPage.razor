@@ -17,6 +17,9 @@
     bool editable = W.Access.MayEdit && !m.Locked;
     var semester = t.SemesterFor(V.Monday);
     int issues = m.IssueCount(V.Scale == Scale.Day ? V.Day : null);
+    // The Scratch Week is one week: it has no semester to lay out, so a tab on it shows the week.
+    bool term = V.Scale == Scale.Term && !m.Scratch;
+    var tm = term ? Term(t) : null;
 }
 
 <div class="plan @(m.Scratch ? "scratch" : "")" data-testid="plan-page" data-day="@V.Day.ToString("yyyy-MM-dd")" data-lens="@V.Lens" data-scale="@V.Scale" data-scratch="@(m.Scratch ? "1" : "0")">
@@ -29,6 +32,13 @@
                     <span class="badge scratch-badge">A plan</span> Nothing in it counts until it is placed onto a week: no hours, registers, cover or clashes with the real timetable.
                     <FollowingNotice Badge="true" />
                 </div>
+            }
+            else
+            {
+            @if (tm is not null)
+            {
+            <h1 class="display" data-testid="plan-title">@(V.Focus is { } tf ? tf.Name + "’s " + (tm.Semester?.Name ?? "weeks") : tm.Semester?.Name ?? "Week by week")</h1>
+            <div class="muted" data-testid="term-range">@TermRange(tm) · @Looks.Count(tm.Weeks.Count, "week") side by side<FollowingNotice Badge="true" /></div>
             }
             else
             {
@@ -53,7 +63,8 @@
                 <FollowingNotice Badge="true" />
             </div>
             }
-            @if (V.Focus is { } focused && Cccc.Domain.Week.MondayOf(W.Today) == V.Monday)
+            }
+            @if (!term && V.Focus is { } focused && Cccc.Domain.Week.MondayOf(W.Today) == V.Monday)
             {
                 <FocusNow Focus="focused" Choose="Choose" />
             }
@@ -91,7 +102,7 @@
                             <button type="button" disabled="@(m.T.Sessions.Count == 0)" @onclick="() => D.Show<Cccc.Web.Features.Scratch.PlaceForm>()" data-testid="scratch-place">Place onto a week…</button>
                             <button type="button" disabled="@(m.T.Sessions.Count == 0)" @onclick="() => D.Show<Cccc.Web.Features.Scratch.EmptyForm>()" data-testid="scratch-empty">Empty Scratch Week…</button>
                         }
-                        else if (W.Access.MayEdit)
+                        else if (W.Access.MayEdit && !term)
                         {
                             <div class="menu-label">Copy</div>
                             <button type="button" disabled="@m.Locked" @onclick="() => D.Show<CopyDayForm>(new Dictionary<string, object?> { [nameof(CopyDayForm.Monday)] = V.Monday })">Copy a day…</button>
@@ -102,8 +113,8 @@
                             }
                             <button type="button" @onclick="() => D.Show<ClearAfterForm>()">Clear the weeks after this one…</button>
                         }
-                        @* The Scratch Week is on no printout: nothing in it is real. *@
-                        @if (!m.Scratch)
+                        @* The Scratch Week is on no printout: nothing in it is real. The term has no one week to print. *@
+                        @if (!m.Scratch && !term)
                         {
                         <div class="menu-label">Print this week</div>
                         <a href="@PrintLink("week")" target="_blank" rel="noopener">As a calendar</a>
@@ -120,7 +131,10 @@
                         }
                         }
                         <div class="menu-label">Show</div>
-                        <button type="button" @onclick="() => { V.ShowOpen = !V.ShowOpen; V.Changed(); }" data-testid="toggle-open">@(V.ShowOpen ? "✓ " : "")Open sessions</button>
+                        @if (!term)
+                        {
+                            <button type="button" @onclick="() => { V.ShowOpen = !V.ShowOpen; V.Changed(); }" data-testid="toggle-open">@(V.ShowOpen ? "✓ " : "")Open sessions</button>
+                        }
                         <button type="button" @onclick="() => { V.ShowGuests = !V.ShowGuests; V.Changed(); }" data-testid="toggle-guests">@(V.ShowGuests ? "✓ " : "")Guest groups</button>
                     </div>
                 }
@@ -128,6 +142,26 @@
         </div>
     </header>
 
+    @if (tm is not null)
+    {
+    <nav class="day-strip" aria-label="Semesters" data-testid="term-strip">
+        <button type="button" class="btn icon quiet" @onclick="() => Step(-1)" aria-label="Previous" data-testid="day-previous">‹</button>
+        @foreach (var s in t.Semesters.OrderBy(s => s.FirstMonday))
+        {
+            <button type="button" class="term-chip @(s.Id == tm.Semester?.Id ? "on" : "") @(s.Contains(W.Today) ? "today" : "")" @onclick="() => OpenSemester(s)" data-testid="term-chip" aria-current="@(s.Id == tm.Semester?.Id ? "true" : null)">
+                <span class="tc-name">@s.Name</span>
+                <span class="tc-when">@s.FirstMonday.ToString("MMM yyyy", System.Globalization.CultureInfo.InvariantCulture) · @Looks.Count(s.WeekCount, "week")</span>
+            </button>
+        }
+        <button type="button" class="btn icon quiet" @onclick="() => Step(1)" aria-label="Next" data-testid="day-next">›</button>
+        @if (!tm.Weeks.Any(w => w.IsThisWeek(W.Today)))
+        {
+            <button type="button" class="btn quiet" @onclick="() => V.GoTo(W.Today)" data-testid="today">This semester</button>
+        }
+    </nav>
+    }
+    else
+    {
     <nav class="day-strip" aria-label="Days of the week" data-testid="day-strip">
         @if (!m.Scratch || V.Scale == Scale.Day)
         {
@@ -164,6 +198,7 @@
             <input type="date" class="day-date" value="@V.Day.ToString("yyyy-MM-dd")" @onchange="OnDate" aria-label="Go to a date" data-testid="day-date" />
         }
     </nav>
+    }
 
     <div class="plan-bar">
         <div class="seg" role="group" aria-label="Rows are">
@@ -173,22 +208,46 @@
         </div>
         <div class="seg" role="group" aria-label="Show">
             <button type="button" class="@(V.Scale == Scale.Day ? "on" : "")" @onclick="() => { V.Scale = Scale.Day; V.Changed(); }" data-testid="scale-day">Day</button>
-            <button type="button" class="@(V.Scale == Scale.Week ? "on" : "")" @onclick="() => { V.Scale = Scale.Week; V.Changed(); }" data-testid="scale-week">Week</button>
+            <button type="button" class="@(V.Scale == Scale.Week || (V.Scale == Scale.Term && m.Scratch) ? "on" : "")" @onclick="() => { V.Scale = Scale.Week; V.Changed(); }" data-testid="scale-week">Week</button>
+            @if (!m.Scratch)
+            {
+                <button type="button" class="@(term ? "on" : "")" @onclick="() => { V.Scale = Scale.Term; V.Chosen = null; V.IssuesOpen = false; V.Changed(); }" title="Every week of the semester side by side" data-testid="scale-term">Term</button>
+            }
         </div>
         @if (V.Focus is { } f)
         {
             <span class="chip focus" data-testid="focus-chip">@f.Name <button type="button" aria-label="Show everybody again" @onclick="() => V.FocusOn(null)">×</button></span>
         }
         <span class="grow"></span>
-        @if (m.HiddenGuests > 0)
+        @if (tm is not null)
+        {
+            @if (tm.HiddenGuestGroups > 0)
+            {
+                <button type="button" class="count quiet" @onclick="() => { V.ShowGuests = true; V.Changed(); }" data-testid="guests-hidden">@tm.HiddenGuestGroups guest @(tm.HiddenGuestGroups == 1 ? "group" : "groups") hidden</button>
+            }
+        }
+        else if (m.HiddenGuests > 0)
         {
             <button type="button" class="count quiet" @onclick="() => { V.ShowGuests = true; V.Changed(); }" data-testid="guests-hidden">@m.HiddenGuests guest @(m.HiddenGuests == 1 ? "class" : "classes") hidden</button>
         }
+        @if (!term)
+        {
         <button type="button" class="count issues @(issues > 0 ? "warn" : "") @(V.IssuesOpen ? "open" : "")" @onclick="() => { V.IssuesOpen = !V.IssuesOpen; V.Chosen = null; V.Changed(); }" data-testid="issues-button">
             @(issues == 0 ? "No issues" : issues == 1 ? "1 issue" : $"{issues} issues")
         </button>
+        }
     </div>
 
+    @if (tm is not null)
+    {
+    <div class="plan-body">
+        <div class="plan-main">
+            <TermGrid M="tm" W="W" Lens="V.Lens" OpenWeek="OpenWeek" OpenIssues="OpenWeekIssues" OpenRow="OpenTermRow" />
+        </div>
+    </div>
+    }
+    else
+    {
     <div class="plan-body @(V.Chosen is not null || V.IssuesOpen ? "with-side" : "")">
         <div class="plan-main">
             @if (m.Scratch)
@@ -244,21 +303,22 @@
                 {
                     <p class="muted">Nothing needs attention. Clashes, classes needing cover and registers still to take would be listed here.</p>
                 }
-                @foreach (var c in m.Clashes.Where(c => V.Scale == Scale.Week || c.SessionIds.Any(i => m.Find(i)?.Date == V.Day)))
+                @foreach (var c in m.Clashes.Where(c => V.Scale != Scale.Day || c.SessionIds.Any(i => m.Find(i)?.Date == V.Day)))
                 {
                     <button type="button" class="issue" @onclick="() => Choose(c.SessionIds[0])" data-testid="issue"><span class="issue-kind">Clash</span>@c.Description</button>
                 }
-                @foreach (var o in m.CoverNeeded.Where(o => V.Scale == Scale.Week || o.Date == V.Day))
+                @foreach (var o in m.CoverNeeded.Where(o => V.Scale != Scale.Day || o.Date == V.Day))
                 {
                     <button type="button" class="issue" @onclick="() => Choose(o.Session.Id)" data-testid="issue"><span class="issue-kind">Cover</span>@Looks.Title(t, o.Session), @Looks.WhenWithDay(o.Session)</button>
                 }
-                @foreach (var o in m.RegistersToFile.Where(o => V.Scale == Scale.Week || o.Date == V.Day))
+                @foreach (var o in m.RegistersToFile.Where(o => V.Scale != Scale.Day || o.Date == V.Day))
                 {
                     <button type="button" class="issue" @onclick="() => Choose(o.Session.Id)" data-testid="issue"><span class="issue-kind">Register</span>@Looks.Title(t, o.Session), @Looks.WhenWithDay(o.Session)</button>
                 }
             </aside>
         }
     </div>
+    }
 </div>
 
 @code {
@@ -385,10 +445,20 @@
         if (V.InScratch)
         {
             // The Scratch Week is one week: a day steps inside it and stops at its ends.
-            if (V.Scale == Scale.Week || _m?.RowsAreDays == true) return;
+            if (V.Scale != Scale.Day || _m?.RowsAreDays == true) return;
             var day = V.Day.AddDays(dir);
             while (Cccc.Domain.Week.IsScratch(day) && day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday && !sessions.Any(s => s.Date == day)) day = day.AddDays(dir);
             if (Cccc.Domain.Week.IsScratch(day)) V.GoTo(day);
+            return;
+        }
+        // The term steps a semester at a time; with no semesters, as many weeks as it lays out.
+        if (V.Scale == Scale.Term)
+        {
+            var semesters = W.T.Semesters.OrderBy(x => x.FirstMonday).ToList();
+            var at = W.T.SemesterNear(V.Day);
+            int i = at is null ? -1 : semesters.FindIndex(x => x.Id == at.Id);
+            if (i >= 0 && i + dir >= 0 && i + dir < semesters.Count) OpenSemester(semesters[i + dir]);
+            else if (i < 0) V.GoTo(V.Day.AddDays(7 * TermModel.WeeksFor(W.T, V.Day).Count * dir));
             return;
         }
         // A week on screen, or one person's week as rows, steps a week at a time.
@@ -403,6 +473,58 @@
     {
         V.Scale = Scale.Day;
         if (d == V.Day) V.Changed(); else V.GoTo(d);
+    }
+
+    /// <summary>A semester's weeks: today, when it is in it, or its first week.</summary>
+    private void OpenSemester(Semester s) => V.GoTo(s.Contains(W.Today) ? W.Today : s.FirstMonday);
+
+    /// <summary>From the term to one week, on the day of it the tab would land on: today in this week, else its Monday.</summary>
+    private void OpenWeek(DateOnly monday)
+    {
+        V.Scale = Scale.Week;
+        V.GoTo(Cccc.Domain.Week.MondayOf(W.Today) == monday ? W.Today : monday);
+        V.Changed();
+    }
+
+    private void OpenWeekIssues(DateOnly monday)
+    {
+        OpenWeek(monday);
+        V.IssuesOpen = true;
+        V.Changed();
+    }
+
+    /// <summary>From a row's figure to that space's, group's or person's week, as Find narrows the plan to one.</summary>
+    private void OpenTermRow((TermRow Row, DateOnly Monday) at)
+    {
+        V.Scale = Scale.Day;
+        V.GoTo(Cccc.Domain.Week.MondayOf(W.Today) == at.Monday ? W.Today : at.Monday);
+        V.FocusOn(new Focus(at.Row.Kind, at.Row.Id, at.Row.Name));
+    }
+
+    private (Timetable T, DateOnly First, Lens Lens, Focus? Focus, bool Guests, DateOnly Today, Access Access)? _termKey;
+    private TermModel? _term;
+
+    /// <summary>The term at a glance, worked out once for what the tab is looking at, and again only when that or the timetable changes.</summary>
+    private TermModel Term(Timetable t)
+    {
+        var key = (t, TermModel.WeeksFor(t, V.Day)[0], V.Lens, V.Focus, V.ShowGuests, W.Today, W.Access);
+        if (_term is null || _termKey is not { } k || !ReferenceEquals(k.T, t) || k != key)
+        {
+            _term = TermModel.Build(t, V, W.Access, W.Today);
+            _termKey = key;
+        }
+        return _term;
+    }
+
+    /// <summary>"19 October 2026 – 21 February 2027": the first Monday to the last Sunday laid out.</summary>
+    private static string TermRange(TermModel tm)
+    {
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var first = tm.Weeks[0].Monday;
+        var last = tm.Weeks[^1].Monday.AddDays(6);
+        return first.Year == last.Year
+            ? $"{first.Day} {first.ToString("MMMM", inv)} – {last.Day} {last.ToString("MMMM yyyy", inv)}"
+            : $"{first.Day} {first.ToString("MMMM yyyy", inv)} – {last.Day} {last.ToString("MMMM yyyy", inv)}";
     }
 
     private void SetLens(Lens l)

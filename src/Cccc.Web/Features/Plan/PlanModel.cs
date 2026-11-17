@@ -10,7 +10,8 @@ namespace Cccc.Web.Features.Plan;
 /// <summary>What the rows of the plan are: the question being asked of the timetable.</summary>
 public enum Lens { Spaces, Groups, People }
 
-public enum Scale { Day, Week }
+/// <summary>How much of the timetable the plan shows: a day, a week, or the weeks of a semester side by side.</summary>
+public enum Scale { Day, Week, Term }
 
 /// <summary>A thing the plan is narrowed to, from Find: a person's day, a space's day, a group's day.</summary>
 public sealed record Focus(string Kind, Guid Id, string Name);

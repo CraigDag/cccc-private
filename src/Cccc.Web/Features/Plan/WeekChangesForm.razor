@@ -1,0 +1,68 @@
+@using Cccc.Web.Features.Week
+@using Cccc.Web.Features.Now
+@inject Dialogs D
+@inject PlanView PV
+@{
+    var t = W.T;
+    var changes = WeekChanges.Between(t, Earlier, Monday);
+}
+<DialogFrame Title="@($"What is different in week {Cccc.Domain.Week.IsoNumber(Monday)}")" Class="wide week-changes">
+    <p class="muted" data-testid="week-changes-from">
+        Week @Cccc.Domain.Week.IsoNumber(Monday), @Cccc.Domain.Week.Range(Monday), against week @Cccc.Domain.Week.IsoNumber(Earlier), @Cccc.Domain.Week.Range(Earlier)@(Earlier.AddDays(7) == Monday ? "" : ", the last week before it with anything in it").
+        A class cancelled, closed or covered is the week happening, not its timetable changing, so it is not listed.
+    </p>
+    @if (changes.Count == 0)
+    {
+        <p class="notice" data-testid="week-changes-none">Nothing is different: every class is on the same day, at the same times, in the same space, with the same people, for the same groups.</p>
+    }
+    else
+    {
+        <ul class="wc-list" data-testid="week-changes">
+            @foreach (var c in changes)
+            {
+                var s = c.Either;
+                <li>
+                    <button type="button" class="wc-row @(c.Kind switch { WeekChangeKind.Added => "added", WeekChangeKind.Gone => "gone", _ => "changed" })" @onclick="() => Show(c)" data-testid="week-change" data-kind="@c.Kind">
+                        <span class="wc-kind">@(c.Kind switch { WeekChangeKind.Added => "New", WeekChangeKind.Gone => "Gone", _ => "Changed" })</span>
+                        <span class="wc-what">
+                            <b style="--c:@(Looks.ColourOf(t, s) ?? "var(--rule)")">@Looks.Title(t, s)</b>
+                            <span class="wc-when">@Cccc.Domain.Week.ShortDay(s.Date.DayOfWeek) @Looks.When(s)@(Looks.Room(t, s) is { Length: > 0 } r ? ", " + r : "") · @Looks.Audience(t, s)</span>
+                            @if (c.Kind == WeekChangeKind.Changed)
+                            {
+                                <span class="wc-words">@ChangeWords.FromTheWeekBefore(t, c)</span>
+                            }
+                        </span>
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+
+    /// <summary>The week looked at.</summary>
+    [Parameter] public DateOnly Monday { get; set; }
+
+    /// <summary>The week it is compared with.</summary>
+    [Parameter] public DateOnly Earlier { get; set; }
+
+    /// <summary>
+    /// To the class on the plan: where it is this week, or where it was the week before when it has gone. A class
+    /// asked for is drawn: with the guests or the open sessions when it is one of them, and without a narrowing
+    /// it is not under.
+    /// </summary>
+    private void Show(WeekChange c)
+    {
+        var t = W.T;
+        var s = c.Either;
+        PV.Scale = Scale.Day;
+        PV.GoTo(s.Date);
+        if (Guests.IsGuestOnly(t, s)) PV.ShowGuests = true;
+        if (Hours.WorkloadOf(t, s) == Workload.DropIn) PV.ShowOpen = true;
+        if (PV.Focus is not null && !PlanModel.Build(t, PV, W.Access, W.Today).Bars.Any(b => b.O.Session.Id == s.Id)) PV.FocusOn(null);
+        PV.Chosen = s.Id;
+        PV.Changed();
+        D.Close();
+    }
+}

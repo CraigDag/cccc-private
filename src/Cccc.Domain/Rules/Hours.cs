@@ -263,11 +263,21 @@ public static class Hours
     /// (a school with no semesters at all is never outside one); or the student is in a visiting
     /// programme, whose week is not the school's own curriculum.
     /// </summary>
-    public static TimeSpan? StudentTarget(Timetable t, DateOnly anyDateInWeek, Guid studentId)
+    public static TimeSpan? StudentTarget(Timetable t, DateOnly anyDateInWeek, Guid studentId) =>
+        t.Students[studentId] is { } st ? GroupTarget(t, anyDateInWeek, st.GroupId) : WeekTarget(t, anyDateInWeek);
+
+    /// <summary>The target for a group's students that week: the week's, unless the group is in a visiting programme.</summary>
+    public static TimeSpan? GroupTarget(Timetable t, DateOnly anyDateInWeek, Guid? groupId)
+    {
+        if (groupId is { } gid && t.Groups[gid] is { } g && t.Programmes.Find(g.ProgrammeId) is { IsGuest: true }) return null;
+        return WeekTarget(t, anyDateInWeek);
+    }
+
+    /// <summary>The school's weekly target, for a week inside a semester (or any week, when there are no semesters).</summary>
+    public static TimeSpan? WeekTarget(Timetable t, DateOnly anyDateInWeek)
     {
         if (t.Settings.WeeklyScheduledTarget is not { } target) return null;
         if (t.Semesters.Count > 0 && t.SemesterFor(anyDateInWeek) is null) return null;
-        if (t.Students[studentId]?.GroupId is { } gid && t.Groups[gid] is { } g && t.Programmes.Find(g.ProgrammeId) is { IsGuest: true }) return null;
         return target;
     }
 

@@ -37,6 +37,16 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   and *Find a time…* in the add form takes what was typed there along and back. **Another time…** on a
   class looks inside its week and moves it on a press, each person's part with it, marked on the plan as
   moved when ticked; Undo takes it back.
+- **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
+  semester side by side. For each week: how many classes, how many are **different from the week
+  before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and
+  its events, then a row for every space, group or person with that week's hours, shaded so a busy week
+  stands out and a group short of its target is orange with how many students are short, and a total
+  for the semester beside each row (*Ada: 96h, over her limit in 2 weeks*). A week that is
+  still blank says so, and the next one to build says **Fill…**, which copies the week before it in one
+  press. Pressing any figure opens that week, or that person's, group's or space's week; pressing the
+  *different* number lists exactly what changed, each line opening that class. A coach sees how many
+  classes everybody has and only their own hours.
 - **An event in a space books it**: adding a class says *Big Top — booked: Work-in-progress showing
   16:00–17:30* (only *booked*, for an event you may not see) and never offers it as free then.
 - **Registers start with today's classes as big cards**, made to be tapped on a phone in the room. A

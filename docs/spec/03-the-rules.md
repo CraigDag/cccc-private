@@ -187,6 +187,33 @@ nothing to come straight from.
   can say it has moved (`MovedFrom`, kept from the first move and dropped when it goes back there),
   which stays inside its own week: a move to another week is a copy.
 
+## A week against the one before (`WeekChanges`)
+
+- A week is compared with **the last week before it with anything in it**, at most half a year back: a
+  blank week between is a timetable not built yet, not every class gone.
+- **Compared as it is written**: the day, the times, the space, who teaches (and for which part), who it
+  is for, its name. Cancelled, closed and covered are the week happening, not its timetable changing;
+  registers, notes and roster exceptions are not compared. So a week copied from the one before is the
+  same.
+- **The same class is found again by what it is** (its class, else its title): first every pair that is
+  the same, then the same day and groups, then the same day, then the same groups, the nearest time
+  first. What is left over is new or gone.
+
+## The term at a glance (`TermGlance`)
+
+- The weeks of the semester the plan is on, side by side; outside every semester the stretch around the
+  day, at most 30 weeks.
+- **Each week's figures are that week's own rules asked of it**, never a second count: the classes that
+  happen (`Occurrences`), the clashes ringed (`Clashes`), the classes still needing cover (`Cover`), the
+  registers missing that the reader may file (`Registers`), the events the reader may see
+  (`EventSchedule`), each person's hours (`Hours.ByFacilitator`), each group's counted hours (a class
+  named for the group; a whole-building class is never a group's) and how many of its students are short
+  of the target (`Hours.GroupTarget`, `Hours.StudentLoad`).
+- A week is blank, closed (the whole building on all five weekdays) or built. A group closed all week
+  says so, rather than reading nought hours short of its target.
+- Hours are a person's own and an administrator's to see; anybody else reads how many classes. A row is
+  shaded only against what the reader may see, so a shade says nothing of anybody else's hours.
+
 ## Guests (schemas 20 and 21)
 
 - **A guest facilitator is nobody's account**: no link offered, no address match, and an existing link

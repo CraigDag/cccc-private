@@ -132,4 +132,17 @@ public class PlanTests
         Assert.True(a.IndexOf("Åse Dahl") > a.IndexOf("Ada Brink"), string.Join(", ", a));
         Assert.DoesNotContain(FindIndex.Search(b, "", false, false), h => h.Kind == "facilitator");
     }
+
+    [Fact]
+    public void FindReachesAnActionByWhereItLivesAfterEveryNameAndEveryActionItsOwnWordsFind()
+    {
+        var b = new Timetable() with { Facilitators = EntitySet<Facilitator>.Of([new Facilitator { Name = "Ida Termansen" }]) };
+        // "Term" is the plan's button, not the action's name: found by where it lives, after the person.
+        Assert.Equal(["Ida Termansen", "Show the whole semester"], FindIndex.Search(b, "term", mayEdit: false, admin: false).Select(h => h.Label));
+        Assert.Equal("go-term", FindIndex.Search(b, "semester", false, false)[0].Kind);
+        // An action's own words come first: "week" is the whole week by name before the semester it is only near.
+        var week = FindIndex.Search(b, "week", false, false).Select(h => h.Kind).ToList();
+        Assert.Equal(["go-week", "go-term"], week);
+        Assert.Empty(FindIndex.Search(b, "zebra", false, false));
+    }
 }

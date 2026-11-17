@@ -63,6 +63,7 @@ public static class FindIndex
         {
             new("go-today", "Go to today", "Plan", null, null),
             new("go-week", "Show the whole week", "Plan", null, null),
+            new("go-term", "Show the whole semester", "Plan ▸ Term · every week side by side, and what changed", null, null),
             new("go-registers", "Take a register", "Registers", null, null),
         };
         if (mayEdit)
@@ -77,7 +78,13 @@ public static class FindIndex
             actions.Add(new FindHit("go-reports", "Reports", "Hours and attendance", null, null));
         }
         if (q.Length == 0) return actions;
-        foreach (var a in actions) Add(5, a.Label, a);
+        // An action is found by its own words, and then by where it lives ("Plan ▸ Term"), after every name found.
+        foreach (var a in actions)
+        {
+            int s = Score(a.Label);
+            if (s < 0 && a.Detail is { } where && Score(where) is var w and >= 0) s = 3 + w;
+            if (s >= 0) hits.Add((s * 10 + 5, a));
+        }
         return hits.OrderBy(h => h.Rank).ThenBy(h => h.Hit.Label, Cccc.Domain.NameOrder.Comparer).Select(h => h.Hit).Take(max).ToList();
     }
 }

@@ -1,0 +1,210 @@
+@using Cccc.Web.Features.Week
+@using Cccc.Web.Features.Sessions
+@inject Dialogs D
+@inject IJSRuntime JS
+@{
+    // The next blank week to build is the one asked for out loud; any later one is filled from the same press, quietly.
+    var next = M.Weeks.FirstOrDefault(w => w.Blank && Fill(w) is not null)?.Monday;
+}
+<p class="term-measure muted" data-testid="term-measure">@M.Measure</p>
+<div class="term-wrap" @ref="_wrap">
+    <table class="term" data-testid="term-grid" style="--weeks:@M.Weeks.Count">
+        <thead>
+            <tr>
+                <th class="term-corner" scope="col">Week</th>
+                @foreach (var w in M.Weeks)
+                {
+                    <th scope="col" class="@Col(w)">
+                        <button type="button" class="term-week" @onclick="() => OpenWeek.InvokeAsync(w.Monday)" title="@Cccc.Domain.Week.ForDocuments(w.Monday)" data-testid="term-week" data-monday="@Key(w)">
+                            <b>@Cccc.Domain.Week.IsoNumber(w.Monday)</b>
+                            <small>@w.Monday.Day @w.Monday.ToString("MMM", System.Globalization.CultureInfo.InvariantCulture)</small>
+                        </button>
+                    </th>
+                }
+                <th scope="col" class="term-total" title="All the weeks laid out">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="term-sum" data-testid="term-classes">
+                <th scope="row">Classes</th>
+                @foreach (var w in M.Weeks)
+                {
+                    <td class="@Col(w)" data-monday="@Key(w)">
+                        @if (w.ClosedAllWeek is { } shut && w.Happening == 0)
+                        {
+                            <span class="term-closed" title="@shut.Name">Closed<small>@shut.Name</small></span>
+                        }
+                        else if (w.Blank)
+                        {
+                            @if (Fill(w) is { } from)
+                            {
+                                <button type="button" class="term-blank @(w.Monday == next ? "next" : "")" @onclick="() => FillWeek(from, w.Monday)" title="Blank. Copy week @Cccc.Domain.Week.IsoNumber(from) onto it…" data-testid="term-fill">Blank<small>Fill…</small></button>
+                            }
+                            else
+                            {
+                                <span class="term-blank" data-testid="term-blank">Blank</span>
+                            }
+                        }
+                        else
+                        {
+                            <button type="button" class="term-n" @onclick="() => OpenWeek.InvokeAsync(w.Monday)" title="@ClassesTitle(w)">
+                                @w.Happening
+                                @if (w.ClosedDays.Count > 0)
+                                {
+                                    <small class="term-part">@(w.ClosedDays.Count == 1 ? "1 day closed" : $"{w.ClosedDays.Count} days closed")</small>
+                                }
+                            </button>
+                        }
+                    </td>
+                }
+                <td class="term-total" data-testid="term-total">@Sum(M.Weeks.Sum(w => w.Happening))</td>
+            </tr>
+            <tr class="term-sum" data-testid="term-changes">
+                <th scope="row" title="Classes new, gone or moved since the last week before it with anything in it">Different</th>
+                @foreach (var w in M.Weeks)
+                {
+                    <td class="@Col(w)" data-monday="@Key(w)">
+                        @if (!w.Blank && w.ComparedWith is { } before)
+                        {
+                            <button type="button" class="term-n @(w.Changes.Count == 0 ? "quiet" : "")" @onclick="() => ShowChanges(w.Monday, before)" title="Against week @Cccc.Domain.Week.IsoNumber(before)" data-testid="term-change-count">
+                                @(w.Changes.Count == 0 ? "Same" : w.Changes.Count.ToString())
+                            </button>
+                        }
+                    </td>
+                }
+                <td class="term-total"></td>
+            </tr>
+            <tr class="term-sum" data-testid="term-issues">
+                <th scope="row" title="Clashes, classes needing cover and registers still to take">Issues</th>
+                @foreach (var w in M.Weeks)
+                {
+                    <td class="@Col(w)" data-monday="@Key(w)">
+                        @if (w.Issues > 0)
+                        {
+                            <button type="button" class="term-n warn" @onclick="() => OpenIssues.InvokeAsync(w.Monday)" title="@IssueWords(w)" data-testid="term-issue-count">@w.Issues</button>
+                        }
+                        else if (!w.Blank)
+                        {
+                            <span class="term-ok" title="Nothing needs attention">✓</span>
+                        }
+                    </td>
+                }
+                <td class="term-total" data-testid="term-total">@Sum(M.Weeks.Sum(w => w.Issues), warn: true)</td>
+            </tr>
+            <tr class="term-sum" data-testid="term-events">
+                <th scope="row">Events</th>
+                @foreach (var w in M.Weeks)
+                {
+                    <td class="@Col(w)" data-monday="@Key(w)">
+                        @if (w.Events > 0)
+                        {
+                            <button type="button" class="term-n quiet" @onclick="() => OpenWeek.InvokeAsync(w.Monday)">@w.Events</button>
+                        }
+                    </td>
+                }
+                <td class="term-total" data-testid="term-total">@Sum(M.Weeks.Sum(w => w.Events))</td>
+            </tr>
+            @foreach (var part in M.Rows.GroupBy(r => r.Section))
+            {
+                <tr class="term-section"><th colspan="@(M.Weeks.Count + 2)"><span>@(M.Headed ? part.Key : Lens switch { Lens.Spaces => "Spaces", Lens.Groups => "Groups", _ => "People" })</span></th></tr>
+                @foreach (var row in part)
+                {
+                    <tr data-row="@row.Id" data-testid="term-row">
+                        <th scope="row" class="term-label"><span class="spine" style="--c:@(row.Colour ?? "var(--rule)")"></span>@row.Name</th>
+                        @foreach (var w in M.Weeks)
+                        {
+                            var cell = M.Cell(row, w);
+                            <td class="@Col(w)" data-monday="@Key(w)">
+                                @if (cell is not null)
+                                {
+                                    <button type="button" class="term-cell @(cell.Warn ? "warn" : "")" style="--fill:@cell.Fill.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" title="@cell.Title"
+                                            @onclick="() => OpenRow.InvokeAsync((row, w.Monday))" data-testid="term-cell" data-warn="@(cell.Warn ? "1" : "0")">
+                                        @cell.Text
+                                        @if (cell.Note is { } note)
+                                        {
+                                            <small>@note</small>
+                                        }
+                                    </button>
+                                }
+                            </td>
+                        }
+                        <td class="term-total">
+                            @if (M.Total(row) is { } total)
+                            {
+                                <span class="term-sum-cell @(total.Warn ? "warn" : "")" title="@total.Title" data-testid="term-total" data-warn="@(total.Warn ? "1" : "0")">
+                                    @total.Text
+                                    @if (total.Note is { } note)
+                                    {
+                                        <small>@note</small>
+                                    }
+                                </span>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+@code {
+    [Parameter, EditorRequired] public TermModel M { get; set; } = default!;
+    [Parameter, EditorRequired] public Workspace W { get; set; } = default!;
+    [Parameter] public Lens Lens { get; set; }
+    [Parameter] public EventCallback<DateOnly> OpenWeek { get; set; }
+    [Parameter] public EventCallback<DateOnly> OpenIssues { get; set; }
+    [Parameter] public EventCallback<(TermRow Row, DateOnly Monday)> OpenRow { get; set; }
+
+    private ElementReference _wrap;
+    private DateOnly? _scrolledFor;
+
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        var shown = M.Weeks.Count > 0 ? M.Weeks[0].Monday : (DateOnly?)null;
+        if (shown == _scrolledFor) return;
+        _scrolledFor = shown;
+        try { await JS.InvokeVoidAsync("ccccPlan.term", _wrap); }
+        catch (JSDisconnectedException) { }
+    }
+
+    private static string Key(TermWeek w) => w.Monday.ToString("yyyy-MM-dd");
+
+    /// <summary>A summary row's figure for all the weeks: nothing when there is none.</summary>
+    private static RenderFragment Sum(int n, bool warn = false) => b =>
+    {
+        if (n == 0) return;
+        b.OpenElement(0, "span");
+        b.AddAttribute(1, "class", "term-sum-cell" + (warn ? " warn" : ""));
+        b.AddContent(2, n);
+        b.CloseElement();
+    };
+
+    private string Col(TermWeek w) => string.Join(" ",
+        w.IsThisWeek(W.Today) ? "now" : "",
+        w.HasEnded(W.Today) ? "ended" : "",
+        w.ClosedAllWeek is not null ? "closed" : "",
+        w.Blank ? "blank" : "");
+
+    private static string ClassesTitle(TermWeek w) =>
+        Looks.Count(w.Happening, "class", "classes") + " happen"
+        + (w.Cancelled > 0 ? $", {w.Cancelled} cancelled" : "")
+        + (w.ClosedDays.Count > 0 ? "; closed " + string.Join(", ", w.ClosedDays.Select(d => Cccc.Domain.Week.ShortDay(d.Day.DayOfWeek))) : "");
+
+    private static string IssueWords(TermWeek w) => string.Join(", ", new[]
+    {
+        w.Clashes > 0 ? Looks.Count(w.Clashes, "clash", "clashes") : null,
+        w.CoverNeeded > 0 ? Looks.Count(w.CoverNeeded, "class", "classes") + " needing cover" : null,
+        w.RegistersMissing > 0 ? Looks.Count(w.RegistersMissing, "register") + " to take" : null,
+    }.Where(x => x is not null));
+
+    /// <summary>
+    /// A blank week ahead an editor may fill: from the last week before it with anything in it, as Copy this week to… does.
+    /// </summary>
+    private DateOnly? Fill(TermWeek w) =>
+        W.Access.MayEdit && !w.HasEnded(W.Today) && w.ClosedAllWeek is null ? w.ComparedWith : null;
+
+    private void FillWeek(DateOnly from, DateOnly onto) =>
+        D.Show<CopyWeekForm>(new Dictionary<string, object?> { [nameof(CopyWeekForm.Monday)] = from, [nameof(CopyWeekForm.Onto)] = onto });
+
+    private void ShowChanges(DateOnly monday, DateOnly earlier) =>
+        D.Show<WeekChangesForm>(new Dictionary<string, object?> { [nameof(WeekChangesForm.Monday)] = monday, [nameof(WeekChangesForm.Earlier)] = earlier });
+}

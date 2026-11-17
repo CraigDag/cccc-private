@@ -477,6 +477,92 @@ div.agenda-row { cursor: default; }
 .wm-chip.chosen { box-shadow: 0 0 0 2px var(--ink); }
 .wm-time { font-variant-numeric: tabular-nums; color: var(--text-muted); margin-right: 2px; }
 
+/* The term at a glance: every week of a semester a column, so a row reads across as a little chart of
+   the term. Each figure is a button to that week; the numbers are the domain's own (TermGlance). */
+.term-chip {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 150px; padding: 6px 12px;
+    border: 1px solid var(--divider); border-radius: 10px; background: var(--panel); color: var(--text); font: inherit; cursor: pointer; text-align: left;
+}
+.term-chip:hover { border-color: var(--border); }
+.tc-name { font-weight: 650; }
+.tc-when { font-size: 12px; color: var(--text-quiet); }
+.term-chip.today .tc-name { color: var(--accent); }
+.term-chip.on { background: var(--selection); border-color: var(--selection); color: var(--selection-text); }
+.term-chip.on .tc-name, .term-chip.on .tc-when { color: inherit; opacity: .85; }
+.term-measure { font-size: 13px; margin: 0 0 8px; }
+.term-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--divider); border-radius: var(--radius); }
+.term { width: max(100%, calc(var(--label) + var(--weeks, 18) * 56px + 84px)); border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
+.term th, .term td { padding: 2px; border-top: 1px solid var(--rule); text-align: center; vertical-align: middle; }
+.term td, .term thead th + th { border-left: 1px solid var(--rule); }
+.term thead th { border-top: 0; border-bottom: 1px solid var(--divider); padding-top: 4px; padding-bottom: 4px; }
+.term-corner, .term-label, .term-sum > th {
+    width: var(--label); position: sticky; left: 0; z-index: 1; background: var(--panel);
+    padding-left: 12px !important; text-align: left !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.term-corner, .term-sum > th { font-size: 11px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--text-quiet); }
+.term-label { font-weight: 600; }
+.term-section th { padding: 12px 12px 4px; text-align: left; font-size: 11px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; color: var(--text-quiet); background: var(--window); }
+.term-section th > span { position: sticky; left: 12px; }
+.term-week {
+    display: flex; flex-direction: column; align-items: center; width: 100%; padding: 2px 0; gap: 0;
+    border: 0; border-radius: 6px; background: none; color: var(--text); font: inherit; cursor: pointer; line-height: 1.15;
+}
+.term-week:hover { background: var(--hover); }
+.term-week b { font-family: var(--serif); font-size: 17px; font-weight: 600; }
+.term-week small { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+.term th.now { box-shadow: inset 0 3px 0 var(--accent); }
+.term th.now .term-week b, .term th.now .term-week small { color: var(--accent); }
+.term td.now { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.term th.ended .term-week b { color: var(--text-muted); }
+.term td.ended { background: color-mix(in srgb, var(--well) 45%, transparent); }
+.term td.closed { background: repeating-linear-gradient(135deg, var(--well) 0 5px, transparent 5px 10px); }
+.term-n, .term-cell, .term-blank {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 32px; padding: 2px;
+    border: 0; border-radius: 5px; background: none; color: var(--text); font: inherit; line-height: 1.1; white-space: nowrap;
+}
+button.term-n, button.term-cell, button.term-blank { cursor: pointer; }
+.term-n { font-family: var(--serif); font-size: 15px; font-weight: 600; }
+.term-n.quiet { color: var(--text-muted); font-weight: 500; }
+.term-n.warn { color: var(--warning); background: var(--warning-soft); font-weight: 700; }
+.term-n small, .term-cell small, .term-blank small, .term-closed small { display: block; font-family: var(--sans); font-size: 10px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.term-part { color: var(--text-muted); }
+.term-ok { color: var(--text-quiet); font-size: 12px; }
+.term-blank { color: var(--text-quiet); font-size: 12px; font-style: italic; }
+button.term-blank small { display: none; color: var(--accent); }
+button.term-blank:hover small, button.term-blank:focus-visible small, button.term-blank.next small { display: block; }
+button.term-blank.next { border: 1px dashed var(--border); font-style: normal; color: var(--text-muted); }
+.term-closed { display: block; font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A row's figure is shaded by its share of the term's fullest week, so a row reads across as the shape of its term. */
+.term-cell { font-size: 11.5px; font-weight: 600; background: color-mix(in srgb, var(--text) calc(var(--fill, 0) * 12%), transparent); }
+.term-cell.warn { color: var(--warning); font-weight: 750; background: var(--warning-soft); }
+.term-cell small { color: inherit; }
+/* The term's total beside each row, set off from the weeks: a sum to read, not a week to open. */
+.term th.term-total, .term td.term-total { width: 84px; border-left: 2px solid var(--divider); background: color-mix(in srgb, var(--well) 45%, transparent); }
+.term thead th.term-total { font-size: 11px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--text-quiet); }
+.term-section th { border-right: 0; }
+.term-sum-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 32px; font-size: 12.5px; font-weight: 700; line-height: 1.1; white-space: nowrap; }
+.term-sum > td.term-total .term-sum-cell { font-family: var(--serif); font-size: 15px; font-weight: 600; }
+.term-sum-cell.warn { color: var(--warning); }
+.term-sum-cell small { font-size: 10px; font-weight: 600; }
+.term-n:hover:not(.warn), .term-cell:hover:not(.warn), button.term-blank:hover { box-shadow: inset 0 0 0 1px var(--border); }
+.term-n.warn:hover, .term-cell.warn:hover { box-shadow: inset 0 0 0 1px var(--warning); }
+
+/* What is different from the week before: one line a class, what kind of difference first. */
+.wc-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--divider); }
+.wc-row {
+    display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; align-items: baseline; width: 100%; padding: 10px 6px;
+    border: 0; border-bottom: 1px solid var(--rule); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+}
+.wc-row:hover { background: var(--hover); }
+.wc-kind { font-size: 11px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.wc-row.gone .wc-kind { color: var(--text-muted); }
+.wc-row.changed .wc-kind { color: var(--warning); }
+.wc-what { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.wc-what b { font-weight: 650; border-left: 3px solid var(--c, var(--border)); padding-left: 7px; }
+.wc-row.gone .wc-what b { text-decoration: line-through; text-decoration-color: var(--text-muted); }
+.wc-when { font-size: 13px; color: var(--text-muted); padding-left: 10px; }
+.wc-words { font-size: 13px; padding-left: 10px; }
+
 /* The side panel: look at a class without leaving the day. */
 .inspector {
     position: sticky; top: 0; display: flex; flex-direction: column; gap: 12px;
@@ -898,6 +984,11 @@ ul.said li + li { margin-top: 4px; }
     .dc-count { display: none; }
     .day-date { display: none; }
     .tl > * { min-width: 640px; }
+    .term-wrap { margin: 0 -16px; border-radius: 0; border-left: 0; border-right: 0; }
+    .term { width: max(100%, calc(var(--label) + var(--weeks, 18) * 58px + 84px)); }
+    .term-chip { min-width: 0; flex: 1 1 0; }
+    .term-chip .tc-when { display: none; }
+    .wc-row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
     /* The week's registers become one card a class: when, then what, then the state on the right. */
     .reg-table thead { display: none; }
     .reg-table, .reg-table tbody { display: block; }

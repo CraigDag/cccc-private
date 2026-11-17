@@ -478,7 +478,9 @@ else
         if (W.Commit(Written(t => Edits.PutSession(t, p, label))))
         {
             if (changedUnderneath) W.Warn("Somebody else changed this class while it was open here; yours is the version kept. Undo puts theirs back.");
-            // The plan follows what was just saved, and shows it chosen, so it is plain where it went.
+            // The plan follows what was just saved, and shows it chosen, so it is plain where it went: from the
+            // term, on its day, where the side panel is.
+            if (PV.Started && PV.Scale == Cccc.Web.Features.Plan.Scale.Term) PV.Scale = Cccc.Web.Features.Plan.Scale.Day;
             if (PV.Started && p.Date != PV.Day && (PV.Scale == Cccc.Web.Features.Plan.Scale.Day || Cccc.Domain.Week.MondayOf(p.Date) != PV.Monday)) PV.GoTo(p.Date);
             PV.Chosen = p.Id;
             PV.Changed();

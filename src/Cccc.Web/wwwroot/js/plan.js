@@ -216,5 +216,18 @@
         document.querySelectorAll('[data-now-clock]').forEach(el => { el.textContent = label(now); });
     }, 30000);
 
-    window.ccccPlan = { attach };
+    // The term is wider than a phone: start it on the week before this one, so this week and what follows
+    // are in view. Called once per semester shown, so it never fights somebody who has scrolled.
+    function term(root) {
+        requestAnimationFrame(() => {
+            if (!root || root.scrollWidth <= root.clientWidth + 2) return;
+            const corner = root.querySelector('thead th.term-corner');
+            const now = root.querySelector('thead th.now');
+            if (!corner || !now) return;
+            const from = now.previousElementSibling && now.previousElementSibling !== corner ? now.previousElementSibling : now;
+            root.scrollLeft = Math.max(0, from.offsetLeft - corner.offsetWidth);
+        });
+    }
+
+    window.ccccPlan = { attach, term };
 })();

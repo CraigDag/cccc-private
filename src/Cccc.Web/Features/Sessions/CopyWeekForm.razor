@@ -28,7 +28,16 @@
 @code {
     [CascadingParameter] public Workspace W { get; set; } = default!;
     [Parameter] public DateOnly Monday { get; set; }
+
+    /// <summary>A week to tick to begin with: the blank week the term at a glance was asked to fill.</summary>
+    [Parameter] public DateOnly? Onto { get; set; }
+
     private readonly HashSet<DateOnly> _chosen = [];
+
+    protected override void OnInitialized()
+    {
+        if (Onto is { } onto && Targets().FirstOrDefault(w => w.Monday == DomainWeek.MondayOf(onto)) is { May: true } target) _chosen.Add(target.Monday);
+    }
 
     private sealed record Target(DateOnly Monday, int Count, bool HasRegisters, bool May)
     {

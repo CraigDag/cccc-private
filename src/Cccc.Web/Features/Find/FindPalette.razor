@@ -104,6 +104,8 @@
                 V.FocusOn(null); V.Scale = Scale.Day; V.GoTo(W.Today); V.Changed(); Nav.NavigateTo("plan"); break;
             case "go-week":
                 V.Scale = Scale.Week; V.Changed(); Nav.NavigateTo("plan"); break;
+            case "go-term":
+                V.CloseScratch(); V.Scale = Scale.Term; V.Chosen = null; V.Changed(); Nav.NavigateTo("plan"); break;
             case "go-registers": Nav.NavigateTo("registers"); break;
             case "go-data": Nav.NavigateTo("data"); break;
             case "go-reports": Nav.NavigateTo("reports"); break;
