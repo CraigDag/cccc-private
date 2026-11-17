@@ -32,10 +32,11 @@ else
                 {
                     var state = Registers.StateOf(t, o, W.Today);
                     var r = t.Registers[o.Session.Id];
-                    <tr @onclick="() => Open(o.Session.Id)" class="@(o.Happens ? "" : "off")" data-testid="register-line">
+                    <tr @onclick="() => Open(o.Session.Id)" class="@(o.Happens ? "clickable" : "off")" data-testid="register-line">
                         <td>@Looks.DayHeading(o.Date)</td>
                         <td class="nowrap">@Looks.When(o.Session)</td>
-                        <td>@Looks.Title(t, o.Session)</td>
+                        @* A real button, so the register opens from the keyboard too; the whole row still answers a click. *@
+                        <td><button type="button" class="link" @onclick="() => Open(o.Session.Id)" @onclick:stopPropagation="true" data-testid="register-open">@Looks.Title(t, o.Session)</button></td>
                         <td>@Looks.Audience(t, o.Session)</td>
                         <td>@Looks.Names(t, o.InTheRoom)</td>
                         <td>

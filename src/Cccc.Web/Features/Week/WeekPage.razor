@@ -110,12 +110,14 @@
                     </div>
                 }
             </div>
-            <span class="grow"></span>
-            @if (W.Project is { } p)
-            {
-                <button type="button" class="btn quiet" disabled="@(!p.CanUndo(W.Access.By))" title="@(p.UndoLabel(W.Access.By) is { } u ? "Undo: " + u : "Nothing of yours to undo")" @onclick="W.Undo" data-testid="undo">Undo</button>
-                <button type="button" class="btn quiet" disabled="@(!p.CanRedo(W.Access.By))" title="@(p.RedoLabel(W.Access.By) is { } r ? "Redo: " + r : "")" @onclick="W.Redo" data-testid="redo">Redo</button>
-            }
+        }
+        @* Undo stays on the bar while something is chosen: a drag chooses the block, and the one thing
+           somebody wants straight after a drag that went wrong is Undo. *@
+        <span class="grow"></span>
+        @if (W.Project is { } p)
+        {
+            <button type="button" class="btn quiet" disabled="@(!p.CanUndo(W.Access.By))" title="@(p.UndoLabel(W.Access.By) is { } u ? "Undo: " + u : "Nothing of yours to undo")" @onclick="W.Undo" data-testid="undo">Undo</button>
+            <button type="button" class="btn quiet" disabled="@(!p.CanRedo(W.Access.By))" title="@(p.RedoLabel(W.Access.By) is { } r ? "Redo: " + r : "")" @onclick="W.Redo" data-testid="redo">Redo</button>
         }
     </div>
 

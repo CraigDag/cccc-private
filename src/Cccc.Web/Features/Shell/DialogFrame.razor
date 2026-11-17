@@ -4,7 +4,7 @@
     <form class="dialog-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault="true" autocomplete="off">
         <header class="dialog-head">
             <h2 id="dialog-title">@Title</h2>
-            <button type="button" class="dialog-x" aria-label="Close" data-close @onclick="D.Close">×</button>
+            <button type="button" class="dialog-x" aria-label="Close" data-close data-testid="dialog-x" @onclick="D.Close">×</button>
         </header>
         <div class="dialog-body">@ChildContent</div>
         <footer class="dialog-foot">

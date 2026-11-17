@@ -48,6 +48,13 @@ public static class Clashes
     private static HashSet<Guid> AudienceOf(Timetable t, Session s) =>
         s.Audience.IsEveryone ? t.Groups.Select(g => g.Id).ToHashSet() : s.Audience.Cohorts.ToHashSet();
 
+    private static string Who(IReadOnlyList<string> names) => names.Count switch
+    {
+        1 => names[0],
+        <= 3 => string.Join(", ", names.Take(names.Count - 1)) + " and " + names[^1],
+        _ => $"{names.Count} students ({string.Join(", ", names.Take(2))} and {names.Count - 2} more)",
+    };
+
     public static IReadOnlyList<Clash> Find(Timetable t, IReadOnlyList<Occurrence> week)
     {
         var list = week.Where(o => o.Happens).ToList();
@@ -71,9 +78,14 @@ public static class Clashes
                         found.Add(new Clash(ClashKind.FacilitatorDoubleBooked,
                             $"{t.Facilitators[fid]?.Name ?? "A facilitator"} double-booked: \"{a.Session.DisplayTitle}\" ({RoomOf(a)}) and \"{b.Session.DisplayTitle}\" ({RoomOf(b)}) ({When(a)})", both));
 
-                foreach (var sid in Roster.For(t, a.Session).Intersect(Roster.For(t, b.Session)))
+                // One warning per pair of sessions, naming the students, rather than one per student: a
+                // whole group put in two places at once is one mistake, and "8 clashes" for it reads as eight.
+                var shared = Roster.For(t, a.Session).Intersect(Roster.For(t, b.Session))
+                    .Select(sid => t.Students[sid]?.Name is { Length: > 0 } n ? n : "a student")
+                    .OrderBy(n => n, NameOrder.Comparer).ToList();
+                if (shared.Count > 0)
                     found.Add(new Clash(ClashKind.StudentDoubleBooked,
-                        $"{(t.Students[sid]?.Name is { Length: > 0 } n ? n : "A student")} double-booked: \"{a.Session.DisplayTitle}\" ({RoomOf(a)}) and \"{b.Session.DisplayTitle}\" ({RoomOf(b)}) ({When(a)})", both));
+                        $"{Who(shared)} double-booked: \"{a.Session.DisplayTitle}\" ({RoomOf(a)}) and \"{b.Session.DisplayTitle}\" ({RoomOf(b)}) ({When(a)})", both));
 
                 // The same people in two rooms: one session is on for a proper superset of the other's
                 // groups. Never derived from the lanes, so a week with no lanes still raises it.
@@ -81,6 +93,10 @@ public static class Clashes
                 var right = AudienceOf(t, b.Session);
                 (Occurrence wide, Occurrence narrow)? pair =
                     left.IsProperSupersetOf(right) ? (a, b) : right.IsProperSupersetOf(left) ? (b, a) : null;
+                // The same groups twice at once is double-booked too, even for a group nobody is enrolled in yet.
+                if (pair is null && left.Count > 0 && !a.Session.Audience.IsEveryone && !b.Session.Audience.IsEveryone && left.SetEquals(right))
+                    found.Add(new Clash(ClashKind.GroupDoubleBooked,
+                        $"{string.Join(", ", left.Select(g => t.Groups[g]?.Name ?? "A group").OrderBy(n => n, NameOrder.Comparer))} booked twice: \"{a.Session.DisplayTitle}\" ({RoomOf(a)}) and \"{b.Session.DisplayTitle}\" ({RoomOf(b)}) ({When(a)})", both));
                 if (pair is { } p)
                     foreach (var gid in AudienceOf(t, p.narrow.Session).OrderBy(g => t.Groups[g]?.Name ?? "", NameOrder.Comparer))
                         found.Add(new Clash(ClashKind.GroupDoubleBooked,
