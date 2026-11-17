@@ -105,6 +105,49 @@ public class ImportTests
         Assert.Equal(TimeSpan.FromHours(1), Hours.Teaching(Occurrences.HappeningInWeek(t, cd.Date), Guid.Parse("00000000-0000-0000-0000-0000000000d2")));
     }
 
+    [Fact]
+    public void ASchema24FilesScratchWeekComesAcrossAsAPlanThatCountsForNothing()
+    {
+        var json = """
+        {
+          "SchemaVersion": 24,
+          "Terms": [ { "Name": "Spring", "StartMonday": "2030-03-04", "WeekCount": 2 } ],
+          "Building": {
+            "WeeksAreSeparate": true,
+            "Rooms": [ { "Id": "00000000-0000-0000-0000-0000000000f1", "Name": "Studio" } ],
+            "Groups": [ { "Id": "00000000-0000-0000-0000-0000000000b1", "Name": "BA 1" } ],
+            "Facilitators": [ { "Id": "00000000-0000-0000-0000-0000000000d1", "Name": "Ada" } ],
+            "Sessions": [
+              { "Id": "00000000-0000-0000-0000-0000000000e1", "Day": "Monday", "WeekMonday": "2030-03-04",
+                "Start": "09:00:00", "End": "10:00:00", "Title": "Acro", "RoomId": "00000000-0000-0000-0000-0000000000f1",
+                "Scope": "Group", "GroupId": "00000000-0000-0000-0000-0000000000b1",
+                "FacilitatorIds": [ "00000000-0000-0000-0000-0000000000d1" ] } ],
+            "ScratchSessions": [
+              { "Id": "00000000-0000-0000-0000-0000000000e2", "Day": "Wednesday", "WeekMonday": "2200-01-06",
+                "Start": "09:00:00", "End": "10:00:00", "Title": "Acro", "RoomId": "00000000-0000-0000-0000-0000000000f1",
+                "Scope": "Group", "GroupId": "00000000-0000-0000-0000-0000000000b1",
+                "FacilitatorIds": [ "00000000-0000-0000-0000-0000000000d1" ],
+                "Attendance": [ { "WeekMonday": "2200-01-06", "PresentStudentIds": [] } ] },
+              { "Id": "00000000-0000-0000-0000-0000000000e3", "Day": "Monday", "WeekMonday": "2200-01-06",
+                "Start": "09:00:00", "End": "10:00:00", "Title": "Dance", "RoomId": "00000000-0000-0000-0000-0000000000f1",
+                "Scope": "Group", "GroupId": "00000000-0000-0000-0000-0000000000b1" } ]
+          }
+        }
+        """;
+        var (t, report) = LegacyImport.FromBytes(Package(json), Today);
+        Assert.Equal(24, report.SchemaVersion);
+        Assert.Equal([Guid.Parse("00000000-0000-0000-0000-0000000000e1")], t.Sessions.Select(s => s.Id));
+        Assert.Equal(2, t.Scratch.Count);
+        var wednesday = t.Scratch[Guid.Parse("00000000-0000-0000-0000-0000000000e2")]!;
+        Assert.Equal(Week.DateOf(ScratchWeek.Monday, DayOfWeek.Wednesday), wednesday.Date);
+        Assert.Equal(Guid.Parse("00000000-0000-0000-0000-0000000000f1"), wednesday.RoomId);
+        Assert.Empty(t.Registers);                                  // a plan has no registers
+        // Nothing counts it: the real week has its one class, and the Monday plan clashes with nothing real.
+        Assert.Single(Occurrences.ForWeek(t, ThisMonday));
+        Assert.Empty(Clashes.ForWeek(t, ThisMonday));
+        Assert.Contains(report.Lines(), l => l.StartsWith("2 classes in the Scratch Week"));
+    }
+
     /// <summary>
     /// The round trip that matters: a project in the old shape — a standing pattern, a frozen week,
     /// a cancellation, a reschedule, a cover, absences, closures and registers — must run the same
@@ -165,6 +208,7 @@ public class ImportTests
         b.TimeRules.Add(new Old.TimeRule { Name = "Preparation", ClassIds = [acro.Id] });
         b.Strands.Add(new Old.Strand { Name = "BA" });
         p.Events.Add(new Old.SchoolEvent { Title = "Show", Date = ThisMonday.AddDays(3) });
+        CCCCScheduler.ViewModels.ScratchWeek.CopyIn(b, b.Sessions.First(s => s.WeekMonday is null));
         var bytes = CCCCScheduler.Services.ProjectPackage.SaveToBytes(p, savedBy: "test");
 
         var (t, _) = LegacyImport.FromBytes(bytes, Today);
@@ -178,6 +222,7 @@ public class ImportTests
             ("classes", t.Classes.Count), ("time rules", t.TimeRules.Count), ("areas", t.Areas.Count),
             ("disciplines", t.Disciplines.Count), ("branches", t.Branches.Count), ("programmes", t.Programmes.Count),
             ("groups", t.Groups.Count), ("students", t.Students.Count), ("facilitators", t.Facilitators.Count), ("rooms", t.Rooms.Count),
+            ("Scratch Week classes", t.Scratch.Count),
         }, k => Assert.True(k.Count > 0, $"No {k.Kind} came across."));
     }
 

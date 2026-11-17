@@ -31,7 +31,17 @@ public static class Edits
                 var s = System.Text.Json.JsonSerializer.Deserialize<Session>(node, ModelJson.Options)!;
                 if (Week.HasEnded(s.Date, today))
                     throw new EditRefused($"The week of {Week.ShortDate(s.WeekMonday)} has ended, so its timetable is kept as it ran. Its registers can still be filed.");
+                // The Scratch Week's classes are a list of their own; a real class dated into its week
+                // would be counted by everything that reads the real timetable, in a week nobody sees.
+                if (node == op.After && Week.IsScratch(s.Date))
+                    throw new EditRefused("A class cannot be moved into the Scratch Week. Copy to Scratch Week puts a copy there and leaves the class where it is.");
             }
+        }
+        foreach (var op in batch.Ops.Where(o => o.Collection == Collections.Scratch.Name && o.After is not null))
+        {
+            var s = System.Text.Json.JsonSerializer.Deserialize<Session>(op.After!, ModelJson.Options)!;
+            if (!Week.IsScratch(s.Date))
+                throw new EditRefused("A class in the Scratch Week stays in it. Place onto a week… puts the plan onto a real week.");
         }
     }
 
@@ -171,22 +181,36 @@ public static class Edits
         var source = t.SessionsInWeek(from).ToList();
         var d = new Draft(t);
         int weeks = 0;
-        foreach (var to in toWeeks.Select(Week.MondayOf).Distinct().Where(m => m != from).OrderBy(m => m))
+        foreach (var to in toWeeks.Select(Week.MondayOf).Distinct().Where(m => m != from && !Week.IsScratch(m)).OrderBy(m => m))
         {
             if (Week.HasEnded(to, today)) continue;
             // A week that already holds a register is never replaced: that would delete what somebody
             // stood in a room and recorded.
             if (HoldsRegisters(d.Current, to)) continue;
-            foreach (var old in d.Current.SessionsInWeek(to).ToList())
-                d.Remove(Collections.Sessions, old.Id).Remove(Collections.Registers, old.Id);
-            foreach (var s in source)
-            {
-                var date = to.AddDays(s.Date.DayNumber - from.DayNumber);
-                d.Put(Collections.Sessions, CopyOf(s, date, CopyId(s.Id, to)));
-            }
+            ReplaceWeek(d, to, source, from);
             weeks++;
         }
         return d.ToBatch(weeks == 1 ? "Copied a week" : $"Copied a week onto {weeks} weeks");
+    }
+
+    /// <summary>
+    /// Empties a real week and fills it with copies of <paramref name="source"/>, each on the same day
+    /// of the week it had. The one implementation behind Copy this week to… and placing the Scratch Week.
+    /// </summary>
+    internal static void ReplaceWeek(Draft d, DateOnly to, IEnumerable<Session> source, DateOnly sourceMonday)
+    {
+        foreach (var old in d.Current.SessionsInWeek(to).ToList())
+            d.Remove(Collections.Sessions, old.Id).Remove(Collections.Registers, old.Id);
+        foreach (var s in source)
+        {
+            var date = to.AddDays(Math.Clamp(s.Date.DayNumber - sourceMonday.DayNumber, 0, 6));
+            // The id is stable, so copying the same week twice gives the same ids; but a copy made last
+            // time and moved to another week since still holds it, and putting over it would drag that
+            // class back here and empty the day it was moved to. That copy gets a new id instead.
+            var id = CopyId(s.Id, to);
+            if (d.Current.Sessions.Contains(id)) id = Guid.NewGuid();
+            d.Put(Collections.Sessions, CopyOf(s, date, id));
+        }
     }
 
     /// <summary>Whether any session of the week has a register filed: such a week is never replaced by a copy.</summary>
@@ -262,6 +286,15 @@ public static class Edits
     // ---- The catalogue ----------------------------------------------------------------------------
 
     /// <summary>
+    /// Every class a change to the catalogue reaches: the real ones in weeks not ended (a week that has
+    /// ended keeps who taught it, where and what it was called), and every one in the Scratch Week, so a
+    /// plan never holds somebody or something that has gone, and never places them back onto a real week.
+    /// </summary>
+    private static IEnumerable<(Collection<Session> In, Session S)> Reachable(Timetable t, DateOnly today) =>
+        t.Sessions.Where(s => !Week.HasEnded(s.Date, today)).Select(s => (Collections.Sessions, s))
+            .Concat(t.Scratch.Select(s => (Collections.Scratch, s)));
+
+    /// <summary>
     /// Renames a class and the sessions still carrying its old title, in weeks not locked. A session
     /// given a title of its own keeps it.
     /// </summary>
@@ -271,8 +304,8 @@ public static class Edits
         var old = t.Classes[c.Id];
         d.Put(Collections.Classes, c);
         if (old is not null && old.Name != c.Name)
-            foreach (var s in t.Sessions.Where(s => s.ClassId == c.Id && s.Title.Trim() == old.Name.Trim() && !Week.HasEnded(s.Date, today)))
-                d.Put(Collections.Sessions, s with { Title = c.Name });
+            foreach (var (into, s) in Reachable(t, today).Where(x => x.S.ClassId == c.Id && x.S.Title.Trim() == old.Name.Trim()))
+                d.Put(into, s with { Title = c.Name });
         return d.ToBatch(old is null ? $"Added the class {c.Name}" : $"Changed the class {c.Name}");
     }
 
@@ -280,8 +313,8 @@ public static class Edits
     public static Batch RemoveClass(Timetable t, Guid id, DateOnly today)
     {
         var d = new Draft(t);
-        foreach (var s in t.Sessions.Where(s => s.ClassId == id && !Week.HasEnded(s.Date, today)))
-            d.Put(Collections.Sessions, s with { ClassId = null });
+        foreach (var (into, s) in Reachable(t, today).Where(x => x.S.ClassId == id))
+            d.Put(into, s with { ClassId = null });
         foreach (var r in t.TimeRules.Where(r => r.ClassIds.Contains(id)))
             d.Put(Collections.TimeRules, r with { ClassIds = r.ClassIds.Remove(id) });
         d.Remove(Collections.Classes, id);
@@ -292,8 +325,8 @@ public static class Edits
     public static Batch RemoveRoom(Timetable t, Guid id, DateOnly today)
     {
         var d = new Draft(t);
-        foreach (var s in t.Sessions.Where(s => s.RoomId == id && !Week.HasEnded(s.Date, today)))
-            d.Put(Collections.Sessions, s with { RoomId = null });
+        foreach (var (into, s) in Reachable(t, today).Where(x => x.S.RoomId == id))
+            d.Put(into, s with { RoomId = null });
         foreach (var e in t.Events.Where(e => e.RoomId == id))
             d.Put(Collections.Events, e with { RoomId = null });
         d.Remove(Collections.Rooms, id);
@@ -307,8 +340,8 @@ public static class Edits
     public static Batch RemoveFacilitator(Timetable t, Guid id, DateOnly today)
     {
         var d = new Draft(t);
-        foreach (var s in t.Sessions.Where(s => (s.FacilitatorIds.Contains(id) || s.CoverIds.Contains(id)) && !Week.HasEnded(s.Date, today)))
-            d.Put(Collections.Sessions, s with
+        foreach (var (into, s) in Reachable(t, today).Where(x => x.S.FacilitatorIds.Contains(id) || x.S.CoverIds.Contains(id)))
+            d.Put(into, s with
             {
                 Facilitators = [.. s.Facilitators.Where(a => a.FacilitatorId != id)],
                 CoverIds = s.CoverIds.Remove(id),
@@ -330,8 +363,8 @@ public static class Edits
     {
         var d = new Draft(t);
         // Weeks that have ended do not change: a dangling id there names nobody and counts nobody.
-        foreach (var s in t.Sessions.Where(s => (s.AddedStudentIds.Contains(id) || s.LeftOffStudentIds.Contains(id)) && !Week.HasEnded(s.Date, today)))
-            d.Put(Collections.Sessions, s with { AddedStudentIds = s.AddedStudentIds.Remove(id), LeftOffStudentIds = s.LeftOffStudentIds.Remove(id) });
+        foreach (var (into, s) in Reachable(t, today).Where(x => x.S.AddedStudentIds.Contains(id) || x.S.LeftOffStudentIds.Contains(id)))
+            d.Put(into, s with { AddedStudentIds = s.AddedStudentIds.Remove(id), LeftOffStudentIds = s.LeftOffStudentIds.Remove(id) });
         foreach (var e in t.Events.Where(e => e.StudentIds.Contains(id)))
             d.Put(Collections.Events, e with { StudentIds = e.StudentIds.Remove(id) });
         foreach (var a in t.Absences.Where(a => a.Is(AbsentPerson.Student, id)))
@@ -348,13 +381,13 @@ public static class Edits
     public static Batch RemoveGroup(Timetable t, Guid id, DateOnly today)
     {
         var d = new Draft(t);
-        foreach (var s in t.Sessions.Where(s => s.Audience.GroupIds.Contains(id) && !Week.HasEnded(s.Date, today)))
+        foreach (var (into, s) in Reachable(t, today).Where(x => x.S.Audience.GroupIds.Contains(id)))
         {
             var left = s.Audience.GroupIds.Remove(id);
             var audience = left.IsEmpty
                 ? s.Audience with { GroupIds = [], Kind = AudienceKind.Group, ProgrammeId = null }
                 : s.Audience with { GroupIds = left, Kind = left.Count == 1 && s.Audience.Kind == AudienceKind.Groups ? AudienceKind.Group : s.Audience.Kind };
-            d.Put(Collections.Sessions, s with { Audience = audience });
+            d.Put(into, s with { Audience = audience });
         }
         foreach (var c in t.Closures.Where(c => c.GroupIds.Contains(id)))
             d.Put(Collections.Closures, c with { GroupIds = c.GroupIds.Remove(id) });
@@ -369,8 +402,8 @@ public static class Edits
         var d = new Draft(t);
         foreach (var g in t.Groups.Where(g => g.ProgrammeId == id))
             d.Put(Collections.Groups, g with { ProgrammeId = null });
-        foreach (var s in t.Sessions.Where(s => s.Audience.ProgrammeId == id && !Week.HasEnded(s.Date, today)))
-            d.Put(Collections.Sessions, s with { Audience = s.Audience with { ProgrammeId = null, Kind = s.Audience.GroupIds.Count == 1 ? AudienceKind.Group : AudienceKind.Groups } });
+        foreach (var (into, s) in Reachable(t, today).Where(x => x.S.Audience.ProgrammeId == id))
+            d.Put(into, s with { Audience = s.Audience with { ProgrammeId = null, Kind = s.Audience.GroupIds.Count == 1 ? AudienceKind.Group : AudienceKind.Groups } });
         d.Remove(Collections.Programmes, id);
         return d.ToBatch("Deleted a programme");
     }

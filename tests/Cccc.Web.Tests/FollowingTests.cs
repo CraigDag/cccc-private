@@ -175,6 +175,14 @@ public sealed class FollowingTests : IDisposable
         follower.Check();
         Assert.Null(_status.Problem);
         Assert.Equal(new TimeOnly(11, 30), project.State.Sessions[acro.Id]!.End);
+
+        // A class copied into the current app's Scratch Week arrives in this one's, and counts for nothing.
+        var planned = CCCCScheduler.ViewModels.ScratchWeek.CopyIn(p.Building, acro);
+        Save(p);
+        follower.Check();
+        Assert.Null(_status.Problem);
+        Assert.Equal(Cccc.Domain.Week.DateOf(Cccc.Domain.Editing.ScratchWeek.Monday, DayOfWeek.Wednesday), project.State.Scratch[planned.Id]!.Date);
+        Assert.Equal(2, project.State.Sessions.Count);
     }
 
     [Fact]

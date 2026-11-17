@@ -11,7 +11,8 @@ public sealed record ImportReport(
     int SchemaVersion,
     int Rooms, int Programmes, int Groups, int Students, int Facilitators, int Classes,
     int Sessions, int PatternSessions, int WeeksStampedFromPattern, int Registers, int Absences, int Events,
-    int CancelledOrMoved, int Covered, int RecordsNotPlaced, int SessionColoursDropped, int FloorPlansDropped)
+    int CancelledOrMoved, int Covered, int RecordsNotPlaced, int SessionColoursDropped, int FloorPlansDropped,
+    int ScratchSessions = 0)
 {
     private static string N(int n, string one, string? many = null) => $"{n} {(n == 1 ? one : many ?? one + "s")}";
 
@@ -27,11 +28,12 @@ public sealed record ImportReport(
         if (RecordsNotPlaced > 0) yield return $"{RecordsNotPlaced} one-off changes or registers belonged to a week where their class no longer runs, and were not brought across.";
         if (SessionColoursDropped > 0) yield return $"{SessionColoursDropped} sessions had a colour of their own; a block is now always coloured by its class.";
         if (FloorPlansDropped > 0) yield return $"{FloorPlansDropped} floor plans were left behind: the floor plan is not part of the app.";
+        if (ScratchSessions > 0) yield return $"{N(ScratchSessions, "class", "classes")} in the Scratch Week, the plan that counts towards nothing until it is placed onto a week.";
     }
 }
 
 /// <summary>
-/// Reads any old <c>.cccc</c> (schema 1 to 23) with the old app's own loader and migrations, then
+/// Reads any old <c>.cccc</c> (schema 1 to 24) with the old app's own loader and migrations, then
 /// translates the migrated project into the new model. See docs/spec/06-importing-old-files.md.
 /// </summary>
 public static class LegacyImport
@@ -213,12 +215,21 @@ public static class LegacyImport
         }
         if (b.WeeksAreSeparate) notPlaced += b.Sessions.Count(s => s.WeekMonday is null);
 
-        t = t with { Sessions = EntitySet<Session>.Of(sessions), Registers = EntitySet<Register>.Of(registers) };
+        // The Scratch Week (schema 24): a plan, kept as a list of its own that nothing counts, on the same
+        // days. The old loader's own tidy has already stamped each one with the scratch Monday, taken
+        // anything that happened off it and dropped what pointed at something gone.
+        var scratch = b.ScratchSessions.Select(e => Translate(e, Week.ScratchMonday, e.Id, t)).ToList();
+        t = t with
+        {
+            Sessions = EntitySet<Session>.Of(sessions),
+            Registers = EntitySet<Register>.Of(registers),
+            Scratch = EntitySet<Session>.Of(scratch),
+        };
         var report = new ImportReport(
             schema == 0 ? p.SchemaVersion : schema,
             t.Rooms.Count, t.Programmes.Count, t.Groups.Count, t.Students.Count, t.Facilitators.Count, t.Classes.Count,
             t.Sessions.Count, pattern.Count, pattern.Count > 0 ? patternWeeks.Count : 0, t.Registers.Count, t.Absences.Count, t.Events.Count,
-            moved, covered, notPlaced, colours, b.Floors.Count);
+            moved, covered, notPlaced, colours, b.Floors.Count, t.Scratch.Count);
         return (t, report);
     }
 

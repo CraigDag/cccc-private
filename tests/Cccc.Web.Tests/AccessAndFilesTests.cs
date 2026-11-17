@@ -57,11 +57,34 @@ public class ProjectFileTests
         using var ms = new MemoryStream();
         using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
         {
-            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 2");
+            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 3");
             using (var w = new StreamWriter(zip.CreateEntry("project.json").Open())) w.Write("{}");
         }
         var e = Assert.Throws<InvalidDataException>(() => ProjectFiles.Read(ms.ToArray()));
         Assert.Contains("newer version", e.Message);
+    }
+
+    [Fact]
+    public void AFileOfTheFirstFormatStillReadsWithAnEmptyScratchWeek()
+    {
+        var t = SampleSchool.Create(Day, Day);
+        using var ms = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 1");
+            var json = System.Text.Json.Nodes.JsonNode.Parse(ModelJson.Serialise(t))!.AsObject();
+            json.Remove("scratch");
+            using (var w = new StreamWriter(zip.CreateEntry("project.json").Open())) w.Write(json.ToJsonString());
+        }
+        var back = ProjectFiles.Read(ms.ToArray());
+        Assert.Equal(t.Sessions.Count, back.Sessions.Count);
+        Assert.Empty(back.Scratch);
+        // And what this build writes says the format it is, so an older build refuses it rather than drop the plan.
+        var planned = t with { Scratch = EntitySet<Session>.Of([new Session { Date = ScratchWeek.Monday }]) };
+        Assert.Single(ProjectFiles.Read(ProjectFiles.Write(planned)).Scratch);
+        using var written = new System.IO.Compression.ZipArchive(new MemoryStream(ProjectFiles.Write(planned)));
+        using var r = new StreamReader(written.GetEntry("format.txt")!.Open());
+        Assert.Equal("cccc2 2", r.ReadToEnd());
     }
 
     [Fact]

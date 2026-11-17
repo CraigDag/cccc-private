@@ -23,7 +23,12 @@ public sealed class StoreRefused(string message) : Exception(message);
 /// </summary>
 public sealed class ProjectStore
 {
-    public const int FormatVersion = 1;
+    /// <summary>
+    /// The store's format. 2 added the Scratch Week's collection: a build of format 1 would replay one of
+    /// its changes as a collection it has never heard of, or drop the plan at its next snapshot, so it
+    /// refuses a store of format 2 instead. A store of format 1 has no Scratch Week and opens as it is.
+    /// </summary>
+    public const int FormatVersion = 2;
     public const int SnapshotEvery = 200;
     public static readonly TimeSpan Retention = TimeSpan.FromDays(30);
 
@@ -92,6 +97,8 @@ public sealed class ProjectStore
             if (v is null) Exec(c, $"INSERT INTO meta(key,value) VALUES('format','{FormatVersion}')");
             else if (int.Parse(v) > FormatVersion)
                 throw new StoreRefused($"This store was written by a newer version of the app (store format {v}; this version understands {FormatVersion}). Update the app to open it.");
+            else if (int.Parse(v) < FormatVersion)
+                Exec(c, $"UPDATE meta SET value='{FormatVersion}' WHERE key='format'");
         }
         return new ProjectStore(path);
     }

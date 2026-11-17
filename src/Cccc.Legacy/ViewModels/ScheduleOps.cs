@@ -145,7 +145,8 @@ public static class ScheduleOps
         // many as the year has, and reading them all would put every Tuesday of the year on one
         // Thursday. The clone keeps the source's own WeekMonday, so the copy lands in the same week.
         var clones = building.SessionsInWeek(anyDateInWeek).Where(s => s.Day == from).Select(s => Clone(s, to)).ToList();
-        building.Sessions.AddRange(clones);
+        // Into the list the week lives in: Copy day on the Scratch Week stays in the Scratch Week.
+        building.ListForWeek(anyDateInWeek).AddRange(clones);
         return clones.Count;
     }
 
@@ -187,16 +188,23 @@ public static class ScheduleOps
 
         var from = WeekLabel.MondayOf(fromAnyDateInWeek);
         var to = WeekLabel.MondayOf(toAnyDateInWeek);
-        if (from == to) return building.Sessions.Count(s => s.WeekMonday == to);
+        // THE SCRATCH WEEK IS ONE END OR THE OTHER OF TWO OF THE THREE COPIES THIS DOES (schema 24):
+        // a real week into it is "Copy this week to Scratch Week", it onto a real week is "Place onto a
+        // week…". Each end reads and writes the list that week lives in, and Clone re-stamps every copy
+        // with the destination's Monday — which is the whole of what makes a placed copy count again
+        // and a copied-in one stop counting. See Building.ScratchSessions.
+        var source = building.ListForWeek(from);
+        var destination = building.ListForWeek(to);
+        if (from == to) return destination.Count(s => s.WeekMonday == to);
 
         // Read the source BEFORE the destination is emptied. The two lists are disjoint by
         // construction (different WeekMonday), so the order cannot matter today — it is written this
         // way so that it still cannot on the day somebody adds a second stamp to a session.
-        var clones = building.Sessions.Where(s => s.WeekMonday == from)
-                                      .Select(s => Clone(s, newWeek: to))
-                                      .ToList();
-        building.Sessions.RemoveAll(s => s.WeekMonday == to);
-        building.Sessions.AddRange(clones);
+        var clones = source.Where(s => s.WeekMonday == from)
+                           .Select(s => Clone(s, newWeek: to))
+                           .ToList();
+        destination.RemoveAll(s => s.WeekMonday == to);
+        destination.AddRange(clones);
         return clones.Count;
     }
 

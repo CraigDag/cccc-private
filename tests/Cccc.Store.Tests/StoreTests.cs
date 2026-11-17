@@ -203,6 +203,37 @@ public class ProjectStoreTests
     }
 
     [Fact]
+    public void AStoreOfTheFirstFormatOpensAndOneFromANewerVersionIsRefused()
+    {
+        using var s = new Scratch();
+        var store = s.Open();
+        var id = store.Create("Year", SampleSchool.Create(s.Today, s.Today), "ada", s.Now);
+        void SetFormat(string v)
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            using var c = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={store.DatabasePath}");
+            c.Open();
+            using var cmd = c.CreateCommand();
+            cmd.CommandText = $"UPDATE meta SET value='{v}' WHERE key='format'";
+            cmd.ExecuteNonQuery();
+        }
+        string Format()
+        {
+            using var c = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={store.DatabasePath}");
+            c.Open();
+            using var cmd = c.CreateCommand();
+            cmd.CommandText = "SELECT value FROM meta WHERE key='format'";
+            return (string)cmd.ExecuteScalar()!;
+        }
+        SetFormat("1");
+        var older = ProjectStore.Open(s.Folder);
+        Assert.Equal(store.Load(id).State.Sessions.Count, older.Load(id).State.Sessions.Count);
+        Assert.Equal(ProjectStore.FormatVersion.ToString(), Format());   // and it is this format from now on
+        SetFormat((ProjectStore.FormatVersion + 1).ToString());
+        Assert.Contains("newer version", Assert.Throws<StoreRefused>(() => ProjectStore.Open(s.Folder)).Message);
+    }
+
+    [Fact]
     public void ABackupIsAWholeStoreThatOpens()
     {
         using var s = new Scratch();

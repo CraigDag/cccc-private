@@ -29,6 +29,12 @@ public sealed record Access(Account? Account)
 
     public bool MayEdit => !Following && IsEditor;
 
+    /// <summary>
+    /// The Scratch Week is for the people who plan the timetable: editors and administrators see it,
+    /// following or not (a viewer never does), and change it where <see cref="MayEdit"/> says.
+    /// </summary>
+    public bool MaySeeScratch => IsEditor;
+
     /// <summary>Anybody signed in can change something: a facilitator files their own registers.</summary>
     public bool MayEditSomething => !Following && SignedIn;
 
@@ -62,7 +68,7 @@ public sealed record Access(Account? Account)
         Account!.Tags.HasFlag(AccountTags.Student), FacilitatorId is not null,
         Account.Tags.HasFlag(AccountTags.Staff));
 
-    private static readonly HashSet<string> EditorsCollections = ["sessions", "registers", "events"];
+    private static readonly HashSet<string> EditorsCollections = ["sessions", "registers", "events", "scratch"];
 
     /// <summary>
     /// The server's own check of who may change which collection, whatever the screen offered: a

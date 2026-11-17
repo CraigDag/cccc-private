@@ -185,6 +185,7 @@ public sealed class LiveProject
     private static string Describe(Op op) => op.Collection switch
     {
         "sessions" => "a session",
+        "scratch" => "a class in the Scratch Week",
         "registers" => "a register",
         "students" => "a student",
         "facilitators" => "a facilitator",

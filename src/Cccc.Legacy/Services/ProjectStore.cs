@@ -2263,6 +2263,13 @@ public sealed class ProjectStore
         // ScheduleOps.RefreshProgrammeSessions.
         ScheduleOps.RefreshProgrammeSessions(b);
 
+        // SCHEMA 24's SCRATCH WEEK, kept to what it may hold. UNGATED and AFTER every scrub above, so
+        // it is judged against the rooms, groups, people and classes this file really has: an absent
+        // "ScratchSessions" reads as an empty list (no migration), a null in it is dropped, a session of
+        // the scratch's found in the real list is moved back, and nothing dead is left in a plan that
+        // could later be placed onto a real week. See ScratchWeek.Tidy.
+        ScratchWeek.Tidy(b);
+
         return p;
     }
 

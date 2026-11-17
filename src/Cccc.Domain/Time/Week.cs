@@ -20,15 +20,30 @@ public static class Week
 
     public static int IsoNumber(DateOnly date) => ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
 
+    /// <summary>
+    /// The week the Scratch Week's classes are dated in (<see cref="Editing.ScratchWeek"/>): Monday 6
+    /// January 2200, past any semester this timetable will hold and far enough from
+    /// <see cref="DateOnly.MaxValue"/> that stepping a week either side cannot overflow. It is in the
+    /// future, so no week-has-ended rule ever applies to it. It is never shown: the words below say
+    /// "Scratch Week" instead of its dates. The current app stamps its own Scratch Week with the same
+    /// Monday (1.67.0), so one brought in from there lands on the same days.
+    /// </summary>
+    public static readonly DateOnly ScratchMonday = new(2200, 1, 6);
+
+    /// <summary>Whether the date falls in the Scratch Week.</summary>
+    public static bool IsScratch(DateOnly anyDateInWeek) => MondayOf(anyDateInWeek) == ScratchMonday;
+
     /// <summary>The week has wholly ended: its Sunday is before today. Such a week is locked.</summary>
     public static bool HasEnded(DateOnly anyDateInWeek, DateOnly today) => MondayOf(anyDateInWeek).AddDays(6) < today;
 
     /// <summary>"Week 37, 7–13 September 2026" — dates and year, because week numbers repeat.</summary>
-    public static string ForDocuments(DateOnly anyDateInWeek) => $"Week {IsoNumber(anyDateInWeek)}, {Range(anyDateInWeek)}";
+    public static string ForDocuments(DateOnly anyDateInWeek) =>
+        IsScratch(anyDateInWeek) ? "the Scratch Week" : $"Week {IsoNumber(anyDateInWeek)}, {Range(anyDateInWeek)}";
 
     /// <summary>"7–13 September 2026", the week's Monday to Sunday, for beside a heading that already says the week.</summary>
     public static string Range(DateOnly anyDateInWeek)
     {
+        if (IsScratch(anyDateInWeek)) return "the Scratch Week";
         var m = MondayOf(anyDateInWeek);
         var s = m.AddDays(6);
         var inv = CultureInfo.InvariantCulture;
@@ -41,8 +56,10 @@ public static class Week
 
     public static string ShortDay(DayOfWeek day) => day.ToString()[..3];
 
-    public static string ShortDate(DateOnly date) =>
-        $"{ShortDay(date.DayOfWeek)} {date.Day} {date.ToString("MMM", CultureInfo.InvariantCulture)}";
+    /// <summary>"Wed 18 Nov"; a day of the Scratch Week has no date, so it is its day alone ("Wed").</summary>
+    public static string ShortDate(DateOnly date) => IsScratch(date)
+        ? ShortDay(date.DayOfWeek)
+        : $"{ShortDay(date.DayOfWeek)} {date.Day} {date.ToString("MMM", CultureInfo.InvariantCulture)}";
 
     public static string Hm(TimeOnly t) => t.ToString("HH:mm", CultureInfo.InvariantCulture);
 

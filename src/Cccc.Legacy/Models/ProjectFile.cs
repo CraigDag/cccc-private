@@ -206,8 +206,16 @@ public sealed class ProjectFile
     ///
     /// <para><b>A schema-22 build must refuse it</b>: it would read the file, count the whole session
     /// for everybody and raise the clash again, and on the first save drop every part.</para>
+    ///
+    /// <para><b>24 adds the Scratch Week</b> — <see cref="Building.ScratchSessions"/>, Craig,
+    /// 2026-11-17: one undated planning week, shared by everybody who edits, whose classes count
+    /// towards nothing until they are placed onto a real week. <b>No migration block</b>: an absent
+    /// <c>"ScratchSessions"</c> reads as empty, which is an empty Scratch Week.</para>
+    ///
+    /// <para><b>A schema-23 build must refuse it</b>: it would read the file without the list and, on
+    /// its first autosave, write it back without it, so the plan would be gone with nothing said.</para>
     /// </summary>
-    public const int CurrentSchemaVersion = 23;
+    public const int CurrentSchemaVersion = 24;
 
     /// <summary>
     /// The oldest format still migrated — and what an absent <see cref="SchemaVersion"/> key means.

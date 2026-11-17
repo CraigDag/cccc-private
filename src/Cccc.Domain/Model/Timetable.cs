@@ -60,6 +60,13 @@ public sealed record Timetable
     public EntitySet<Absence> Absences { get; init; } = EntitySet<Absence>.Empty;
     public EntitySet<SchoolEvent> Events { get; init; } = EntitySet<SchoolEvent>.Empty;
 
+    /// <summary>
+    /// The Scratch Week's classes: a plan, dated in <see cref="Week.ScratchMonday"/>, and a collection of
+    /// its own so that nothing reading <see cref="Sessions"/> can count it. See
+    /// <see cref="Editing.ScratchWeek"/>.
+    /// </summary>
+    public EntitySet<Session> Scratch { get; init; } = EntitySet<Session>.Empty;
+
     public static Timetable Empty { get; } = new();
 
     /// <summary>The sessions dated Monday to Sunday of this week. A week nobody filled is blank.</summary>

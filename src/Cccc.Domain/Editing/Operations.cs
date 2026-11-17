@@ -109,11 +109,13 @@ public static class Collections
     public static readonly Collection<Register> Registers = new("registers", t => t.Registers, (t, s) => t with { Registers = s });
     public static readonly Collection<Absence> Absences = new("absences", t => t.Absences, (t, s) => t with { Absences = s });
     public static readonly Collection<SchoolEvent> Events = new("events", t => t.Events, (t, s) => t with { Events = s });
+    /// <summary>The Scratch Week's classes (<see cref="ScratchWeek"/>), never part of <see cref="Sessions"/>.</summary>
+    public static readonly Collection<Session> Scratch = new("scratch", t => t.Scratch, (t, s) => t with { Scratch = s });
 
     public static IReadOnlyList<Collection> All { get; } =
     [
         Settings, Semesters, Closures, Rooms, Programmes, Groups, Branches, Disciplines, Students,
-        Facilitators, Areas, Classes, TimeRules, Sessions, Registers, Absences, Events,
+        Facilitators, Areas, Classes, TimeRules, Sessions, Registers, Absences, Events, Scratch,
     ];
 
     private static readonly Dictionary<string, Collection> ByName = All.ToDictionary(c => c.Name);

@@ -13,14 +13,16 @@ namespace Cccc.Web.Features.Admin;
 public static class ProjectFiles
 {
     public const string Extension = ".cccc2";
-    private const string Marker = "cccc2 1";
+    /// <summary>The format this build writes. 2 added the Scratch Week; a file of format 1 has none, which reads as an empty one.</summary>
+    private const int Format = 2;
+    private const string Marker = "cccc2 ";
 
     public static byte[] Write(Timetable t)
     {
         using var ms = new MemoryStream();
         using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
         {
-            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open(), Encoding.UTF8)) w.Write(Marker);
+            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open(), Encoding.UTF8)) w.Write(Marker + Format);
             using (var w = new StreamWriter(zip.CreateEntry("project.json", CompressionLevel.Optimal).Open(), Encoding.UTF8)) w.Write(ModelJson.Serialise(t));
         }
         return ms.ToArray();
@@ -40,7 +42,12 @@ public static class ProjectFiles
     {
         using var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
         using (var r = new StreamReader(zip.GetEntry("format.txt")?.Open() ?? throw new InvalidDataException("This is not a .cccc2 file.")))
-            if (r.ReadToEnd().Trim() != Marker) throw new InvalidDataException("This .cccc2 file was saved by a newer version of the app.");
+        {
+            var said = r.ReadToEnd().Trim();
+            if (!said.StartsWith(Marker, StringComparison.Ordinal) || !int.TryParse(said[Marker.Length..], out var n) || n < 1)
+                throw new InvalidDataException("This is not a .cccc2 file this app understands.");
+            if (n > Format) throw new InvalidDataException("This .cccc2 file was saved by a newer version of the app.");
+        }
         using var j = new StreamReader(zip.GetEntry("project.json")?.Open() ?? throw new InvalidDataException("The file has no project in it."));
         return ModelJson.Deserialise(j.ReadToEnd());
     }

@@ -89,6 +89,50 @@ public sealed class Building
     public List<ScheduleEntry> Sessions { get; set; } = new();
 
     /// <summary>
+    /// <b>The Scratch Week</b> — one undated planning week shared by everybody who edits, where a class
+    /// can be copied and moved about without touching the real timetable. Craig, 2026-11-17, schema 24.
+    ///
+    /// <para><b>It is its own list, deliberately, and never part of <see cref="Sessions"/>.</b> Every
+    /// reader that counts — hours, time rules, a student's load, registers, cover, clashes, the four
+    /// PDFs, the reports — reads <see cref="Sessions"/> or <see cref="SessionsInWeek"/> for a real week,
+    /// so a class in here cannot be counted by any of them without somebody writing a line to do it.
+    /// The alternative, scratch classes marked inside <see cref="Sessions"/>, needed every one of those
+    /// readers to remember to skip them, and one that forgot would count a plan as taught hours.</para>
+    ///
+    /// <para><b>Its sessions carry <see cref="ScratchMonday"/> as their week</b>, a Monday no term can
+    /// reach, so that the calendar, the editor, drag, Copy day and Copy week to… all work on it exactly
+    /// as they do on a real week: <see cref="SessionsInWeek"/> answers this list for that week and
+    /// <see cref="AddSession"/> files a session stamped with it here. Placing it back onto a real week is
+    /// <c>ScheduleOps.CopyWeek</c> from that Monday, which re-stamps every copy with the real week and
+    /// puts it in <see cref="Sessions"/>, where it counts again.</para>
+    /// </summary>
+    public List<ScheduleEntry> ScratchSessions { get; set; } = new();
+
+    /// <summary>
+    /// <b>The week the Scratch Week's sessions are stamped with</b>: Monday 6 January 2200, far past any
+    /// term this file will hold and far enough from <see cref="DateOnly.MaxValue"/> that stepping a week
+    /// either side of it cannot overflow. It is never shown to anybody; the screen says "Scratch Week".
+    /// It is in the future so that no week-has-ended rule (the freeze, a missing register) applies.
+    /// </summary>
+    public static readonly DateOnly ScratchMonday = new(2200, 1, 6);
+
+    /// <summary>Whether <paramref name="anyDateInWeek"/> falls in the Scratch Week.</summary>
+    public static bool IsScratchWeek(DateOnly anyDateInWeek) => WeekLabel.MondayOf(anyDateInWeek) == ScratchMonday;
+
+    /// <summary>Whether this session is one of the Scratch Week's, by its stamp.</summary>
+    public static bool IsScratch(ScheduleEntry entry) => entry.WeekMonday is DateOnly w && IsScratchWeek(w);
+
+    /// <summary>
+    /// <b>The list a session belongs in</b>: <see cref="ScratchSessions"/> for one stamped with
+    /// <see cref="ScratchMonday"/>, <see cref="Sessions"/> for everything else. Every write that adds a
+    /// session goes through this, so a scratch copy cannot land among the real ones.
+    /// </summary>
+    public List<ScheduleEntry> ListFor(ScheduleEntry entry) => IsScratch(entry) ? ScratchSessions : Sessions;
+
+    /// <summary>The list holding the week containing <paramref name="anyDateInWeek"/>.</summary>
+    public List<ScheduleEntry> ListForWeek(DateOnly anyDateInWeek) => IsScratchWeek(anyDateInWeek) ? ScratchSessions : Sessions;
+
+    /// <summary>
     /// Every session in the building, whatever room it is in — or none. <b>The one collection that
     /// never drops a room-less session</b>, which is what makes it the right source for anything keyed
     /// on day and time rather than on room: the week grid, the calendar-view exports, the sessions
@@ -150,6 +194,9 @@ public sealed class Building
         // The fast path, and the state almost every project is in: one pattern, nothing frozen, so
         // the answer is the list itself and no Where is allocated per call. SessionsInWeek is asked
         // once per session per render by the resolver.
+        // The Scratch Week first, and before the fast path: it is its own list whatever the project's
+        // weeks are, and no real week ever answers it. See ScratchSessions.
+        if (IsScratchWeek(anyDateInWeek)) return ScratchSessions;
         if (!SessionsVaryByWeek) return Sessions;
 
         var monday = WeekLabel.MondayOf(anyDateInWeek);
@@ -260,11 +307,11 @@ public sealed class Building
     public void AddSession(ScheduleEntry entry, Room? room)
     {
         entry.RoomId = room?.Id;
-        Sessions.Add(entry);
+        ListFor(entry).Add(entry);
     }
 
     /// <summary>Takes a session out of the building. False when it was not in it.</summary>
-    public bool RemoveSession(ScheduleEntry entry) => Sessions.Remove(entry);
+    public bool RemoveSession(ScheduleEntry entry) => Sessions.Remove(entry) || ScratchSessions.Remove(entry);
 
     /// <summary>
     /// Moves a session to another room — or to no room at all when <paramref name="destination"/> is

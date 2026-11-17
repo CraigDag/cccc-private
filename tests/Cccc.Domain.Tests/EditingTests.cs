@@ -58,6 +58,20 @@ public class CopyWeekTests
         var twice = Apply.Batch(once, Edits.CopyWeek(once, Monday, [NextWeek], Today));
         Assert.Single(twice.SessionsInWeek(NextWeek));
     }
+
+    [Fact]
+    public void ACopyMovedToAnotherWeekIsNotDraggedBackByCopyingTheWeekAgain()
+    {
+        var b = new Build();
+        b.Session(Monday, "09:00", "10:00");
+        var once = Apply.Batch(b.T, Edits.CopyWeek(b.T, Monday, [NextWeek], Today));
+        // Somebody moves next week's copy on a week, with the form's date box.
+        var copy = once.SessionsInWeek(NextWeek).Single();
+        var moved = Apply.Batch(once, Edits.PutSession(once, copy with { Date = WeekAfter }));
+        var again = Apply.Batch(moved, Edits.CopyWeek(moved, Monday, [NextWeek], Today));
+        Assert.Single(again.SessionsInWeek(NextWeek));
+        Assert.Equal(copy.Id, again.SessionsInWeek(WeekAfter).Single().Id);   // still where it was moved to
+    }
 }
 
 public class RemovingTests
