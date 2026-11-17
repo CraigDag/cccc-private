@@ -6,11 +6,17 @@
     <ProjectReference Include="..\Cccc.Legacy\Cccc.Legacy.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="QuestPDF" Version="2026.9.2" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <!-- The product's version: one value, read at run time by AppVersion and drawn on the status bar. -->
+    <Version>2.0.0-preview.1</Version>
   </PropertyGroup>
 
 </Project>

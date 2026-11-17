@@ -1,0 +1,72 @@
+@page "/setup"
+@layout BareLayout
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@inject AccountDirectory Accounts
+@inject SignInLimiter Limiter
+@inject SchoolClock Clock
+
+<PageTitle>First administrator · CCCC Scheduler</PageTitle>
+<h1>Make the first administrator</h1>
+
+@if (Accounts.SetupToken() is null)
+{
+    <p>This server already has its first administrator. <a href="/signin">Sign in</a> instead.</p>
+}
+else
+{
+    <p class="muted">This page works once, through the link the server printed to its log when it started with no accounts.</p>
+    @if (_message is not null)
+    {
+        <p class="form-error" role="alert">@_message</p>
+    }
+    <form method="post" @formname="setup" @onsubmit="MakeAsync">
+        <AntiforgeryToken />
+        <input type="hidden" name="Form.Token" value="@(F.Token ?? Token)" />
+        <label class="field"><span>Sign-in name</span><input name="Form.Login" value="@F.Login" required autocomplete="username" /></label>
+        <label class="field"><span>Name people see</span><input name="Form.Display" value="@F.Display" required /></label>
+        <label class="field"><span>Passphrase (at least @Verifier.MinimumLength characters)</span><input name="Form.Passphrase" type="password" required autocomplete="new-password" /></label>
+        <label class="field"><span>The same again</span><input name="Form.Again" type="password" required autocomplete="new-password" /></label>
+        <div class="form-actions"><button class="btn primary" type="submit">Make the administrator</button></div>
+    </form>
+}
+
+@code {
+    public sealed class SetupForm
+    {
+        public string? Token { get; set; }
+        public string? Login { get; set; }
+        public string? Display { get; set; }
+        public string? Passphrase { get; set; }
+        public string? Again { get; set; }
+    }
+
+    [CascadingParameter] public HttpContext HttpContext { get; set; } = default!;
+    [SupplyParameterFromForm] public SetupForm? Form { get; set; }
+    private SetupForm F => Form ??= new();
+    [SupplyParameterFromQuery(Name = "token")] public string? Token { get; set; }
+    private string? _message;
+
+    protected override void OnInitialized()
+    {
+        HttpContext.Response.Headers.CacheControl = "no-store";
+        Form ??= new();
+    }
+
+    private async Task MakeAsync()
+    {
+        if (!Limiter.Allow(SignInSetup.ClientOf(HttpContext), Clock.Now)) { _message = "Too many tries in the last minute."; return; }
+        if (F.Passphrase != F.Again) { _message = "The two passphrases are not the same."; return; }
+        if (Verifier.WhyNot(F.Passphrase) is { } why) { _message = why; return; }
+        try
+        {
+            var a = Accounts.CreateFirstAdministrator(F.Token ?? "", F.Login ?? "", F.Display ?? "", F.Passphrase!);
+            Accounts.RecordSignIn(a.Id);
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, AccountClaims.For(a));
+            HttpContext.Response.Redirect("/");
+        }
+        catch (AccountRefused e) { _message = e.Message; }
+    }
+}

@@ -1,0 +1,78 @@
+@page "/signin"
+@layout BareLayout
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@inject AccountDirectory Accounts
+@inject SignInLimiter Limiter
+@inject SchoolClock Clock
+@inject NavigationManager Nav
+
+<PageTitle>Sign in · CCCC Scheduler</PageTitle>
+<h1>Sign in</h1>
+
+@if (_message is not null)
+{
+    <p class="form-error" role="alert" data-testid="signin-error">@_message</p>
+}
+
+<form method="post" @formname="signin" @onsubmit="SignInAsync" data-testid="signin-form">
+    <AntiforgeryToken />
+    <label class="field">
+        <span>Name</span>
+        <input name="Form.Login" value="@F.Login" autocomplete="username" autofocus required data-testid="signin-login" />
+    </label>
+    <label class="field">
+        <span>Passphrase</span>
+        <input name="Form.Passphrase" type="password" autocomplete="current-password" required data-testid="signin-passphrase" />
+    </label>
+    <input type="hidden" name="Form.Back" value="@(F.Back ?? Back)" />
+    <div class="form-actions"><button class="btn primary" type="submit" data-testid="signin-submit">Sign in</button></div>
+</form>
+
+@code {
+    public sealed class SignInForm
+    {
+        public string? Login { get; set; }
+        public string? Passphrase { get; set; }
+        public string? Back { get; set; }
+    }
+
+    [CascadingParameter] public HttpContext HttpContext { get; set; } = default!;
+    [SupplyParameterFromForm] public SignInForm? Form { get; set; }
+    private SignInForm F => Form ??= new();
+    [SupplyParameterFromQuery(Name = "back")] public string? Back { get; set; }
+
+    private string? _message;
+
+    protected override void OnInitialized()
+    {
+        HttpContext.Response.Headers.CacheControl = "no-store";
+        Form ??= new();
+    }
+
+    private async Task SignInAsync()
+    {
+        if (!Limiter.Allow(SignInSetup.ClientOf(HttpContext), Clock.Now))
+        {
+            HttpContext.Response.StatusCode = 429;
+            _message = "Too many tries in the last minute. Wait a minute and try again.";
+            return;
+        }
+        var a = Accounts.Verify(F.Login ?? "", F.Passphrase ?? "");
+        if (a is null)
+        {
+            _message = "That name and passphrase do not match an account that can sign in.";
+            return;
+        }
+        Accounts.RecordSignIn(a.Id);
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, AccountClaims.For(a),
+            new AuthenticationProperties { IsPersistent = true });
+        var back = F.Back;
+        // Only ever a path on this site, never somewhere else.
+        var to = a.MustChange ? "/passphrase"
+            : back is { Length: > 0 } && back.StartsWith('/') && !back.StartsWith("//") && !back.StartsWith("/\\") ? back : "/";
+        HttpContext.Response.Redirect(to);
+    }
+}

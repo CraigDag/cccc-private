@@ -1,0 +1,110 @@
+@inject Dialogs D
+@inject WeekView V
+@{
+    var t = W.T;
+    var gap = _sessionId is { } id && t.Sessions[id] is { } s ? Occurrences.Resolve(t, s) : null;
+}
+@if (gap is null)
+{
+    var needed = Cover.StillNeeded(t, V.Monday, W.Today);
+    var covered = Occurrences.ForWeek(t, V.Monday).Where(o => o.Covered && o.Date >= W.Today).ToList();
+    <DialogFrame Title="@("Cover, " + DomainWeek.ForDocuments(V.Monday))" Class="wide">
+        @if (needed.Count == 0)
+        {
+            <p data-testid="cover-none">Nothing this week needs cover from today on.</p>
+        }
+        else
+        {
+            <p>A class needs cover when every facilitator on it is away. Choose one to see who could take it.</p>
+        }
+        <ul class="pick-list" data-testid="cover-list">
+            @foreach (var o in needed)
+            {
+                <li>
+                    <button type="button" class="pick" @onclick="() => Pick(o.Session.Id)" data-testid="cover-gap">
+                        <b>@Looks.Title(t, o.Session)</b> <span>@Looks.WhenWithDay(o.Session) · @Looks.Room(t, o.Session)</span>
+                        <small>Away: @Looks.Names(t, o.AwayIds)</small>
+                    </button>
+                </li>
+            }
+        </ul>
+        @if (covered.Count > 0)
+        {
+            <h3>Already covered</h3>
+            <ul class="pick-list">
+                @foreach (var o in covered)
+                {
+                    <li><button type="button" class="pick" @onclick="() => Pick(o.Session.Id)"><b>@Looks.Title(t, o.Session)</b> <span>@Looks.WhenWithDay(o.Session)</span> <small>Covered by @Looks.Names(t, o.Session.CoverIds)</small></button></li>
+                }
+            </ul>
+        }
+    </DialogFrame>
+}
+else
+{
+    var ranked = Cover.Ranked(t, gap);
+    <DialogFrame Title="@("Cover " + Looks.Title(t, gap.Session))" OnOk="Save" Class="wide">
+        <ChildContent>
+            <p>@Looks.WhenWithDay(gap.Session)@(Looks.Room(t, gap.Session) is { Length: > 0 } r ? ", " + r : ""). Away: <b>@(Looks.Names(t, gap.AwayIds) is { Length: > 0 } a ? a : "nobody")</b>.</p>
+            <p class="hint">Free people first, then the lightest week. Somebody teaching at that time is still offered, last: being busy is advice, never a refusal.</p>
+            <div class="checks rows" data-testid="cover-candidates">
+                @foreach (var c in ranked)
+                {
+                    <label class="candidate @(c.IsFree ? "" : "busy")">
+                        <input type="checkbox" checked="@_chosen.Contains(c.Person.Id)" @onchange="e => Toggle(c.Person.Id, (bool)e.Value!)" />
+                        <span class="grow"><b>@c.Person.Name</b>@(c.Person.IsGuest ? " (guest)" : "")</span>
+                        <small>@(c.TeachingThen is { } busy ? "Teaching " + Looks.Title(t, busy.Session) + " then" : "Free") · @DomainWeek.Duration(c.Week.Total) this week</small>
+                    </label>
+                }
+            </div>
+            <label class="field"><span>Note (shown with the cover)</span><input @bind="_note" maxlength="200" /></label>
+        </ChildContent>
+        <Extra>
+            @if (_sessionId is not null && SessionId is null)
+            {
+                <button type="button" class="btn quiet" @onclick="() => { _sessionId = null; _chosen.Clear(); }">◂ All this week</button>
+            }
+            @if (gap.Session.CoverIds.Count > 0)
+            {
+                <button type="button" class="btn" @onclick="Clear">Remove the cover</button>
+            }
+        </Extra>
+    </DialogFrame>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? SessionId { get; set; }
+    private Guid? _sessionId;
+    private readonly HashSet<Guid> _chosen = [];
+    private string? _note;
+
+    protected override void OnInitialized()
+    {
+        if (SessionId is { } id) Pick(id);
+    }
+
+    private void Pick(Guid id)
+    {
+        _sessionId = id;
+        _chosen.Clear();
+        if (W.T.Sessions[id] is { } s)
+        {
+            _chosen.UnionWith(s.CoverIds);
+            _note = s.CoverNote;
+        }
+    }
+
+    private void Toggle(Guid id, bool on) { if (on) _chosen.Add(id); else _chosen.Remove(id); }
+
+    private void Save()
+    {
+        if (_sessionId is not { } id) return;
+        if (W.Commit(t => Edits.SetCover(t, id, _chosen, _note))) D.Close();
+    }
+
+    private void Clear()
+    {
+        if (_sessionId is not { } id) return;
+        if (W.Commit(t => Edits.SetCover(t, id, [], null))) D.Close();
+    }
+}

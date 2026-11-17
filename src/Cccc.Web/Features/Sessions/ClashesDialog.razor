@@ -1,0 +1,39 @@
+@inject Dialogs D
+@inject WeekView V
+@{ var clashes = Clashes.ForWeek(W.T, V.Monday).Where(c => c.Kind != ClashKind.NeedsCover).ToList(); }
+<DialogFrame Title="@("Clashes, " + DomainWeek.ForDocuments(V.Monday))" Class="wide">
+    <p class="hint">Warnings, never refusals: real timetables break their own rules in exceptional weeks. A hidden guest class still counts here.</p>
+    @if (clashes.Count == 0)
+    {
+        <p>No clashes this week.</p>
+    }
+    <ul class="pick-list" data-testid="clash-list">
+        @foreach (var c in clashes)
+        {
+            <li><button type="button" class="pick" @onclick="() => Choose(c)"><b>@Word(c.Kind)</b> <span>@c.Description</span></button></li>
+        }
+    </ul>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+
+    private void Choose(Clash c)
+    {
+        V.Chosen.Clear();
+        V.Chosen.UnionWith(c.SessionIds);
+        V.Changed();
+        D.Close();
+    }
+
+    public static string Word(ClashKind k) => k switch
+    {
+        ClashKind.RoomDoubleBooked => "Room",
+        ClashKind.FacilitatorDoubleBooked => "Facilitator",
+        ClashKind.FacilitatorUnavailable => "Unavailable",
+        ClashKind.FacilitatorOverHours => "Over hours",
+        ClashKind.FacilitatorLongGap => "Long gap",
+        ClashKind.StudentDoubleBooked => "Student",
+        ClashKind.GroupDoubleBooked => "Group",
+        _ => "Cover",
+    };
+}

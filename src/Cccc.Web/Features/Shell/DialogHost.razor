@@ -1,0 +1,13 @@
+@implements IDisposable
+@inject Dialogs D
+@if (D.Component is { } type)
+{
+    <div class="backdrop" data-testid="backdrop">
+        <DynamicComponent @key="D.Generation" Type="type" Parameters="D.Parameters" />
+    </div>
+}
+@code {
+    protected override void OnInitialized() => D.Moved += Refresh;
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => D.Moved -= Refresh;
+}

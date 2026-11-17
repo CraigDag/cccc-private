@@ -336,4 +336,14 @@ public sealed class AccountDirectory(ProjectStore store, Func<DateTimeOffset> cl
         if (cmd.ExecuteNonQuery() == 0) throw new AccountRefused("That account has gone.");
         return stamp;
     }
+
+    /// <summary>For made-up preview accounts only: they start ready to use.</summary>
+    public void ClearMustChange(Guid id)
+    {
+        using var c = store.Connect();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "UPDATE accounts SET must_change=0 WHERE id=$id";
+        cmd.Parameters.AddWithValue("$id", id.ToString());
+        cmd.ExecuteNonQuery();
+    }
 }

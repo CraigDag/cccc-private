@@ -1,0 +1,70 @@
+@page "/passphrase"
+@layout BareLayout
+@attribute [ExcludeFromInteractiveRouting]
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@inject AccountDirectory Accounts
+
+<PageTitle>Change passphrase · CCCC Scheduler</PageTitle>
+<h1>Change your passphrase</h1>
+
+@if (_me is { MustChange: true })
+{
+    <p class="muted">Your passphrase was set by an administrator. Choose your own before carrying on.</p>
+}
+<p class="muted">Changing it signs you out everywhere else.</p>
+@if (_message is not null)
+{
+    <p class="form-error" role="alert" data-testid="passphrase-error">@_message</p>
+}
+<form method="post" @formname="passphrase" @onsubmit="ChangeAsync">
+    <AntiforgeryToken />
+    <label class="field"><span>Current passphrase</span><input name="Form.Current" type="password" required autocomplete="current-password" /></label>
+    <label class="field"><span>New passphrase (at least @Verifier.MinimumLength characters)</span><input name="Form.Next" type="password" required autocomplete="new-password" /></label>
+    <label class="field"><span>The same again</span><input name="Form.Again" type="password" required autocomplete="new-password" /></label>
+    <div class="form-actions">
+        <button class="btn primary" type="submit">Change passphrase</button>
+        @if (_me is not { MustChange: true })
+        {
+            <a class="btn" href="/">Close</a>
+        }
+    </div>
+</form>
+
+@code {
+    public sealed class PassForm
+    {
+        public string? Current { get; set; }
+        public string? Next { get; set; }
+        public string? Again { get; set; }
+    }
+
+    [CascadingParameter] public HttpContext HttpContext { get; set; } = default!;
+    [SupplyParameterFromForm] public PassForm? Form { get; set; }
+    private PassForm F => Form ??= new();
+    private string? _message;
+    private Account? _me;
+
+    protected override void OnInitialized()
+    {
+        HttpContext.Response.Headers.CacheControl = "no-store";
+        Form ??= new();
+        _me = AccountClaims.Current(HttpContext.User, Accounts);
+    }
+
+    private async Task ChangeAsync()
+    {
+        if (_me is null) { HttpContext.Response.Redirect("/signin"); return; }
+        if (F.Next != F.Again) { _message = "The two new passphrases are not the same."; return; }
+        if (Verifier.WhyNot(F.Next) is { } why) { _message = why; return; }
+        try
+        {
+            Accounts.ChangeOwn(_me.Id, F.Current ?? "", F.Next!);
+            var fresh = Accounts.Find(_me.Id)!;
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, AccountClaims.For(fresh),
+                new AuthenticationProperties { IsPersistent = true });
+            HttpContext.Response.Redirect("/");
+        }
+        catch (AccountRefused e) { _message = e.Message; }
+    }
+}

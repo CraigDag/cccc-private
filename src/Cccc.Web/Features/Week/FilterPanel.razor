@@ -1,0 +1,38 @@
+@inject WeekView V
+<div class="menu filter-panel" data-testid="filter-panel">
+    <label class="field"><span>Search</span>
+        <TypedText Value="@V.Search" ValueChanged="OnSearch" Placeholder="Class, room, person, note" Label="Search the week" data-testid="filter-search" />
+    </label>
+    <FilterPick Label="Programme" Items="@ProgrammeItems()" (guest)" : ""), p.Colour))" Set="V.Programmes" OnChange="V.Changed" />
+    <FilterPick Label="Group" Items="@(W.T.Groups.Select(g => (g.Id, g.Name, (string?)g.Colour)))" Set="V.Groups" OnChange="V.Changed" />
+    <FilterPick Label="Room" Items="@(W.T.Rooms.Select(r => (r.Id, r.Name, (string?)r.Colour)))" Set="V.Rooms" OnChange="V.Changed" />
+    <FilterPick Label="Facilitator" Items="@(W.T.Facilitators.Select(f => (f.Id, f.Name, (string?)f.Colour)))" Set="V.Facilitators" OnChange="V.Changed" />
+    @if (W.T.Students.Count > 0)
+    {
+        <FilterPick Label="Student" Items="@(W.T.Students.Select(s => (s.Id, s.Name, (string?)null)))" Set="V.Students" OnChange="V.Changed" />
+    }
+    <fieldset class="checks">
+        <legend>Also show</legend>
+        <label><input type="checkbox" checked="@V.ShowOpen" @onchange="e => Set(() => V.ShowOpen = (bool)e.Value!)" data-testid="show-open" /> Open sessions</label>
+        <label><input type="checkbox" checked="@V.ShowGuests" @onchange="e => Set(() => V.ShowGuests = (bool)e.Value!)" data-testid="show-guests" /> Guest classes</label>
+        <label><input type="checkbox" checked="@V.ShowEvents" @onchange="e => Set(() => V.ShowEvents = (bool)e.Value!)" data-testid="show-events" /> Events</label>
+    </fieldset>
+    <div class="form-actions">
+        @if (V.AnyFilter)
+        {
+            <button type="button" class="btn" @onclick="V.ClearFilters">Clear filters</button>
+        }
+        <button type="button" class="btn" @onclick="OnClose">Close</button>
+    </div>
+</div>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private IEnumerable<(Guid, string, string?)> ProgrammeItems() =>
+        W.T.Programmes.Select(p => (p.Id, p.Name + (p.IsGuest ? " (guest)" : ""), (string?)p.Colour));
+
+    private void OnSearch(string s) { V.Search = s; V.Changed(); }
+
+    private void Set(Action a) { a(); V.Changed(); }
+}

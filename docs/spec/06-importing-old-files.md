@@ -41,8 +41,8 @@ A file newer than schema 23 is refused, in the old app's words.
   also ran in weeks outside every semester; here those weeks are blank, which the round-trip test pins.)
   Each stamped copy gets a **stable id** derived from the pattern id and the Monday, the old app's own
   `FrozenCopyId`, so an old register keyed to a pattern session lands on the right copy.
-- An exception or register keyed to a week where its session does not land is kept on the nearest
-  week that has it, as the old `SeparateTheWeeks` does, and the import report counts these.
+- An exception or register keyed to a week where its session does not land (a hand-edited or damaged
+  file; the old app's own repairs prevent it) is not brought across, and the import report counts it.
 
 **An import report** is shown after every import: how many of each thing came across, how many weeks
 were stamped from the pattern, and anything that could not be placed — by count, never by name.

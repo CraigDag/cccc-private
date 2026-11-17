@@ -173,6 +173,9 @@ public static class Edits
         foreach (var to in toWeeks.Select(Week.MondayOf).Distinct().Where(m => m != from).OrderBy(m => m))
         {
             if (Week.HasEnded(to, today)) continue;
+            // A week that already holds a register is never replaced: that would delete what somebody
+            // stood in a room and recorded.
+            if (HoldsRegisters(d.Current, to)) continue;
             foreach (var old in d.Current.SessionsInWeek(to).ToList())
                 d.Remove(Collections.Sessions, old.Id).Remove(Collections.Registers, old.Id);
             foreach (var s in source)
@@ -184,6 +187,10 @@ public static class Edits
         }
         return d.ToBatch(weeks == 1 ? "Copied a week" : $"Copied a week onto {weeks} weeks");
     }
+
+    /// <summary>Whether any session of the week has a register filed: such a week is never replaced by a copy.</summary>
+    public static bool HoldsRegisters(Timetable t, DateOnly anyDateInWeek) =>
+        t.SessionsInWeek(anyDateInWeek).Any(s => t.Registers.Contains(s.Id));
 
     /// <summary>Copy day APPENDS to the destination day.</summary>
     public static Batch CopyDay(Timetable t, DateOnly from, DateOnly to)

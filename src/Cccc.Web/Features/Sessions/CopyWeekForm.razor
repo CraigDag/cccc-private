@@ -1,0 +1,58 @@
+@inject Dialogs D
+@{
+    var t = W.T;
+    var weeks = Targets().ToList();
+    int count = Edits.SessionCountIn(t, Monday);
+}
+<DialogFrame Title="@("Copy " + DomainWeek.ForDocuments(Monday))" OnOk="Save" OkEnabled="@(_chosen.Count > 0)" OkLabel="@($"Copy onto {_chosen.Count} week{(_chosen.Count == 1 ? "" : "s")}")" Class="wide">
+    <p>Copies this week's @count sessions onto the weeks you tick. <b>A week you tick is replaced, not added to</b>, so nothing is doubled. A week that has ended, or already holds a register, is never replaced.</p>
+    @if (count == 0)
+    {
+        <p class="form-error">This week is blank, so copying it would empty the weeks you tick.</p>
+    }
+    <div class="bar">
+        <button type="button" class="btn quiet" @onclick="() => { _chosen.Clear(); _chosen.UnionWith(weeks.Where(w => w.Blank && w.May).Select(w => w.Monday)); }">Tick every blank week</button>
+        <button type="button" class="btn quiet" @onclick="() => _chosen.Clear()">Untick all</button>
+    </div>
+    <div class="checks rows week-picks" data-testid="copy-weeks">
+        @foreach (var w in weeks)
+        {
+            <label class="@(w.May ? "" : "off")">
+                <input type="checkbox" disabled="@(!w.May)" checked="@_chosen.Contains(w.Monday)" @onchange="e => Toggle(w.Monday, (bool)e.Value!)" />
+                <span class="grow">Week @DomainWeek.IsoNumber(w.Monday), @DomainWeek.ShortDate(w.Monday)@(t.SemesterFor(w.Monday) is { } s ? " · " + s.Name : "")</span>
+                <small>@(w.HasRegisters ? "has registers, kept" : w.Blank ? "blank" : $"{w.Count} sessions, replaced")</small>
+            </label>
+        }
+    </div>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public DateOnly Monday { get; set; }
+    private readonly HashSet<DateOnly> _chosen = [];
+
+    private sealed record Target(DateOnly Monday, int Count, bool HasRegisters, bool May)
+    {
+        public bool Blank => Count == 0;
+    }
+
+    private IEnumerable<Target> Targets()
+    {
+        var t = W.T;
+        var first = DomainWeek.MondayOf(W.Today);
+        var last = t.YearEndMonday is { } e && e > first ? e : first.AddDays(7 * 20);
+        for (var m = first; m <= last; m = m.AddDays(7))
+        {
+            if (m == Monday) continue;
+            bool regs = Edits.HoldsRegisters(t, m);
+            yield return new Target(m, Edits.SessionCountIn(t, m), regs, !regs && !DomainWeek.HasEnded(m, W.Today));
+        }
+    }
+
+    private void Toggle(DateOnly m, bool on) { if (on) _chosen.Add(m); else _chosen.Remove(m); }
+
+    private void Save()
+    {
+        var to = _chosen.ToList();
+        if (W.Commit(t => Edits.CopyWeek(t, Monday, to, W.Today))) D.Close();
+    }
+}

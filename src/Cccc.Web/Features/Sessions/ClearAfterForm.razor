@@ -1,0 +1,14 @@
+@inject Dialogs D
+@{ int n = Edits.CountClearedAfter(W.T, W.Today); }
+<DialogFrame Title="Clear the weeks after this one" OnOk="Save" OkEnabled="@(n > 0)" OkLabel="@($"Clear {n} sessions")">
+    <p>Empties every week after <b>this week (@DomainWeek.ForDocuments(W.Today))</b> to the end of the year, so those weeks are blank until somebody fills them. This week and every week before it keep what they have.</p>
+    <p>@(n == 0 ? "There is nothing after this week to clear." : $"{n} sessions would go. Undo brings them back.")</p>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+
+    private void Save()
+    {
+        if (W.Commit(t => Edits.ClearWeeksAfter(t, W.Today))) D.Close();
+    }
+}

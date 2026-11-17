@@ -1,0 +1,20 @@
+@implements IDisposable
+@inject Toasts T
+<div class="toasts" aria-live="polite" data-testid="toasts">
+    @foreach (var t in T.Shown)
+    {
+        <div class="toast @(t.IsWarning ? "warn" : "")" @key="t.Id" data-testid="toast">
+            <span>@t.Text</span>
+            @if (t.Action is not null)
+            {
+                <button type="button" class="link" @onclick="async () => { T.Dismiss(t.Id); await t.Action(); }">@t.ActionLabel</button>
+            }
+            <button type="button" class="toast-x" aria-label="Dismiss" @onclick="() => T.Dismiss(t.Id)">×</button>
+        </div>
+    }
+</div>
+@code {
+    protected override void OnInitialized() => T.Moved += Refresh;
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => T.Moved -= Refresh;
+}

@@ -1,0 +1,29 @@
+@inject Dialogs D
+@{ var s = W.T.Sessions[SessionId]; }
+@if (s is null)
+{
+    <DialogFrame Title="This session has gone"><p>Somebody removed it while it was open here.</p></DialogFrame>
+}
+else if (s.Cancelled)
+{
+    <DialogFrame Title="@("Restore " + Looks.Title(W.T, s))" OnOk="() => Set(false)" OkLabel="Restore it" DismissLabel="Close">
+        <p>@Looks.WhenWithDay(s) is cancelled@(s.CancelNote is { Length: > 0 } n ? ": " + n : "."). Restoring puts it back on the week.</p>
+    </DialogFrame>
+}
+else
+{
+    <DialogFrame Title="@("Cancel " + Looks.Title(W.T, s))" OnOk="() => Set(true)" OkLabel="Cancel the class" DismissLabel="Close">
+        <p>@Looks.WhenWithDay(s) stays on the week, struck through, so everybody can see it is not happening. Nobody's hours count it and it needs no register.</p>
+        <label class="field"><span>Why (shown on the week)</span><input @bind="_note" maxlength="200" /></label>
+    </DialogFrame>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid SessionId { get; set; }
+    private string? _note;
+
+    private void Set(bool cancelled)
+    {
+        if (W.Commit(t => Edits.SetCancelled(t, SessionId, cancelled, _note))) D.Close();
+    }
+}

@@ -1,0 +1,20 @@
+<label class="field"><span>@Label</span>
+    <select @onchange="OnPick" aria-label="@Label">
+        <option value="" selected>Add a @Label.ToLowerInvariant()…</option>
+        @foreach (var (id, name, _) in Items.Where(i => !Set.Contains(i.Id)).OrderBy(i => i.Name, NameOrder.Comparer))
+        {
+            <option value="@id">@name</option>
+        }
+    </select>
+</label>
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public IEnumerable<(Guid Id, string Name, string? Colour)> Items { get; set; } = [];
+    [Parameter, EditorRequired] public HashSet<Guid> Set { get; set; } = [];
+    [Parameter] public Action? OnChange { get; set; }
+
+    private void OnPick(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var g) && Set.Add(g)) OnChange?.Invoke();
+    }
+}

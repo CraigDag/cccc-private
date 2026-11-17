@@ -1,0 +1,47 @@
+@inject Dialogs D
+<DialogFrame Title="Copy a day" OnOk="Save" OkEnabled="@(_why is null)" OkLabel="Copy">
+    <p>Copies every session of one day onto another. The day it lands on keeps what it already has; the copies are added beside them.</p>
+    <label class="field"><span>Copy</span>
+        <select @bind="_from" @bind:after="Check">
+            @foreach (var d in DomainWeek.Days(Monday))
+            {
+                <option value="@d.ToString("yyyy-MM-dd")">@DomainWeek.ShortDate(d) (@W.T.Sessions.Count(s => s.Date == d) sessions)</option>
+            }
+        </select>
+    </label>
+    <label class="field"><span>Onto</span><input type="date" @bind="_to" @bind:after="Check" /></label>
+    @if (_why is not null)
+    {
+        <p class="form-error">@_why</p>
+    }
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public DateOnly Monday { get; set; }
+    private string _from = "";
+    private DateOnly _to;
+    private string? _why;
+
+    protected override void OnInitialized()
+    {
+        var first = Monday <= W.Today && W.Today <= Monday.AddDays(6) ? W.Today : Monday;
+        _from = first.ToString("yyyy-MM-dd");
+        _to = first.AddDays(1);
+        Check();
+    }
+
+    private void Check()
+    {
+        var from = DateOnly.Parse(_from);
+        _why = _to == from ? "Choose a different day to copy onto."
+            : DomainWeek.HasEnded(_to, W.Today) ? "That day's week has ended, so nothing can be added to it."
+            : !W.T.Sessions.Any(s => s.Date == from) ? "There is nothing on that day to copy."
+            : null;
+    }
+
+    private void Save()
+    {
+        var from = DateOnly.Parse(_from);
+        if (W.Commit(t => Edits.CopyDay(t, from, _to))) D.Close();
+    }
+}

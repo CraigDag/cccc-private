@@ -1,0 +1,90 @@
+@inject Dialogs D
+@{
+    var t = W.T;
+    var s = t.Sessions[SessionId];
+}
+@if (s is null)
+{
+    <DialogFrame Title="This session has gone"><p>Somebody removed it while it was open here.</p></DialogFrame>
+}
+else
+{
+    var roster = Roster.ForRegister(t, s);
+    var existing = t.Registers[s.Id];
+    bool may = Registers.MayChange(W.Access.Registers, s);
+    <DialogFrame Title="@("Register: " + Looks.Title(t, s))" OnOk="@(may ? EventCallback.Factory.Create(this, Save) : default)" Class="wide">
+        <ChildContent>
+            <p>@Looks.WhenWithDay(s)@(Looks.Room(t, s) is { Length: > 0 } r ? ", " + r : "") · @Looks.Audience(t, s)</p>
+            @if (existing is { FiledAt: { } at })
+            {
+                <p class="muted" data-testid="register-filed">Taken @W.Clock.Describe(at)@(existing.FiledBy is { } by ? " by " + W.NameOf(by) : ""). @(may ? "Changing it files it again." : "")</p>
+            }
+            else if (s.Date > W.Today)
+            {
+                <p class="muted">This class has not happened yet.</p>
+            }
+            @if (!may)
+            {
+                <p class="muted">Only somebody in the room for this class, or an administrator, can change its register. Everybody can read it.</p>
+            }
+            @if (roster.Count == 0)
+            {
+                <p>Nobody is on this class, so it has no register.</p>
+            }
+            else
+            {
+                @if (may)
+                {
+                    <div class="bar">
+                        <button type="button" class="btn quiet" @onclick="() => All(Mark.Present)" data-testid="register-all-present">Everybody present</button>
+                        <span class="muted">@_marks.Count(m => m.Value == Mark.Present) present · @_marks.Count(m => m.Value == Mark.Excused) excused · @_marks.Count(m => m.Value == Mark.Absent) absent</span>
+                    </div>
+                }
+                <div class="register" data-testid="register-rows">
+                    @foreach (var id in roster.OrderBy(id => t.Students[id]?.Name, NameOrder.Comparer))
+                    {
+                        var mark = _marks.GetValueOrDefault(id, Mark.Absent);
+                        <div class="register-row" data-testid="register-row">
+                            <span class="grow">@(t.Students[id]?.Name ?? "A student no longer on the list")@(_knownAway.Contains(id) ? " · away" : "")</span>
+                            <div class="seg small" role="radiogroup" aria-label="@t.Students[id]?.Name">
+                                @foreach (var m in new[] { Mark.Present, Mark.Excused, Mark.Absent })
+                                {
+                                    <button type="button" role="radio" aria-checked="@(mark == m ? "true" : "false")" class="@(mark == m ? "on " + m.ToString().ToLowerInvariant() : "")"
+                                            disabled="@(!may)" @onclick="() => _marks[id] = m">@m</button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </ChildContent>
+    </DialogFrame>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid SessionId { get; set; }
+    private readonly Dictionary<Guid, Mark> _marks = [];
+    private HashSet<Guid> _knownAway = [];
+
+    protected override void OnInitialized()
+    {
+        var t = W.T;
+        if (t.Sessions[SessionId] is not { } s) return;
+        _knownAway = Registers.KnownAway(t, s).ToHashSet();
+        var r = t.Registers[s.Id];
+        foreach (var id in Roster.ForRegister(t, s))
+            _marks[id] = r is not null ? r.MarkFor(id) : _knownAway.Contains(id) ? Mark.Excused : Mark.Present;
+    }
+
+    private void All(Mark m)
+    {
+        foreach (var k in _marks.Keys.ToList()) _marks[k] = _knownAway.Contains(k) && m == Mark.Present ? Mark.Excused : m;
+    }
+
+    private void Save()
+    {
+        var present = _marks.Where(m => m.Value == Mark.Present).Select(m => m.Key).ToList();
+        var excused = _marks.Where(m => m.Value == Mark.Excused).Select(m => m.Key).ToList();
+        if (W.Commit(t => Edits.FileRegister(t, SessionId, present, excused, W.Access.Registers, W.Access.By, W.Clock.Now))) D.Close();
+    }
+}

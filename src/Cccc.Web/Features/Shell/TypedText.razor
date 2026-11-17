@@ -1,0 +1,28 @@
+@*
+    A text box that searches as you type without losing keystrokes. A box written value="@x" @oninput
+    makes every keystroke a round trip, and the render that comes back writes the server's idea of the
+    value over what is in the box. This one renders the value it started with and never changes it, so
+    Blazor has nothing to patch; to set it from the app, change its @key.
+*@
+<input type="@Type" class="@Class" value="@_start" placeholder="@Placeholder" aria-label="@Label"
+       @oninput="OnInput" @attributes="Extra" />
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Type { get; set; } = "text";
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? Extra { get; set; }
+    private string? _start;
+    private bool _started;
+
+    protected override void OnParametersSet()
+    {
+        if (_started) return;
+        _start = Value;
+        _started = true;
+    }
+
+    private Task OnInput(ChangeEventArgs e) => ValueChanged.InvokeAsync(e.Value?.ToString() ?? "");
+}

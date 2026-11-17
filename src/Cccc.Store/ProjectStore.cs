@@ -135,6 +135,29 @@ public sealed class ProjectStore
 
     private static DateTimeOffset FromIso(string s) => DateTimeOffset.Parse(s, null, System.Globalization.DateTimeStyles.RoundtripKind);
 
+    // ---- Settings of the store itself -------------------------------------------------------------
+
+    /// <summary>A store-wide value: which project is open, when the last backup ran. Never project contents.</summary>
+    public string? GetMeta(string key)
+    {
+        using var c = Connect();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT value FROM meta WHERE key=$k";
+        cmd.Parameters.AddWithValue("$k", key);
+        return cmd.ExecuteScalar() as string;
+    }
+
+    public void SetMeta(string key, string? value)
+    {
+        using var c = Connect();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = value is null ? "DELETE FROM meta WHERE key=$k"
+            : "INSERT INTO meta(key,value) VALUES($k,$v) ON CONFLICT(key) DO UPDATE SET value=$v";
+        cmd.Parameters.AddWithValue("$k", key);
+        if (value is not null) cmd.Parameters.AddWithValue("$v", value);
+        cmd.ExecuteNonQuery();
+    }
+
     // ---- Projects ---------------------------------------------------------------------------------
 
     public IReadOnlyList<ProjectInfo> List(bool includeDeleted = false)
@@ -398,7 +421,7 @@ public sealed class ProjectStore
             }
         }
         tx.Commit();
-        Exec(Connect(), "VACUUM;");
+        using (var v = Connect()) Exec(v, "VACUUM;");
         return changed;
     }
 

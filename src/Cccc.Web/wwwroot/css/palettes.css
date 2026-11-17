@@ -1,0 +1,134 @@
+/* CCCC Scheduler. The palette is the whole of the theme: every rule below the palettes refers to a
+   variable, and no rule below them contains a colour. Four dark palettes, Setsquare Dark (mint) by
+   default; it sits on bare :root too, so a first frame is never unthemed. */
+
+:root[data-theme="Chalkline Dark"] {
+    color-scheme: dark;
+    --window:         #0D0C0B;
+    --chrome:         #2A2824;
+    --panel:          #2A2824;
+    --field:          #3A3731;
+    --board:          #232120;
+    --hover:          #312F2B;
+    --hover-raised:   #36342E;
+    --raised:         #2F2D28;
+    --well:           #1C1B18;
+    --border:         #918D85;
+    --divider:        #3E3B35;
+    --rule:           #42403A;
+    --divider-raised: #434039;
+    --text:           #FAF8F5;
+    --text-muted:     #A8A7A4;
+    --text-quiet:     #A4A3A0;
+    --accent:         #7FB0CC;
+    --accent-text:    #06141C;
+    --canvas:         #000000;
+    --lit:            #FFFFFF;
+    --selection:      #A8CFE4;
+    --warning:        #F0B27A;
+    --block-wash:     24%;
+}
+
+:root, :root[data-theme="Setsquare Dark"] {
+    color-scheme: dark;
+    --window:         #0F1211;
+    --chrome:         #2A302E;
+    --panel:          #2A302E;
+    --field:          #373E3B;
+    --board:          #212725;
+    --hover:          #313734;
+    --hover-raised:   #353C39;
+    --raised:         #2E3532;
+    --well:           #202422;
+    --border:         #8C9792;
+    --divider:        #3A403E;
+    --rule:           #3F4443;
+    --divider-raised: #404644;
+    --text:           #DFE5E3;
+    --text-muted:     #A4AEAB;
+    --text-quiet:     #A1ABA8;
+    --accent:         #3AD3B3;
+    --accent-text:    #04211B;
+    --canvas:         #000000;
+    --lit:            #FFFFFF;
+    --selection:      #3AD3B3;
+    --warning:        #E7B85C;
+    --block-wash:     24%;
+}
+
+:root[data-theme="Instrument Dark"] {
+    color-scheme: dark;
+    --window:         #090B0E;
+    --chrome:         #252930;
+    --panel:          #252930;
+    --field:          #343942;
+    --board:          #1E2228;
+    --hover:          #2C3037;
+    --hover-raised:   #30353D;
+    --raised:         #292E35;
+    --well:           #181C21;
+    --border:         #889099;
+    --divider:        #383D46;
+    --rule:           #3B4148;
+    --divider-raised: #3C424B;
+    --text:           #F5F7FA;
+    --text-muted:     #A8ABAE;
+    --text-quiet:     #A2A5A8;
+    --accent:         #9AA4FF;
+    --accent-text:    #0A0C2A;
+    --canvas:         #000000;
+    --lit:            #FFFFFF;
+    --selection:      #B9C0FF;
+    --warning:        #FFBA78;
+    --block-wash:     24%;
+}
+
+:root[data-theme="Sandtable Dark"] {
+    color-scheme: dark;
+    --window:         #0C0A07;
+    --chrome:         #2A261F;
+    --panel:          #2A261F;
+    --field:          #39342B;
+    --board:          #221E19;
+    --hover:          #312D26;
+    --hover-raised:   #363229;
+    --raised:         #2F2B23;
+    --well:           #1B1813;
+    --border:         #90897E;
+    --divider:        #3D372E;
+    --rule:           #423D35;
+    --divider-raised: #433D33;
+    --text:           #FBF7EF;
+    --text-muted:     #A6A39C;
+    --text-quiet:     #A29F97;
+    --accent:         #7FCBA3;
+    --accent-text:    #05190F;
+    --canvas:         #000000;
+    --lit:            #FFFFFF;
+    --selection:      #A6E0C2;
+    --warning:        #F5B87C;
+    --block-wash:     24%;
+}
+
+@font-face {
+    font-family: "Instrument Sans";
+    font-style: normal;
+    font-weight: 400 700;
+    font-stretch: 100%;
+    font-display: swap;
+    src: url("../fonts/instrument-sans-latin.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+        U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "Instrument Sans";
+    font-style: normal;
+    font-weight: 400 700;
+    font-stretch: 100%;
+    font-display: swap;
+    src: url("../fonts/instrument-sans-latin-ext.woff2") format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+        U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+        U+2C60-2C7F, U+A720-A7FF;
+}

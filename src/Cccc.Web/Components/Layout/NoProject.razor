@@ -1,0 +1,15 @@
+<div class="empty-state" data-testid="no-project">
+    <h1>No timetable yet</h1>
+    @if (W.Access.MayManageProjects)
+    {
+        <p>Start one, or bring the school's existing <code>.cccc</code> file across, in Administration ▸ Projects.</p>
+        <p><a class="btn primary" href="/admin/projects">Open Projects</a></p>
+    }
+    else
+    {
+        <p>An administrator has not opened a timetable on this server yet.</p>
+    }
+</div>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+}

@@ -1,21 +1,29 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
     <base href="/" />
-    <ResourcePreloader />
-    <link rel="stylesheet" href="@Assets["app.css"]" />
-    <link rel="stylesheet" href="@Assets["Cccc.Web.styles.css"]" />
-    <ImportMap />
-    <HeadOutlet />
+    <link rel="icon" href="@Assets["icons/icon-192.png"]" />
+    <link rel="stylesheet" href="@Assets["css/palettes.css"]" />
+    <link rel="stylesheet" href="@Assets["css/app.css"]" />
+    <script src="@Assets["js/theme.js"]"></script>
+    <HeadOutlet @rendermode="PageRenderMode" />
 </head>
-
 <body>
-    <Routes />
+    <Routes @rendermode="PageRenderMode" />
     <ReconnectModal />
+    <script src="@Assets["js/shell.js"]"></script>
+    <script src="@Assets["js/week.js"]"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
-
 </html>
+
+@code {
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    // The sign-in pages are plain pages; everything behind sign-in is one interactive circuit.
+    private IComponentRenderMode? PageRenderMode =>
+        HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
+}

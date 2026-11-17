@@ -1,0 +1,46 @@
+@* The week below 640px: a list per day, because a seven-column grid cannot be read on a phone. *@
+<div class="day-list" data-testid="day-list">
+    @foreach (var d in M.Days)
+    {
+        var rows = M.Visible.Where(o => o.Date == d).OrderBy(o => o.Start).ThenBy(o => Looks.Title(W.T, o.Session), NameOrder.Comparer).ToList();
+        var events = M.Events.Where(e => e.Covers(d)).ToList();
+        <section class="day @(d == W.Today ? "today" : "")">
+            <h2>@Looks.DayHeading(d) @(d == W.Today ? " · today" : "")</h2>
+            @if (Occurrences.ClosureFor(W.T, d, null) is { } c)
+            {
+                <div class="wk-closed">Closed · @c.Name</div>
+            }
+            @foreach (var e in events)
+            {
+                <button type="button" class="wk-event @(e.Event.AllDay ? "allday" : "")" @onclick="() => OnOpenEvent.InvokeAsync(e.Event.Id)">
+                    @(e.Event.AllDay ? "" : Cccc.Domain.Week.Hm(e.Event.Start) + " ") @e.Event.Title
+                </button>
+            }
+            @if (rows.Count == 0 && events.Count == 0)
+            {
+                <p class="muted">Nothing on.</p>
+            }
+            @foreach (var o in rows)
+            {
+                var colour = Looks.ColourOf(W.T, o.Session);
+                <button type="button" class="day-row @(o.NeedsCover ? "cover" : "") @(o.Happens ? "" : "off") @(M.Ringed.Contains(o.Session.Id) ? "clash" : "")"
+                        style="@(colour is null ? "" : $"--c:{colour}")" @onclick="() => OnOpen.InvokeAsync(o.Session.Id)" data-testid="day-row">
+                    <span class="day-time">@Looks.When(o.Session)</span>
+                    <span class="day-what"><b>@Looks.Title(W.T, o.Session)</b>
+                        <small>@string.Join(" · ", new[] { Looks.Room(W.T, o.Session), Looks.Audience(W.T, o.Session), Looks.Initials(W.T, o) }.Where(x => x.Length > 0))</small>
+                    </span>
+                    @if (Looks.StateWord(o) is { Length: > 0 } state)
+                    {
+                        <span class="day-state">@state</span>
+                    }
+                </button>
+            }
+        </section>
+    }
+</div>
+@code {
+    [Parameter, EditorRequired] public WeekModel M { get; set; } = default!;
+    [Parameter, EditorRequired] public Workspace W { get; set; } = default!;
+    [Parameter] public EventCallback<Guid> OnOpen { get; set; }
+    [Parameter] public EventCallback<Guid> OnOpenEvent { get; set; }
+}

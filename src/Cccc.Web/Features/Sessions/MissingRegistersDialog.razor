@@ -1,0 +1,24 @@
+@inject Dialogs D
+@inject WeekView V
+@{
+    var t = W.T;
+    var missing = Registers.FileableBy(Registers.MissingInWeek(t, V.Monday, W.Today), W.Access.Registers);
+}
+<DialogFrame Title="Registers missing" Class="wide">
+    <p class="hint">A register is missing when the class ran, somebody is on it, and the day has passed. These are the ones you can take.</p>
+    @if (missing.Count == 0)
+    {
+        <p>None missing this week.</p>
+    }
+    <ul class="pick-list" data-testid="missing-list">
+        @foreach (var o in missing)
+        {
+            <li><button type="button" class="pick" @onclick="() => Take(o.Session.Id)"><b>@Looks.Title(t, o.Session)</b> <span>@Looks.WhenWithDay(o.Session) · @Looks.Audience(t, o.Session)</span></button></li>
+        }
+    </ul>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+
+    private void Take(Guid id) => D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = id });
+}

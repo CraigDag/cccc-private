@@ -1,9 +1,91 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject AuthenticationStateProvider Auth
+@inject AccountDirectory Accounts
+@inject ProjectChoice Choice
+@inject SchoolClock Clock
+@inject Toasts ToastList
+@inject NavigationManager Nav
 
-@Body
+@if (_ws is null)
+{
+    <div class="loading">Opening the timetable…</div>
+}
+else
+{
+    <CascadingValue Value="_ws">
+        <div class="shell" data-testid="shell">
+            <Rail />
+            <div class="shell-main">
+                <main class="shell-page">
+                    @if (_ws.Project is null && !IsAdministrationPage)
+                    {
+                        <NoProject />
+                    }
+                    else
+                    {
+                        @Body
+                    }
+                </main>
+                <StatusBar />
+            </div>
+        </div>
+        <DialogHost />
+        <ToastHost />
+    </CascadingValue>
+}
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
+@code {
+    private Workspace? _ws;
+    private LiveProject? _subscribed;
+    private Timer? _presence;
+
+    private bool IsAdministrationPage => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("admin", StringComparison.Ordinal);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Auth.AuthenticationStateChanged += OnAuthChanged;
+        Choice.Moved += OnProjectMoved;
+        await BuildAsync();
+        _presence = new Timer(_ => InvokeAsync(() => { if (_ws is { Project: { } p }) p.Here(_ws.Access.Display); }), null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
+    }
+
+    private async Task BuildAsync()
+    {
+        var state = await Auth.GetAuthenticationStateAsync();
+        var account = AccountClaims.Current(state.User, Accounts);
+        if (account is null)
+        {
+            Nav.NavigateTo("/signin", forceLoad: true);
+            return;
+        }
+        var project = Choice.Open();
+        if (!ReferenceEquals(project, _subscribed))
+        {
+            if (_subscribed is not null) _subscribed.ChangedEvent -= OnChanged;
+            if (project is not null) project.ChangedEvent += OnChanged;
+            _subscribed = project;
+        }
+        _ws = new Workspace(new Access(account), project, Clock, ToastList, Accounts);
+        project?.Here(account.Display);
+    }
+
+    private void OnChanged(Changed c) => _ = InvokeAsync(StateHasChanged);
+
+    private void OnProjectMoved() => _ = InvokeAsync(async () => { await BuildAsync(); StateHasChanged(); });
+
+    private void OnAuthChanged(Task<AuthenticationState> t) => _ = InvokeAsync(async () =>
+    {
+        var state = await t;
+        if (AccountClaims.Current(state.User, Accounts) is null) Nav.NavigateTo("/signin", forceLoad: true);
+    });
+
+    public void Dispose()
+    {
+        Auth.AuthenticationStateChanged -= OnAuthChanged;
+        Choice.Moved -= OnProjectMoved;
+        if (_subscribed is not null) _subscribed.ChangedEvent -= OnChanged;
+        _presence?.Dispose();
+        if (_ws is { Project: { } p }) p.Left(_ws.Access.Display);
+    }
+}

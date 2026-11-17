@@ -1,0 +1,381 @@
+@inject Dialogs D
+@inject WeekView V
+@{
+    var t = W.T;
+    var existing = SessionId is { } sid ? t.Sessions[sid] : null;
+}
+@if (SessionId is not null && existing is null)
+{
+    <DialogFrame Title="This session has gone">
+        <p>Somebody removed it while it was open here.</p>
+    </DialogFrame>
+}
+else if (!_editable && existing is not null)
+{
+    var o = Occurrences.Resolve(t, existing);
+    <DialogFrame Title="@Cccc.Web.Features.Week.Looks.Title(t, existing)">
+        <ChildContent>
+            <dl class="facts">
+                <dt>When</dt><dd>@Cccc.Web.Features.Week.Looks.WhenWithDay(existing)</dd>
+                <dt>For</dt><dd>@Cccc.Web.Features.Week.Looks.Audience(t, existing)</dd>
+                <dt>Room</dt><dd>@(Cccc.Web.Features.Week.Looks.Room(t, existing) is { Length: > 0 } r ? r : "No room")</dd>
+                <dt>In the room</dt><dd>@(Cccc.Web.Features.Week.Looks.Names(t, o.InTheRoom) is { Length: > 0 } n ? n : "Nobody yet")</dd>
+                @foreach (var a in existing.Facilitators.Where(a => a.From is not null || a.Until is not null))
+                {
+                    <dt>@(t.Facilitators[a.FacilitatorId]?.Name)</dt><dd>@Windows.Describe(existing, a.FacilitatorId)</dd>
+                }
+                @if (Cccc.Web.Features.Week.Looks.StateWord(o) is { Length: > 0 } st)
+                {
+                    <dt>State</dt><dd>@st @(existing.CancelNote is { Length: > 0 } cn ? "— " + cn : "")</dd>
+                }
+                @if (existing.MovedFrom is { } mf)
+                {
+                    <dt>Moved from</dt><dd>@Cccc.Domain.Week.ShortDate(mf.Date), @Cccc.Domain.Week.Hm(mf.Start)–@Cccc.Domain.Week.Hm(mf.End)</dd>
+                }
+                @if (!string.IsNullOrWhiteSpace(existing.Notes))
+                {
+                    <dt>Notes</dt><dd class="pre">@existing.Notes</dd>
+                }
+                <dt>On it</dt><dd>@Roster.For(t, existing).Count students</dd>
+            </dl>
+            @if (_lockedWeek)
+            {
+                <p class="muted">This week has ended, so the session does not change. Its register still can.</p>
+            }
+        </ChildContent>
+        <Extra>
+            @if (Roster.For(t, existing).Count > 0 && o.Happens)
+            {
+                <button type="button" class="btn" @onclick="() => Register(existing.Id)">Register…</button>
+            }
+        </Extra>
+    </DialogFrame>
+}
+else
+{
+    <DialogFrame Title="@(existing is null ? "Add a session" : "Edit " + Cccc.Web.Features.Week.Looks.Title(t, existing))" OnOk="Save" OkEnabled="@(_why is null)" Class="wide">
+        <ChildContent>
+            <div class="form-grid">
+                <label class="field"><span>Class</span>
+                    <select @bind="ClassText" @bind:after="OnClassChosen" data-testid="session-class">
+                        <option value="">No class</option>
+                        @foreach (var c in t.Classes.OrderBy(c => c.Name, NameOrder.Comparer))
+                        {
+                            <option value="@c.Id">@c.Name</option>
+                        }
+                    </select>
+                </label>
+                <label class="field"><span>Title</span>
+                    <input @bind="_title" placeholder="@(t.Classes.Find(_classId)?.Name ?? "Untitled")" data-testid="session-title" />
+                </label>
+                <label class="field"><span>Date</span><input type="date" @bind="_date" @bind:after="Check" data-testid="session-date" /></label>
+                <div class="field two">
+                    <label><span>From</span><input type="time" step="900" @bind="_start" @bind:after="Check" data-testid="session-start" /></label>
+                    <label><span>Until</span><input type="time" step="900" @bind="_end" @bind:after="Check" data-testid="session-end" /></label>
+                </div>
+                <label class="field"><span>Who it is for</span>
+                    <select @bind="_kind" @bind:after="Check" data-testid="session-for">
+                        <option value="@AudienceKind.Group">One group</option>
+                        <option value="@AudienceKind.Groups">Several groups</option>
+                        <option value="@AudienceKind.Programme">A whole programme</option>
+                        <option value="@AudienceKind.Everyone">Everyone (the whole building)</option>
+                    </select>
+                </label>
+                @if (_kind == AudienceKind.Group)
+                {
+                    <label class="field"><span>Group</span>
+                        <select @bind="GroupText" @bind:after="Check" data-testid="session-group">
+                            <option value="">Choose a group…</option>
+                            @foreach (var g in t.Groups.OrderBy(g => g.Name, NameOrder.Comparer))
+                            {
+                                <option value="@g.Id">@g.Name</option>
+                            }
+                        </select>
+                    </label>
+                }
+                else if (_kind == AudienceKind.Programme)
+                {
+                    <label class="field"><span>Programme</span>
+                        <select @bind="ProgrammeText" @bind:after="Check">
+                            <option value="">Choose a programme…</option>
+                            @foreach (var p in t.Programmes.OrderBy(p => p.Name, NameOrder.Comparer))
+                            {
+                                <option value="@p.Id">@p.Name</option>
+                            }
+                        </select>
+                    </label>
+                }
+                else if (_kind == AudienceKind.Groups)
+                {
+                    <fieldset class="field checks span2"><legend>Groups</legend>
+                        @foreach (var g in t.Groups.OrderBy(g => g.Name, NameOrder.Comparer))
+                        {
+                            <label><input type="checkbox" checked="@_groups.Contains(g.Id)" @onchange="e => Toggle(_groups, g.Id, (bool)e.Value!)" /> @g.Name</label>
+                        }
+                    </fieldset>
+                }
+                <label class="field"><span>Room</span>
+                    <select @bind="RoomText" @bind:after="Check" data-testid="session-room">
+                        <option value="">No room</option>
+                        @foreach (var r in t.Rooms.OrderBy(r => r.Name, NameOrder.Comparer))
+                        {
+                            <option value="@r.Id">@r.Name</option>
+                        }
+                    </select>
+                </label>
+            </div>
+
+            <fieldset class="field span2"><legend>Facilitators</legend>
+                @foreach (var a in _people.ToList())
+                {
+                    var f = t.Facilitators[a.Id];
+                    <div class="person-row" data-testid="session-facilitator">
+                        <span class="disc" style="@(f is null ? "" : $"--c:{f.Colour}")">@f?.Initials</span>
+                        <span class="grow">@(f?.Name ?? "Removed")@(f is { IsGuest: true } ? " (guest)" : "")</span>
+                        <label class="inline"><span>from</span><input type="time" step="900" value="@Hm(a.From)" @onchange="e => SetPart(a, e, true)" aria-label="In the class from" /></label>
+                        <label class="inline"><span>until</span><input type="time" step="900" value="@Hm(a.Until)" @onchange="e => SetPart(a, e, false)" aria-label="In the class until" /></label>
+                        <button type="button" class="btn quiet" @onclick="() => { _people.Remove(a); Check(); }" aria-label="Remove @f?.Name">Remove</button>
+                    </div>
+                }
+                <select @onchange="AddPerson" aria-label="Add a facilitator" data-testid="session-add-facilitator">
+                    <option value="" selected>Add a facilitator…</option>
+                    @foreach (var f in t.Facilitators.Where(f => _people.All(p => p.Id != f.Id)).OrderBy(f => f.IsGuest).ThenBy(f => f.Name, NameOrder.Comparer))
+                    {
+                        <option value="@f.Id">@f.Name@(f.IsGuest ? " (guest)" : "")</option>
+                    }
+                </select>
+                <p class="hint">Leave from and until empty for somebody in the whole class.</p>
+            </fieldset>
+
+            @if (_kind != AudienceKind.Everyone)
+            {
+                var proposal = Proposal();
+                var roster = Roster.For(t, proposal);
+                var members = Roster.GroupMembers(t, proposal);
+                <details class="field span2">
+                    <summary>Students on it: @roster.Count</summary>
+                    <div class="checks columns">
+                        @foreach (var id in members.Concat(_added).Distinct().OrderBy(id => t.Students[id]?.Name, NameOrder.Comparer))
+                        {
+                            var st = t.Students[id];
+                            if (st is null) continue;
+                            <label><input type="checkbox" checked="@(roster.Contains(id))" @onchange="e => SetOnIt(id, members.Contains(id), (bool)e.Value!)" /> @st.Name</label>
+                        }
+                    </div>
+                    <select @onchange="AddStudent" aria-label="Add a student from another group">
+                        <option value="" selected>Add a student from another group…</option>
+                        @foreach (var st in t.Students.Where(s => !members.Contains(s.Id) && !_added.Contains(s.Id)).OrderBy(s => s.Name, NameOrder.Comparer))
+                        {
+                            <option value="@st.Id">@st.Name</option>
+                        }
+                    </select>
+                </details>
+            }
+
+            <div class="form-grid">
+                <label class="field span2"><span>Notes</span><textarea rows="2" @bind="_notes"></textarea></label>
+                <label class="check"><input type="checkbox" @bind="_provisional" /> Provisional (not settled yet)</label>
+            </div>
+
+            @if (_why is not null)
+            {
+                <p class="form-error" role="alert">@_why</p>
+            }
+            else if (_warnings.Count > 0)
+            {
+                <details class="warnings" open="@(_warnings.Count <= 3)" data-testid="session-warnings">
+                    <summary>@_warnings.Count warning@(_warnings.Count == 1 ? "" : "s") — saving is still allowed</summary>
+                    <ul>
+                        @foreach (var c in _warnings)
+                        {
+                            <li>@c.Description</li>
+                        }
+                    </ul>
+                </details>
+            }
+        </ChildContent>
+        <Extra>
+            @if (existing is not null)
+            {
+                <button type="button" class="btn danger" @onclick="Delete" data-testid="session-delete">Delete</button>
+                @if (Roster.For(t, existing).Count > 0)
+                {
+                    <button type="button" class="btn" @onclick="() => Register(existing.Id)">Register…</button>
+                }
+            }
+        </Extra>
+    </DialogFrame>
+}
+
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? SessionId { get; set; }
+    [Parameter] public DateOnly? Date { get; set; }
+    [Parameter] public TimeOnly? Start { get; set; }
+    [Parameter] public Guid? Group { get; set; }
+
+    private sealed class Person { public Guid Id; public TimeOnly? From; public TimeOnly? Until; }
+
+    private bool _editable, _lockedWeek;
+    private string? _original;
+    private Guid _id;
+    private Guid? _classId, _roomId, _groupId, _programmeId;
+    private string _title = "";
+    private DateOnly _date;
+    private TimeOnly _start, _end;
+    private AudienceKind _kind = AudienceKind.Group;
+    private readonly HashSet<Guid> _groups = [];
+    private readonly List<Person> _people = [];
+    private readonly HashSet<Guid> _added = [], _leftOff = [];
+    private string? _notes;
+    private bool _provisional;
+    private Session _base = new();
+    private IReadOnlyList<Clash> _warnings = [];
+    private string? _why;
+
+    private string ClassText { get => _classId?.ToString() ?? ""; set => _classId = Guid.TryParse(value, out var g) ? g : null; }
+    private string GroupText { get => _groupId?.ToString() ?? ""; set => _groupId = Guid.TryParse(value, out var g) ? g : null; }
+    private string ProgrammeText { get => _programmeId?.ToString() ?? ""; set => _programmeId = Guid.TryParse(value, out var g) ? g : null; }
+    private string RoomText { get => _roomId?.ToString() ?? ""; set => _roomId = Guid.TryParse(value, out var g) ? g : null; }
+
+    protected override void OnInitialized()
+    {
+        var t = W.T;
+        var s = SessionId is { } id ? t.Sessions[id] : null;
+        if (s is null && SessionId is not null) return;
+        _lockedWeek = s is not null && Cccc.Domain.Week.HasEnded(s.Date, W.Today);
+        _editable = W.Access.MayEdit && !_lockedWeek && !(s is null && Cccc.Domain.Week.HasEnded(Date ?? W.Today, W.Today));
+        if (s is null)
+        {
+            var start = Start ?? new TimeOnly(9, 0);
+            s = new Session
+            {
+                Date = Date ?? W.Today,
+                Start = start,
+                End = start.AddHours(1.5),
+                Audience = Group is { } g ? Audience.ForGroup(g) : Audience.ForGroup(Guid.Empty),
+            };
+        }
+        else _original = System.Text.Json.JsonSerializer.Serialize(s, ModelJson.Options);
+        _base = s;
+        _id = s.Id;
+        _classId = s.ClassId; _roomId = s.RoomId; _title = s.Title; _date = s.Date; _start = s.Start; _end = s.End;
+        _kind = s.Audience.Kind;
+        _groupId = s.Audience.Kind == AudienceKind.Group ? s.Audience.GroupIds.FirstOrDefault() is var gg && gg != Guid.Empty ? gg : null : null;
+        _programmeId = s.Audience.ProgrammeId;
+        _groups.UnionWith(s.Audience.GroupIds);
+        _people.AddRange(s.Facilitators.Select(a => new Person { Id = a.FacilitatorId, From = a.From, Until = a.Until }));
+        _added.UnionWith(s.AddedStudentIds); _leftOff.UnionWith(s.LeftOffStudentIds);
+        _notes = s.Notes; _provisional = s.Provisional;
+        Check();
+    }
+
+    private static string Hm(TimeOnly? t) => t is { } x ? Cccc.Domain.Week.Hm(x) : "";
+
+    private void OnClassChosen()
+    {
+        var c = W.T.Classes.Find(_classId);
+        if (c is not null && (string.IsNullOrWhiteSpace(_title) || W.T.Classes.Any(k => k.Name == _title))) _title = c.Name;
+        Check();
+    }
+
+    private void Toggle(HashSet<Guid> set, Guid id, bool on)
+    {
+        if (on) set.Add(id); else set.Remove(id);
+        Check();
+    }
+
+    private void SetPart(Person p, ChangeEventArgs e, bool from)
+    {
+        TimeOnly? v = TimeOnly.TryParse(e.Value?.ToString(), out var x) ? Edits.Snap(x) : null;
+        if (from) p.From = v; else p.Until = v;
+        Check();
+    }
+
+    private void AddPerson(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var g) && _people.All(p => p.Id != g)) _people.Add(new Person { Id = g });
+        Check();
+    }
+
+    private void AddStudent(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var g)) { _added.Add(g); _leftOff.Remove(g); }
+        Check();
+    }
+
+    private void SetOnIt(Guid id, bool member, bool on)
+    {
+        if (on) { _leftOff.Remove(id); if (!member) _added.Add(id); }
+        else { if (member) _leftOff.Add(id); _added.Remove(id); }
+        Check();
+    }
+
+    private Audience AudienceNow() => _kind switch
+    {
+        AudienceKind.Everyone => Audience.Everyone,
+        AudienceKind.Group => _groupId is { } g ? Audience.ForGroup(g) : new Audience { Kind = AudienceKind.Group },
+        AudienceKind.Groups => Audience.ForGroups(_groups.Where(W.T.Groups.Contains)),
+        _ => _programmeId is { } p ? Edits.ForProgramme(W.T, p) : new Audience { Kind = AudienceKind.Programme },
+    };
+
+    private Session Proposal() => _base with
+    {
+        Id = _id,
+        ClassId = _classId,
+        Title = _title?.Trim() ?? "",
+        Date = _date,
+        Start = Edits.Snap(_start),
+        End = Edits.Snap(_end),
+        Audience = AudienceNow(),
+        RoomId = _roomId,
+        Facilitators = _people.Select(p => new Assignment(p.Id, p.From, p.Until)).ToImmutableList(),
+        AddedStudentIds = _added.ToImmutableList(),
+        LeftOffStudentIds = _leftOff.ToImmutableList(),
+        Notes = string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim(),
+        Provisional = _provisional,
+    };
+
+    private void Check()
+    {
+        var p = Proposal();
+        _why = p.End <= p.Start ? "It has to finish after it starts."
+            : Cccc.Domain.Week.HasEnded(p.Date, W.Today) ? "That week has ended, so nothing can be added to it or moved into it."
+            : p.Audience.Kind == AudienceKind.Group && p.Audience.GroupIds.Count == 0 ? "Choose the group it is for."
+            : p.Audience.Kind == AudienceKind.Groups && p.Audience.GroupIds.Count == 0 ? "Tick at least one group."
+            : p.Audience.Kind == AudienceKind.Programme && p.Audience.ProgrammeId is null ? "Choose the programme it is for."
+            : null;
+        _warnings = _why is null ? Clashes.CausedBy(W.T, Windows.Normalise(p)) : [];
+    }
+
+    private void Save()
+    {
+        Check();
+        if (_why is not null) return;
+        var p = Proposal();
+        bool isNew = _original is null;
+        bool changedUnderneath = !isNew && W.T.Sessions[_id] is { } now && System.Text.Json.JsonSerializer.Serialize(now, ModelJson.Options) != _original;
+        var label = (isNew ? "Added " : "Changed ") + Cccc.Web.Features.Week.Looks.Title(W.T, p) + " on " + Cccc.Domain.Week.ShortDate(p.Date);
+        if (W.Commit(t => Edits.PutSession(t, p, label)))
+        {
+            if (changedUnderneath) W.Warn("Somebody else changed this session while it was open here; yours is the version kept. Undo puts theirs back.");
+            if (Cccc.Domain.Week.MondayOf(p.Date) != V.Monday) V.GoTo(p.Date);
+            V.Chosen.Clear();
+            V.Chosen.Add(p.Id);
+            D.Close();
+        }
+    }
+
+    private void Delete()
+    {
+        var label = "Deleted " + Cccc.Web.Features.Week.Looks.Title(W.T, _base) + " on " + Cccc.Domain.Week.ShortDate(_base.Date);
+        if (W.Commit(t => Edits.RemoveSessions(t, [_id], label)))
+        {
+            V.Chosen.Remove(_id);
+            D.Close();
+        }
+    }
+
+    private void Register(Guid id) =>
+        D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = id });
+}

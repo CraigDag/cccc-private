@@ -1,0 +1,213 @@
+@inject Dialogs D
+@using Cccc.Web.Features.Week
+@using DomainWeek = Cccc.Domain.Week
+@{
+    var t = W.T;
+    var existing = EventId is { } id ? t.Events[id] : null;
+    bool may = W.Access.MayEdit && (existing is null || W.Access.Events.Sees(existing));
+}
+@if (EventId is not null && (existing is null || !W.Access.Events.Sees(existing)))
+{
+    <DialogFrame Title="This event has gone"><p>Somebody removed it while it was open here.</p></DialogFrame>
+}
+else if (!may)
+{
+    <DialogFrame Title="@existing!.Title">
+        <dl class="facts">
+            <dt>When</dt><dd>@Describe(existing)</dd>
+            @if (t.Rooms.Find(existing.RoomId) is { } room)
+            {
+                <dt>Room</dt><dd>@room.Name</dd>
+            }
+            @if (existing.Place.Length > 0)
+            {
+                <dt>Where</dt><dd>@existing.Place</dd>
+            }
+            @if (existing.Note.Length > 0)
+            {
+                <dt>Note</dt><dd class="pre">@existing.Note</dd>
+            }
+        </dl>
+    </DialogFrame>
+}
+else
+{
+    <DialogFrame Title="@(existing is null ? "New event" : "Edit " + existing.Title)" OnOk="Save" OkEnabled="@(_why is null)" Class="wide">
+        <ChildContent>
+            <p class="hint">An event sits beside the classes. Nothing that counts classes reads it: no hours, no clash, no register, no cover.</p>
+            <div class="form-grid">
+                <label class="field span2"><span>Title</span><input @bind="_e.Title" @bind:after="Check" data-testid="event-title" /></label>
+                <label class="field"><span>Kind</span>
+                    <select @bind="_e.Category">
+                        @foreach (var c in Enum.GetValues<EventCategory>())
+                        {
+                            <option value="@c">@Word(c)</option>
+                        }
+                    </select>
+                </label>
+                <label class="check"><input type="checkbox" @bind="_e.AllDay" @bind:after="Check" /> All day</label>
+                <label class="field"><span>Date</span><input type="date" @bind="_e.Date" @bind:after="Check" data-testid="event-date" /></label>
+                <label class="field"><span>Last day (for more than one day)</span><input type="date" @bind="_e.EndDate" @bind:after="Check" /></label>
+                @if (!_e.AllDay)
+                {
+                    <div class="field two">
+                        <label><span>From</span><input type="time" step="900" @bind="_e.Start" @bind:after="Check" /></label>
+                        <label><span>Until</span><input type="time" step="900" @bind="_e.End" @bind:after="Check" /></label>
+                    </div>
+                }
+                <label class="field"><span>Repeats</span>
+                    <select @bind="_repeat" @bind:after="Check">
+                        <option value="">Does not repeat</option>
+                        <option value="@RepeatKind.Daily">Every day</option>
+                        <option value="@RepeatKind.Weekly">Every week</option>
+                        <option value="@RepeatKind.MonthlyOnDate">Every month, on the date</option>
+                        <option value="@RepeatKind.MonthlyOnWeekday">Every month, on the weekday</option>
+                    </select>
+                </label>
+                @if (_repeat.Length > 0)
+                {
+                    <label class="field"><span>Until (repeats always end)</span><input type="date" @bind="_until" @bind:after="Check" /></label>
+                    @if (_repeat == nameof(RepeatKind.Weekly))
+                    {
+                        <fieldset class="field checks inline span2"><legend>On</legend>
+                            @foreach (var d in DomainWeek.Days(DomainWeek.MondayOf(_e.Date)).Select(d => d.DayOfWeek))
+                            {
+                                <label><input type="checkbox" checked="@_days.Contains(d)" @onchange="e => { if ((bool)e.Value!) _days.Add(d); else _days.Remove(d); }" /> @DomainWeek.ShortDay(d)</label>
+                            }
+                        </fieldset>
+                    }
+                }
+                <fieldset class="field checks inline span2"><legend>Who sees it</legend>
+                    <label><input type="checkbox" checked="@(_e.Audience == EventAudience.Everyone)" @onchange="e => { if ((bool)e.Value!) _e.Audience = EventAudience.Everyone; }" /> Everyone</label>
+                    @foreach (var a in new[] { EventAudience.Students, EventAudience.Facilitators, EventAudience.Staff })
+                    {
+                        <label><input type="checkbox" checked="@_e.Audience.HasFlag(a)" @onchange="e => Flag(a, (bool)e.Value!)" /> @a</label>
+                    }
+                    @if (W.Access.Events.MayChooseAdministrators)
+                    {
+                        <label title="Ticked alone, only administrators see it, editors included"><input type="checkbox" checked="@_e.Audience.HasFlag(EventAudience.Administrators)" @onchange="e => Flag(EventAudience.Administrators, (bool)e.Value!)" /> Administrators</label>
+                    }
+                </fieldset>
+                <label class="field"><span>Room</span>
+                    <select @bind="RoomText">
+                        <option value="">No room</option>
+                        @foreach (var r in t.Rooms.OrderBy(r => r.Name, NameOrder.Comparer))
+                        {
+                            <option value="@r.Id">@r.Name</option>
+                        }
+                    </select>
+                </label>
+                <label class="field"><span>Or a place</span><input @bind="_e.Place" /></label>
+                <label class="check span2"><input type="checkbox" @bind="_e.SkipClosures" /> Not on days the building is closed</label>
+                <label class="field span2"><span>Note</span><textarea rows="2" @bind="_e.Note"></textarea></label>
+            </div>
+            @if (_why is not null)
+            {
+                <p class="form-error" role="alert">@_why</p>
+            }
+        </ChildContent>
+        <Extra>
+            @if (existing is not null)
+            {
+                <button type="button" class="btn danger" @onclick="Delete">Delete</button>
+            }
+        </Extra>
+    </DialogFrame>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? EventId { get; set; }
+    [Parameter] public DateOnly? Date { get; set; }
+
+    private sealed class Draft
+    {
+        public Guid Id;
+        public string Title { get; set; } = "";
+        public EventCategory Category { get; set; }
+        public DateOnly Date { get; set; }
+        public DateOnly? EndDate { get; set; }
+        public bool AllDay { get; set; }
+        public TimeOnly Start { get; set; } = new(9, 0);
+        public TimeOnly End { get; set; } = new(10, 0);
+        public EventAudience Audience { get; set; }
+        public string Place { get; set; } = "";
+        public string Note { get; set; } = "";
+        public bool SkipClosures { get; set; }
+        public Guid? RoomId;
+    }
+
+    private Draft _e = new();
+    private SchoolEvent _base = new();
+    private string _repeat = "";
+    private DateOnly _until;
+    private readonly HashSet<DayOfWeek> _days = [];
+    private string? _why;
+    private string RoomText { get => _e.RoomId?.ToString() ?? ""; set => _e.RoomId = Guid.TryParse(value, out var g) ? g : null; }
+
+    protected override void OnInitialized()
+    {
+        var e = EventId is { } id ? W.T.Events[id] : null;
+        _base = e ?? new SchoolEvent { Date = Date ?? W.Today };
+        _e = new Draft
+        {
+            Id = _base.Id, Title = _base.Title, Category = _base.Category, Date = _base.Date, EndDate = _base.EndDate,
+            AllDay = _base.AllDay, Start = _base.Start, End = _base.End, Audience = _base.Audience, Place = _base.Place,
+            Note = _base.Note, SkipClosures = _base.SkipClosures, RoomId = _base.RoomId,
+        };
+        _repeat = _base.Repeat?.Kind.ToString() ?? "";
+        _until = _base.Repeat?.Until ?? _base.Date.AddDays(28);
+        _days.UnionWith(_base.Repeat?.Days ?? [_base.Date.DayOfWeek]);
+        Check();
+    }
+
+    private void Flag(EventAudience a, bool on) => _e.Audience = on ? _e.Audience | a : _e.Audience & ~a;
+
+    private void Check()
+    {
+        _why = string.IsNullOrWhiteSpace(_e.Title) ? "Give it a title."
+            : _e.EndDate is { } end && end < _e.Date ? "The last day is before the first."
+            : !_e.AllDay && _e.End <= _e.Start ? "It has to finish after it starts."
+            : _repeat.Length > 0 && _until < _e.Date ? "It has to repeat until a date after it starts."
+            : null;
+    }
+
+    private SchoolEvent Build() => _base with
+    {
+        Title = _e.Title.Trim(), Category = _e.Category, Date = _e.Date,
+        EndDate = _e.EndDate is { } end && end > _e.Date ? end : null,
+        AllDay = _e.AllDay, Start = Edits.Snap(_e.Start), End = Edits.Snap(_e.End),
+        Audience = _e.Audience, Place = _e.Place.Trim(), Note = _e.Note.Trim(), SkipClosures = _e.SkipClosures, RoomId = _e.RoomId,
+        Repeat = _repeat.Length == 0 ? null : new Repeat
+        {
+            Kind = Enum.Parse<RepeatKind>(_repeat), Every = 1, Until = _until,
+            Days = _repeat == nameof(RepeatKind.Weekly) ? _days.OrderBy(DomainWeek.DayIndex).ToImmutableList() : [],
+        },
+    };
+
+    private void Save()
+    {
+        Check();
+        if (_why is not null) return;
+        var e = Build();
+        bool isNew = W.T.Events[e.Id] is null;
+        if (W.Commit(t => new Cccc.Domain.Editing.Draft(t).Put(Collections.Events, e).ToBatch((isNew ? "Added the event " : "Changed the event ") + e.Title)))
+            D.Close();
+    }
+
+    private void Delete()
+    {
+        if (W.Commit(t => new Cccc.Domain.Editing.Draft(t).Remove(Collections.Events, _base.Id).ToBatch("Deleted the event " + _base.Title)))
+            D.Close();
+    }
+
+    private static string Describe(SchoolEvent e) =>
+        DomainWeek.ShortDate(e.Date) + (e.EndDate is { } end ? " to " + DomainWeek.ShortDate(end) : "")
+        + (e.AllDay ? ", all day" : $", {DomainWeek.Hm(e.Start)}–{DomainWeek.Hm(e.End)}")
+        + (e.Repeat is { Until: { } u } ? $", repeating until {DomainWeek.ShortDate(u)}" : "");
+
+    public static string Word(EventCategory c) => c switch
+    {
+        EventCategory.HostedGroup => "Hosted group",
+        _ => c.ToString(),
+    };
+}

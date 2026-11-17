@@ -1,0 +1,19 @@
+<footer class="status" data-testid="status-bar">
+    @if (W.Project is { } p)
+    {
+        var others = p.Present(TimeSpan.FromMinutes(2)).Where(n => n != W.Access.Display).ToList();
+        @if (others.Count > 0)
+        {
+            <span class="status-item" data-testid="also-here"><span class="dot live"></span> Also here: @string.Join(", ", others)</span>
+        }
+        @if (p.LastChange is { } c)
+        {
+            <span class="status-item muted">Last change @W.Clock.Describe(c.At) by @W.NameOf(c.By)</span>
+        }
+        <span class="status-item muted">Changes are kept as you make them</span>
+    }
+    <span class="status-version" data-testid="version">@AppVersion.Current</span>
+</footer>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+}
