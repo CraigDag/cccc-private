@@ -84,6 +84,18 @@ the script for Craig to fill in with the same encrypted remote the current backu
 ssh -t cccc-ts "sudo install -m 755 /opt/cccc-next-src/docs/deployment/laptop/cccc-next-backup.sh /usr/local/bin/; sudo install -m 644 /opt/cccc-next-src/docs/deployment/laptop/cccc-next-backup.service /opt/cccc-next-src/docs/deployment/laptop/cccc-next-backup.timer /etc/systemd/system/; sudo systemctl daemon-reload; sudo systemctl enable --now cccc-next-backup.timer; systemctl list-timers 'cccc-*'"
 ```
 
+## Erasing a person
+
+Administration ▸ Erase a person takes the name out of every timetable and every stored copy inside the
+app. The nightly copies taken before that still hold it. To finish an erasure request, delete them and
+let the next night's backup take a clean copy:
+
+```powershell
+ssh -t cccc-ts "sudo rm -f /srv/cccc-next/backups/cccc-*.db; sudo /usr/local/bin/cccc-next-backup.sh"
+```
+
+If the off-site line in the backup script is switched on, delete that remote's older copies too.
+
 ## Taking it away again
 
 ```powershell

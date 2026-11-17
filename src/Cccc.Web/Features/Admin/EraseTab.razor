@@ -4,7 +4,7 @@
 @inject ILogger<EraseTab> Log
 <div style="max-width:620px">
     <p>Erasing a person takes them off the timetable <b>and rewrites every stored change and snapshot that names them</b>, in every timetable on this server, so their name and email are gone from the history too. Their id is kept, so registers and counts still add up. It cannot be undone.</p>
-    <p class="notice">The nightly off-site backup keeps older copies for 90 days. To finish an erasure request, also delete the backups older than today from Drive, as the runbook says.</p>
+    <p class="notice">Backups taken before today still hold the name: the laptop keeps fourteen nightly copies, and any off-site copy keeps its own. To finish an erasure request, delete those too, as the runbook's <em>Erasing a person</em> section says.</p>
     <label class="field"><span>Who</span>
         <select @bind="_who">
             <option value="">Choose…</option>
