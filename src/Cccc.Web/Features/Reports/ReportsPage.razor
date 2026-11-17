@@ -1,0 +1,127 @@
+@page "/reports/{Slug?}"
+@using Cccc.Web.Features.Week
+@using DomainWeek = Cccc.Domain.Week
+
+<PageTitle>Reports · CCCC Scheduler</PageTitle>
+@if (!W.Access.MayUseAdminTools)
+{
+    <div class="empty-state"><h1>Reports</h1><p>Reports are for administrators.</p></div>
+}
+else
+{
+    var t = W.T;
+    var occ = ReportMath.Happening(t, _from, _to);
+    var weeks = ReportMath.Mondays(_from, _to).ToList();
+    <div class="page-head">
+        <h1>Reports</h1>
+        <div class="bar" style="margin:0">
+            <label class="inline"><span>From the week of</span><input type="date" @bind="_from" /></label>
+            <label class="inline"><span>to the week of</span><input type="date" @bind="_to" /></label>
+            @foreach (var s in t.Semesters.OrderBy(s => s.FirstMonday))
+            {
+                <button type="button" class="btn quiet" @onclick="() => { _from = s.FirstMonday; _to = s.LastMonday; }">@s.Name</button>
+            }
+        </div>
+    </div>
+    <p class="muted">@weeks.Count week@(weeks.Count == 1 ? "" : "s"): @DomainWeek.ShortDate(DomainWeek.MondayOf(_from)) to @DomainWeek.ShortDate(DomainWeek.MondayOf(_to).AddDays(6)). Only classes that happen count: closed and cancelled ones do not.</p>
+    <nav class="tabs">
+        @foreach (var (slug, title) in Tabs)
+        {
+            <NavLink href="@("reports/" + slug)" class="@(Current == slug ? "active" : "")" Match="NavLinkMatch.All">@title</NavLink>
+        }
+    </nav>
+    @switch (Current)
+    {
+        case "utilisation":
+            <div class="section">
+                <h2>By programme</h2>
+                <HoursTable Rows="ReportMath.ByProgramme(t, occ)" />
+            </div>
+            <div class="section">
+                <h2>By group</h2>
+                <HoursTable Rows="ReportMath.ByGroup(t, occ)" />
+                <p class="hint">A class for several groups counts in full for each, so this column can add up to more than the total. Whole-building sessions are their own last row, never every group's.</p>
+            </div>
+            <div class="section">
+                <h2>By area</h2>
+                <HoursTable Rows="ReportMath.ByArea(t, occ, weeks.Count)" ShowTarget="true" />
+            </div>
+            break;
+        case "attendance":
+            var (classes, students) = ReportMath.Attendance(t, occ);
+            <div class="section">
+                <h2>By class</h2>
+                <AttendanceTable Rows="classes" What="Class" />
+            </div>
+            <div class="section">
+                <h2>By student</h2>
+                <AttendanceTable Rows="students" What="Student" />
+            </div>
+            break;
+        case "facilitators":
+            <FacilitatorHours Weeks="weeks" />
+            break;
+        case "registers":
+            var missing = Registers.MissingBetween(t, DomainWeek.MondayOf(_from), Min(DomainWeek.MondayOf(_to).AddDays(6), W.Today.AddDays(-1)), W.Today);
+            <div class="section">
+                <h2>Outstanding, by whose class it is</h2>
+                <p class="hint">Counted off the assigned facilitators, so a week somebody covered is still a gap on whoever's class it is.</p>
+                <div class="table-wrap"><table class="grid-table static">
+                    <thead><tr><th>Facilitator</th><th class="num">Missing</th></tr></thead>
+                    <tbody>
+                        @foreach (var f in t.Facilitators.Select(f => (f, n: Registers.OutstandingFor(missing, f.Id))).Where(x => x.n > 0).OrderByDescending(x => x.n).ThenBy(x => x.f.Name, NameOrder.Comparer))
+                        {
+                            <tr><td><span class="spine" style="--c:@f.f.Colour"></span>@f.f.Name</td><td class="num">@f.n</td></tr>
+                        }
+                    </tbody>
+                </table></div>
+            </div>
+            <div class="section">
+                <h2>Every one (@missing.Count)</h2>
+                <div class="table-wrap"><table class="grid-table static">
+                    <thead><tr><th>Day</th><th>Time</th><th>Class</th><th>For</th><th>Facilitators</th></tr></thead>
+                    <tbody>
+                        @foreach (var o in missing)
+                        {
+                            <tr><td>@DomainWeek.ShortDate(o.Date)</td><td>@Looks.When(o.Session)</td><td>@Looks.Title(t, o.Session)</td><td>@Looks.Audience(t, o.Session)</td><td>@Looks.Names(t, o.Session.FacilitatorIds)</td></tr>
+                        }
+                    </tbody>
+                </table></div>
+            </div>
+            break;
+        default:
+            var thisWeek = Occurrences.ForWeek(t, W.Today);
+            var allMissing = Registers.MissingBetween(t, DomainWeek.MondayOf(_from), Min(DomainWeek.MondayOf(_to).AddDays(6), W.Today.AddDays(-1)), W.Today);
+            var clashes = Clashes.ForWeek(t, W.Today).Where(c => c.Kind != ClashKind.NeedsCover).ToList();
+            var cover = Cover.StillNeeded(t, W.Today, W.Today);
+            <div class="cards">
+                <div class="card"><small>Classes this week</small><b>@thisWeek.Count(o => o.Happens)</b><small>@thisWeek.Count(o => !o.Happens) closed or cancelled</small></div>
+                <div class="card"><small>Hours scheduled this week</small><b>@DomainWeek.Duration(thisWeek.Where(o => o.Happens).Aggregate(TimeSpan.Zero, (a, o) => a + o.Session.Length))</b></div>
+                <div class="card @(clashes.Count > 0 ? "warn" : "")"><small>Clashes this week</small><b>@clashes.Count</b></div>
+                <div class="card @(cover.Count > 0 ? "warn" : "")"><small>Still needing cover this week</small><b>@cover.Count</b></div>
+                <div class="card @(allMissing.Count > 0 ? "warn" : "")"><small>Registers missing in these weeks</small><b>@allMissing.Count</b></div>
+                <div class="card"><small>Hours in these weeks</small><b>@DomainWeek.Duration(occ.Aggregate(TimeSpan.Zero, (a, o) => a + o.Session.Length))</b><small>@occ.Count classes</small></div>
+                <div class="card"><small>People</small><b>@t.Students.Count</b><small>students · @t.Facilitators.Count(f => !f.IsGuest) facilitators · @t.Groups.Count groups</small></div>
+            </div>
+            break;
+    }
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public string? Slug { get; set; }
+    private DateOnly _from, _to;
+
+    private static readonly (string, string)[] Tabs =
+        [("overview", "Overview"), ("utilisation", "Utilisation"), ("attendance", "Attendance"), ("facilitators", "Facilitator hours"), ("registers", "Registers outstanding")];
+
+    private string Current => Tabs.Any(x => x.Item1 == Slug) ? Slug! : "overview";
+
+    protected override void OnInitialized()
+    {
+        var sem = W.T.SemesterNear(W.Today);
+        _to = DomainWeek.MondayOf(W.Today);
+        _from = sem is not null && sem.FirstMonday <= _to ? sem.FirstMonday : _to.AddDays(-7 * 7);
+    }
+
+    private static DateOnly Min(DateOnly a, DateOnly b) => a < b ? a : b;
+}

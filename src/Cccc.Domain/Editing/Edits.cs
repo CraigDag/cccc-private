@@ -300,10 +300,11 @@ public static class Edits
     /// absences (audit finding C3: a live delete sweeps what a reload would). Filed registers keep the
     /// id, so a class's counts still add up; erasure is a separate step that rewrites history.
     /// </summary>
-    public static Batch RemoveStudent(Timetable t, Guid id)
+    public static Batch RemoveStudent(Timetable t, Guid id, DateOnly today)
     {
         var d = new Draft(t);
-        foreach (var s in t.Sessions.Where(s => s.AddedStudentIds.Contains(id) || s.LeftOffStudentIds.Contains(id)))
+        // Weeks that have ended do not change: a dangling id there names nobody and counts nobody.
+        foreach (var s in t.Sessions.Where(s => (s.AddedStudentIds.Contains(id) || s.LeftOffStudentIds.Contains(id)) && !Week.HasEnded(s.Date, today)))
             d.Put(Collections.Sessions, s with { AddedStudentIds = s.AddedStudentIds.Remove(id), LeftOffStudentIds = s.LeftOffStudentIds.Remove(id) });
         foreach (var e in t.Events.Where(e => e.StudentIds.Contains(id)))
             d.Put(Collections.Events, e with { StudentIds = e.StudentIds.Remove(id) });
@@ -314,9 +315,9 @@ public static class Edits
     }
 
     /// <summary>
-    /// Removing a group takes it off sessions ahead (a session left with no group becomes for everyone
-    /// only if it was for that one group alone — it is then a whole-building session, said in the label),
-    /// off closures, and leaves its students without a group.
+    /// Removing a group takes it off sessions ahead (a session that was for that group alone is left for
+    /// no group, never turned into a whole-building one), off closures, and leaves its students without
+    /// a group.
     /// </summary>
     public static Batch RemoveGroup(Timetable t, Guid id, DateOnly today)
     {
@@ -325,7 +326,7 @@ public static class Edits
         {
             var left = s.Audience.GroupIds.Remove(id);
             var audience = left.IsEmpty
-                ? Audience.Everyone
+                ? s.Audience with { GroupIds = [], Kind = AudienceKind.Group, ProgrammeId = null }
                 : s.Audience with { GroupIds = left, Kind = left.Count == 1 && s.Audience.Kind == AudienceKind.Groups ? AudienceKind.Group : s.Audience.Kind };
             d.Put(Collections.Sessions, s with { Audience = audience });
         }
@@ -337,12 +338,12 @@ public static class Edits
         return d.ToBatch("Deleted a group");
     }
 
-    public static Batch RemoveProgramme(Timetable t, Guid id)
+    public static Batch RemoveProgramme(Timetable t, Guid id, DateOnly today)
     {
         var d = new Draft(t);
         foreach (var g in t.Groups.Where(g => g.ProgrammeId == id))
             d.Put(Collections.Groups, g with { ProgrammeId = null });
-        foreach (var s in t.Sessions.Where(s => s.Audience.ProgrammeId == id))
+        foreach (var s in t.Sessions.Where(s => s.Audience.ProgrammeId == id && !Week.HasEnded(s.Date, today)))
             d.Put(Collections.Sessions, s with { Audience = s.Audience with { ProgrammeId = null, Kind = s.Audience.GroupIds.Count == 1 ? AudienceKind.Group : AudienceKind.Groups } });
         d.Remove(Collections.Programmes, id);
         return d.ToBatch("Deleted a programme");

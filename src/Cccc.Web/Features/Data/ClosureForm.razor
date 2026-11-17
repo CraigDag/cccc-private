@@ -1,0 +1,81 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add a closure" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@(_why is null)">
+    <ChildContent>
+        <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" @bind:after="Check" placeholder="Autumn break, Easter…" /></label>
+        <div class="field two">
+            <label><span>From</span><input type="date" @bind="_from" @bind:after="Check" /></label>
+            <label><span>To (the same day for one day)</span><input type="date" @bind="_to" @bind:after="Check" /></label>
+        </div>
+        <label class="field"><span>Closes</span>
+            <select @bind="_scope">
+                <option value="@ClosureScope.WholeBuilding">The whole building</option>
+                <option value="@ClosureScope.Groups">Only some groups</option>
+            </select>
+        </label>
+        @if (_scope == ClosureScope.Groups)
+        {
+            <fieldset class="field checks columns"><legend>Groups</legend>
+                @foreach (var g in W.T.Groups.OrderBy(g => g.Name, NameOrder.Comparer))
+                {
+                    <label><input type="checkbox" checked="@_groups.Contains(g.Id)" @onchange="e => { if ((bool)e.Value!) _groups.Add(g.Id); else _groups.Remove(g.Id); }" /> @g.Name</label>
+                }
+            </fieldset>
+            @if (_groups.Count == 0)
+            {
+                <p class="hint">With no group ticked it closes nothing. It is kept as given, and says so in the list.</p>
+            }
+        }
+        <p class="hint">A closed class stays on the week, marked closed. It needs no cover and no register, and nobody's hours count it.</p>
+        @if (_why is not null)
+        {
+            <p class="form-error">@_why</p>
+        }
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete">Delete</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private Closure? _old;
+    private string _name = "";
+    private DateOnly _from, _to;
+    private ClosureScope _scope;
+    private readonly HashSet<Guid> _groups = [];
+    private string? _why;
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.Closures[id] : null;
+        _from = _old?.From ?? W.Today;
+        _to = _old?.To ?? W.Today;
+        if (_old is not null) { _name = _old.Name; _scope = _old.Scope; _groups.UnionWith(_old.GroupIds); }
+        Check();
+    }
+
+    private void Check()
+    {
+        _why = _name.Trim().Length == 0 ? "Give it a name." : _to < _from ? "It has to end on or after the day it starts." : null;
+    }
+
+    private void Save()
+    {
+        Check();
+        if (_why is not null) return;
+        var c = (_old ?? new Closure()) with
+        {
+            Name = _name.Trim(), From = _from, To = _to, Scope = _scope,
+            GroupIds = _scope == ClosureScope.Groups ? _groups.ToImmutableList() : [],
+        };
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Closures, c).ToBatch((_old is null ? "Added the closure " : "Changed the closure ") + c.Name))) D.Close();
+    }
+
+    private void Delete()
+    {
+        if (W.Commit(t => new DraftOf(t).Remove(Collections.Closures, _old!.Id).ToBatch("Deleted the closure " + _old.Name))) D.Close();
+    }
+}

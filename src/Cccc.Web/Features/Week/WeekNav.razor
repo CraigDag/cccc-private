@@ -1,0 +1,28 @@
+@* The week header shared by the pages that are about one week: ◂ date ▸ and This week. *@
+<div class="week-head">
+    <div class="week-tile"><small>Week</small><b>@Cccc.Domain.Week.IsoNumber(Monday)</b></div>
+    <div class="week-nav">
+        <button type="button" class="btn icon" @onclick="() => Go.InvokeAsync(Monday.AddDays(-7))" aria-label="Previous week">◂</button>
+        <input type="date" class="week-date" value="@Monday.ToString("yyyy-MM-dd")" @onchange="OnDate" aria-label="Week of" />
+        <button type="button" class="btn icon" @onclick="() => Go.InvokeAsync(Monday.AddDays(7))" aria-label="Next week">▸</button>
+        @if (Cccc.Domain.Week.MondayOf(Today) != Monday)
+        {
+            <button type="button" class="btn" @onclick="() => Go.InvokeAsync(Today)">This week</button>
+        }
+    </div>
+    <div class="week-title">
+        <h1>@Title</h1>
+        <div class="muted">@Cccc.Domain.Week.ForDocuments(Monday)</div>
+    </div>
+    @ChildContent
+</div>
+@code {
+    [Parameter, EditorRequired] public DateOnly Monday { get; set; }
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public EventCallback<DateOnly> Go { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private Task OnDate(ChangeEventArgs e) =>
+        DateOnly.TryParse(e.Value?.ToString(), out var d) ? Go.InvokeAsync(d) : Task.CompletedTask;
+}

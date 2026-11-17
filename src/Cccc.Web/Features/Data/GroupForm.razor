@@ -1,0 +1,50 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add a group" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@(_name.Trim().Length > 0)">
+    <ChildContent>
+        <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" /></label>
+        <label class="field"><span>Programme</span>
+            <select @bind="_programme">
+                <option value="">No programme</option>
+                @foreach (var p in W.T.Programmes.OrderBy(p => p.Name, NameOrder.Comparer))
+                {
+                    <option value="@p.Id">@p.Name</option>
+                }
+            </select>
+        </label>
+        <Colour @bind-Value="_colour" />
+        @if (_old is not null)
+        {
+            <p class="hint">Deleting a group takes it off the classes ahead (they are left for no group, never turned into whole-building ones) and leaves its students without a group.</p>
+        }
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete">Delete</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private Group? _old;
+    private string _name = "", _colour = "#3F51B5", _programme = "";
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.Groups[id] : null;
+        if (_old is null) return;
+        _name = _old.Name; _colour = _old.Colour; _programme = _old.ProgrammeId?.ToString() ?? "";
+    }
+
+    private void Save()
+    {
+        var g = (_old ?? new Group()) with { Name = _name.Trim(), Colour = _colour, ProgrammeId = Guid.TryParse(_programme, out var p) ? p : null };
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Groups, g).ToBatch((_old is null ? "Added the group " : "Changed the group ") + g.Name))) D.Close();
+    }
+
+    private void Delete()
+    {
+        if (W.Commit(t => Edits.RemoveGroup(t, _old!.Id, W.Today))) D.Close();
+    }
+}

@@ -1,0 +1,52 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add a discipline" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@(_name.Trim().Length > 0)">
+    <ChildContent>
+        <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" /></label>
+        <label class="field"><span>Branch</span>
+            <select @bind="_branch">
+                <option value="">No branch</option>
+                @foreach (var b in W.T.Branches.OrderBy(b => b.Name, NameOrder.Comparer))
+                {
+                    <option value="@b.Id">@b.Name</option>
+                }
+            </select>
+        </label>
+        <Colour @bind-Value="_colour" />
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete">Delete</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private Discipline? _old;
+    private string _name = "", _colour = "#5E35B1", _branch = "";
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.Disciplines[id] : null;
+        if (_old is null) return;
+        _name = _old.Name; _colour = _old.Colour; _branch = _old.BranchId?.ToString() ?? "";
+    }
+
+    private void Save()
+    {
+        var x = (_old ?? new Discipline()) with { Name = _name.Trim(), Colour = _colour, BranchId = Guid.TryParse(_branch, out var b) ? b : null };
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Disciplines, x).ToBatch((_old is null ? "Added the discipline " : "Changed the discipline ") + x.Name))) D.Close();
+    }
+
+    private void Delete()
+    {
+        var id = _old!.Id;
+        if (W.Commit(t =>
+        {
+            var d = new DraftOf(t);
+            foreach (var s in t.Students.Where(s => s.DisciplineId == id)) d.Put(Collections.Students, s with { DisciplineId = null });
+            return d.Remove(Collections.Disciplines, id).ToBatch("Deleted the discipline " + _old.Name);
+        })) D.Close();
+    }
+}

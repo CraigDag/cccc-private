@@ -1,0 +1,61 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add a class" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@(_name.Trim().Length > 0)">
+    <ChildContent>
+        <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" /></label>
+        <Colour @bind-Value="_colour" />
+        <label class="field"><span>Area</span>
+            <select @bind="_area">
+                <option value="">No area</option>
+                @foreach (var a in W.T.Areas.OrderBy(a => a.Name, NameOrder.Comparer))
+                {
+                    <option value="@a.Id">@a.Name</option>
+                }
+            </select>
+        </label>
+        <label class="field"><span>How it counts for a student</span>
+            <select @bind="_workload">
+                @foreach (var w in Enum.GetValues<Workload>())
+                {
+                    <option value="@w">@WorkloadWords.For(w)</option>
+                }
+            </select>
+        </label>
+        <p class="hint">Counted: required, part of a student's hours. Open session: optional (open training), can be hidden from the week. Not counted: on the timetable, never a student's hours (lunch).
+        @if (_old is not null)
+        {
+            <span>Renaming a class renames the sessions still carrying its old name, in weeks that have not ended.</span>
+        }
+        </p>
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete">Delete</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private Class? _old;
+    private string _name = "", _colour = "#5E35B1", _area = "";
+    private Workload _workload;
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.Classes[id] : null;
+        if (_old is null) return;
+        _name = _old.Name; _colour = _old.Colour; _area = _old.AreaId?.ToString() ?? ""; _workload = _old.Workload;
+    }
+
+    private void Save()
+    {
+        var c = (_old ?? new Class()) with { Name = _name.Trim(), Colour = _colour, AreaId = Guid.TryParse(_area, out var a) ? a : null, Workload = _workload };
+        if (W.Commit(t => Edits.PutClass(t, c, W.Today))) D.Close();
+    }
+
+    private void Delete()
+    {
+        if (W.Commit(t => Edits.RemoveClass(t, _old!.Id, W.Today))) D.Close();
+    }
+}

@@ -1,4 +1,5 @@
 using Cccc.Store;
+using Microsoft.AspNetCore.DataProtection;
 using Cccc.Web.Components;
 using Cccc.Web.Features.Print;
 using Cccc.Web.Infrastructure;
@@ -41,6 +42,12 @@ builder.Services.AddScoped<Cccc.Web.Features.Shell.Toasts>();
 builder.Services.AddScoped<Cccc.Web.Features.Week.WeekView>();
 builder.Services.AddHttpContextAccessor();
 
+// Sign-in cookies are sealed with keys kept beside the store, so an update or restart does not sign
+// everybody out.
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Path.GetDirectoryName(store.DatabasePath)!, "keys")))
+    .SetApplicationName("cccc-scheduler");
+
 builder.AddSignIn();
 builder.Services.AddAntiforgery(o => o.Cookie.Name = "cccc.af");
 builder.Services.AddRazorComponents().AddInteractiveServerComponents(o =>
@@ -80,6 +87,7 @@ app.MapGet("/healthz", () => "ok").AllowAnonymous();
 app.MapStaticAssets().AllowAnonymous();
 app.MapSignInEndpoints();
 app.MapDownloads();
+app.MapProjectDownload();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
 app.Run();

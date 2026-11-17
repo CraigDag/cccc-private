@@ -1,0 +1,39 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add a room" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@(_name.Trim().Length > 0)">
+    <ChildContent>
+        <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" data-testid="room-name" /></label>
+        <label class="field"><span>Kind of space (optional)</span><input @bind="_category" placeholder="Studio, gym, aerial hall…" /></label>
+        <Colour @bind-Value="_colour" />
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete">Delete</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private Room? _old;
+    private string _name = "", _colour = "#3F51B5";
+    private string? _category;
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.Rooms[id] : null;
+        if (_old is null) return;
+        _name = _old.Name; _category = _old.Category; _colour = _old.Colour;
+    }
+
+    private void Save()
+    {
+        var r = (_old ?? new Room()) with { Name = _name.Trim(), Category = string.IsNullOrWhiteSpace(_category) ? null : _category.Trim(), Colour = _colour };
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Rooms, r).ToBatch((_old is null ? "Added the room " : "Changed the room ") + r.Name))) D.Close();
+    }
+
+    private void Delete()
+    {
+        if (W.Commit(t => Edits.RemoveRoom(t, _old!.Id, W.Today))) D.Close();
+    }
+}

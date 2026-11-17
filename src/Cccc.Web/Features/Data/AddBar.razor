@@ -1,0 +1,9 @@
+<div class="bar">
+    <button type="button" class="btn primary" @onclick="OnAdd" data-testid="data-add">Add a @Kind.One…</button>
+    @ChildContent
+</div>
+@code {
+    [Parameter, EditorRequired] public Kind Kind { get; set; } = default!;
+    [Parameter] public EventCallback OnAdd { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

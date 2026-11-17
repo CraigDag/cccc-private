@@ -1,0 +1,74 @@
+@page "/my-week"
+@using Cccc.Web.Features.Week
+@using Cccc.Web.Features.Sessions
+@using Cccc.Web.Features.Print
+@inject Dialogs D
+@inject PrintRequests Prints
+
+<PageTitle>My week · CCCC Scheduler</PageTitle>
+@if (Me is null)
+{
+    <div class="empty-state">
+        <h1>My week</h1>
+        <p>Your account is not linked to a facilitator, so there is no week of yours to show. An administrator links accounts in Administration ▸ Accounts.</p>
+    </div>
+}
+else
+{
+    var t = W.T;
+    var m = WeekModel.Build(t, _view, W.Access, W.Today, s => s.FacilitatorIds.Contains(Me.Id) || s.CoverIds.Contains(Me.Id), Me.Id);
+    var split = Hours.For(t, Occurrences.HappeningInWeek(t, _view.Monday), Me.Id);
+    var missing = Registers.MissingBetween(t, _view.Monday.AddDays(-7 * 8), W.Today.AddDays(-1), W.Today)
+        .Where(o => Registers.MayChange(W.Access.Registers, o.Session)).ToList();
+    <WeekNav Monday="_view.Monday" Today="W.Today" Title="@("My week, " + Me.Name)" Go="d => _view.GoTo(d)">
+        <a class="btn" href="@Prints.Link("mine", _view, W.Access, Me.Id)" target="_blank" rel="noopener">Print my week</a>
+    </WeekNav>
+    <div class="cards">
+        <div class="card @(Me.MaxWeeklyHours is { } max && split.Total > max ? "warn" : "")">
+            <small>Hours this week</small><b>@Cccc.Domain.Week.Duration(split.Total)</b>
+            <small>Teaching @Cccc.Domain.Week.Duration(split.Teaching)@string.Concat(split.Rules.Select(r => $" · {r.Name} {Cccc.Domain.Week.Duration(r.Time)}"))@(Me.MaxWeeklyHours is { } lim ? $" · limit {Cccc.Domain.Week.Duration(lim)}" : "")</small>
+        </div>
+        <div class="card @(missing.Count > 0 ? "warn" : "")">
+            <small>Registers to take</small><b>@missing.Count</b>
+            <small>From the last eight weeks</small>
+        </div>
+    </div>
+    @if (missing.Count > 0)
+    {
+        <div class="section">
+            <h2>Registers to take</h2>
+            <ul class="pick-list">
+                @foreach (var o in missing)
+                {
+                    <li><button type="button" class="pick" @onclick="() => Take(o.Session.Id)"><b>@Looks.Title(t, o.Session)</b> <small>@Looks.WhenWithDay(o.Session) · @Looks.Audience(t, o.Session)</small></button></li>
+                }
+            </ul>
+        </div>
+    }
+    <div class="desk-only">
+        <WeekGrid M="m" W="W" Gestures="_gestures" Editable="false" OpenEvent="OpenEvent" />
+    </div>
+    <div class="phone-only">
+        <DayList M="m" W="W" OnOpen="OpenSession" OnOpenEvent="OpenEvent" />
+    </div>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    private readonly WeekView _view = new() { ShowGuests = true };
+    private WeekGestures _gestures = default!;
+
+    private Facilitator? Me => W.Access.FacilitatorId is { } id ? W.T.Facilitators[id] : null;
+
+    protected override void OnInitialized()
+    {
+        _view.Start(W.Today, null);
+        _view.Moved += () => _ = InvokeAsync(StateHasChanged);
+        _gestures = new WeekGestures { OnOpen = id => { OpenSession(id); StateHasChanged(); return Task.CompletedTask; } };
+    }
+
+    private void OpenSession(Guid id) => D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.SessionId)] = id });
+
+    private void OpenEvent(Guid id) => D.Show<Cccc.Web.Features.Events.EventForm>(new Dictionary<string, object?> { [nameof(Cccc.Web.Features.Events.EventForm.EventId)] = id });
+
+    private void Take(Guid id) => D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = id });
+}

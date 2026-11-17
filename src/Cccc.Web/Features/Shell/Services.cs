@@ -74,6 +74,9 @@ public sealed class Workspace(Access access, LiveProject? project, SchoolClock c
     public LiveProject? Project { get; } = project;
     public SchoolClock Clock { get; } = clock;
     public Timetable T => Project?.State ?? Timetable.Empty;
+
+    /// <summary>The project's name as the store has it. Shown inside the app only: never on paper, in a tab title or a URL.</summary>
+    public string ProjectName => Project is null ? "" : Project.Name;
     public DateOnly Today => Clock.Today;
 
     /// <summary>The name a person reads for whoever made a change (changes are recorded by login).</summary>

@@ -1,0 +1,140 @@
+@inject ProjectStore Store
+@inject ProjectChoice Choice
+@inject LiveProjects Live
+@inject Dialogs D
+@inject IJSRuntime JS
+@using Cccc.Legacy
+@using Cccc.Domain.Sample
+@{
+    var projects = Store.List();
+    var deleted = Store.List(includeDeleted: true).Where(p => p.Deleted is not null).ToList();
+    var open = Choice.OpenId();
+}
+<div class="section">
+    <div class="bar">
+        <label class="btn primary" data-testid="import-label">
+            Bring in a file…
+            <InputFile OnChange="Import" accept=".cccc,.cccc2" style="display:none" data-testid="import-file" />
+        </label>
+        <button type="button" class="btn" @onclick="NewBlank">Start a blank timetable</button>
+        <button type="button" class="btn quiet" @onclick="NewSample">Add the made-up sample school</button>
+    </div>
+    <p class="hint">Bring in the school's <code>.cccc</code> from the current app (every version up to schema @LegacyImport.NewestSchema), or a <code>.cccc2</code> downloaded from here. The file is read in memory and stored only as the new timetable.</p>
+    @if (_busy)
+    {
+        <p class="notice">Reading the file…</p>
+    }
+    @if (_error is not null)
+    {
+        <p class="notice warn" role="alert">@_error</p>
+    }
+    @if (_imported is not null)
+    {
+        <div class="notice" data-testid="import-report">
+            <b>Brought in as a new timetable.</b>
+            <ul>
+                @foreach (var line in _report)
+                {
+                    <li>@line</li>
+                }
+            </ul>
+            <button type="button" class="btn" @onclick="() => { Choice.Choose(_imported.Value); _imported = null; }">Open it for everybody</button>
+        </div>
+    }
+</div>
+
+<div class="section">
+    <h2>Timetables</h2>
+    <p class="hint">Everybody sees the one marked open. Signing in opens it.</p>
+    <ul class="list" data-testid="projects">
+        @foreach (var p in projects)
+        {
+            <li class="list-row" style="cursor:default; flex-wrap:wrap">
+                <span class="name"><b>@p.Name</b> @if (p.Id == open) { <span class="badge" style="border-color:var(--accent);color:var(--accent)">Open for everybody</span> }<br />
+                    <small class="muted">Last changed @W.Clock.Describe(p.LastChanged) by @W.NameOf(p.LastChangedBy)</small></span>
+                @if (p.Id != open)
+                {
+                    <button type="button" class="btn" @onclick="() => Choice.Choose(p.Id)">Open for everybody</button>
+                }
+                <button type="button" class="btn quiet" @onclick="() => D.Show<HistoryDialog>(new Dictionary<string, object?> { [nameof(HistoryDialog.ProjectId)] = p.Id })">History…</button>
+                <button type="button" class="btn quiet" @onclick="() => D.Show<RenameDialog>(new Dictionary<string, object?> { [nameof(RenameDialog.ProjectId)] = p.Id })">Rename…</button>
+                <a class="btn quiet" href="@($"download/project/{p.Id}")" target="_blank" rel="noopener" data-testid="project-download">Download</a>
+                @if (p.Id != open)
+                {
+                    <button type="button" class="btn quiet danger" @onclick="() => Delete(p)">Delete</button>
+                }
+            </li>
+        }
+    </ul>
+</div>
+@if (deleted.Count > 0)
+{
+    <div class="section">
+        <h2>Deleted</h2>
+        <p class="hint">A deleted timetable comes back until 30 days have passed, and is then gone for good.</p>
+        <ul class="list">
+            @foreach (var p in deleted)
+            {
+                <li class="list-row" style="cursor:default">
+                    <span class="name">@p.Name <small class="muted">deleted @W.Clock.Describe(p.Deleted!.Value), gone after @W.Clock.Local(p.Deleted!.Value + ProjectStore.Retention).ToString("d MMM")</small></span>
+                    <button type="button" class="btn" @onclick="() => { Store.Undelete(p.Id); }">Bring back</button>
+                </li>
+            }
+        </ul>
+    </div>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    private bool _busy;
+    private string? _error;
+    private Guid? _imported;
+    private IReadOnlyList<string> _report = [];
+    private const long MaxFile = 64 * 1024 * 1024;
+
+    private async Task Import(InputFileChangeEventArgs e)
+    {
+        _error = null; _imported = null; _busy = true;
+        try
+        {
+            using var ms = new MemoryStream();
+            await e.File.OpenReadStream(MaxFile).CopyToAsync(ms);
+            var bytes = ms.ToArray();
+            Timetable t;
+            if (ProjectFiles.LooksLikeOurs(bytes))
+            {
+                t = ProjectFiles.Read(bytes);
+                _report = [$"{t.Sessions.Count} sessions, {t.Students.Count} students, {t.Facilitators.Count} facilitators."];
+            }
+            else
+            {
+                var (tt, report) = LegacyImport.FromBytes(bytes, W.Today);
+                t = tt;
+                _report = report.Lines().ToList();
+            }
+            var name = string.IsNullOrWhiteSpace(t.Settings.Name) ? Path.GetFileNameWithoutExtension(e.File.Name) : t.Settings.Name;
+            _imported = Store.Create(name, t, W.Access.By, W.Clock.Now);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or System.Text.Json.JsonException or InvalidOperationException)
+        {
+            // The old loader's own words for a file it cannot read (newer schema, damaged zip) are kept.
+            _error = "That file could not be brought in: " + ex.Message;
+        }
+        finally { _busy = false; }
+    }
+
+    private void NewBlank()
+    {
+        var t = Timetable.Empty with { Settings = new Settings { Name = "New timetable" } };
+        Store.Create("New timetable " + W.Clock.Local(W.Clock.Now).ToString("d MMM yyyy"), t, W.Access.By, W.Clock.Now);
+    }
+
+    private void NewSample() =>
+        Store.Create("Northlight (made-up sample)", SampleSchool.Create(W.Today, W.Today), W.Access.By, W.Clock.Now);
+
+    private void Delete(ProjectInfo p)
+    {
+        Store.Delete(p.Id, W.Clock.Now);
+        Live.Forget(p.Id);
+        W.Say($"Deleted {p.Name}. It can be brought back for 30 days.");
+    }
+}

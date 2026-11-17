@@ -1,0 +1,40 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add a programme" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@(_name.Trim().Length > 0)">
+    <ChildContent>
+        <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" /></label>
+        <Colour @bind-Value="_colour" />
+        <label class="check"><input type="checkbox" @bind="_guest" /> A visiting group (guest)</label>
+        <p class="hint">A guest programme's classes are off the week until somebody asks for them (+ Filter ▸ Guest classes, or a filter for the programme or one of its groups). Hidden is drawing only: they still clash, need cover and count hours.</p>
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete">Delete</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private Programme? _old;
+    private string _name = "", _colour = "#607D8B";
+    private bool _guest;
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.Programmes[id] : null;
+        if (_old is null) return;
+        _name = _old.Name; _colour = _old.Colour; _guest = _old.IsGuest;
+    }
+
+    private void Save()
+    {
+        var p = (_old ?? new Programme()) with { Name = _name.Trim(), Colour = _colour, IsGuest = _guest };
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Programmes, p).ToBatch((_old is null ? "Added the programme " : "Changed the programme ") + p.Name))) D.Close();
+    }
+
+    private void Delete()
+    {
+        if (W.Commit(t => Edits.RemoveProgramme(t, _old!.Id, W.Today))) D.Close();
+    }
+}

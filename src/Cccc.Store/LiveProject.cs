@@ -34,6 +34,9 @@ public sealed class LiveProject
     public long Sequence { get; private set; }
     public Change? LastChange { get; private set; }
 
+    /// <summary>The project's name in the store, read when asked so a rename shows at once.</summary>
+    public string Name => _store.Find(Id)?.Name ?? "";
+
     /// <summary>Raised after every change, outside the lock. Handlers must hand off to their own thread.</summary>
     public event Action<Changed>? ChangedEvent;
 
@@ -185,6 +188,20 @@ public sealed class LiveProject
     {
         var since = _clock() - within;
         return _present.Where(kv => kv.Value >= since).Select(kv => kv.Key).OrderBy(n => n, NameOrder.Comparer).ToList();
+    }
+
+    /// <summary>
+    /// Drops every undo and redo step held in memory, for every person. Erasing a person needs it: those
+    /// steps carry whole entities, the erased person's name among them.
+    /// </summary>
+    public void ForgetUndo()
+    {
+        lock (_gate)
+        {
+            _undo.Clear();
+            _redo.Clear();
+            LastChange = null;
+        }
     }
 
     /// <summary>Writes a snapshot so the next load replays nothing.</summary>

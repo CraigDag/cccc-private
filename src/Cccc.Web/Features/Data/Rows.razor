@@ -1,0 +1,24 @@
+@{ var list = Items.ToList(); }
+@if (list.Count == 0)
+{
+    <p class="muted">Nothing here yet.</p>
+}
+else
+{
+    <ul class="list" data-testid="data-list">
+        @foreach (var r in list)
+        {
+            <li>
+                <button type="button" class="list-row" @onclick="() => OnOpen.InvokeAsync(r.Id)" data-testid="data-row">
+                    <span class="spine" style="@(r.Colour is null ? "" : $"--c:{r.Colour}")"></span>
+                    <span class="name">@r.Name</span>
+                    <small>@r.Detail</small>
+                </button>
+            </li>
+        }
+    </ul>
+}
+@code {
+    [Parameter, EditorRequired] public IEnumerable<Row> Items { get; set; } = [];
+    [Parameter] public EventCallback<Guid> OnOpen { get; set; }
+}

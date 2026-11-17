@@ -1,0 +1,43 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add a branch" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@(_name.Trim().Length > 0)">
+    <ChildContent>
+        <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" /></label>
+        <Colour @bind-Value="_colour" />
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete">Delete</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private Branch? _old;
+    private string _name = "", _colour = "#607D8B";
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.Branches[id] : null;
+        if (_old is null) return;
+        _name = _old.Name; _colour = _old.Colour;
+    }
+
+    private void Save()
+    {
+        var b = (_old ?? new Branch()) with { Name = _name.Trim(), Colour = _colour };
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Branches, b).ToBatch((_old is null ? "Added the branch " : "Changed the branch ") + b.Name))) D.Close();
+    }
+
+    private void Delete()
+    {
+        var id = _old!.Id;
+        if (W.Commit(t =>
+        {
+            var d = new DraftOf(t);
+            foreach (var x in t.Disciplines.Where(x => x.BranchId == id)) d.Put(Collections.Disciplines, x with { BranchId = null });
+            return d.Remove(Collections.Branches, id).ToBatch("Deleted the branch " + _old.Name);
+        })) D.Close();
+    }
+}

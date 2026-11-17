@@ -1,0 +1,91 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add a facilitator" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@(_why is null)" Class="wide">
+    <ChildContent>
+        <div class="form-grid">
+            <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" @bind:after="Check" /></label>
+            <label class="field"><span>Email (optional)</span><input type="email" @bind="_email" /></label>
+            <Colour @bind-Value="_colour" />
+            <label class="check"><input type="checkbox" @bind="_guest" /> A visiting facilitator (guest)</label>
+            <label class="field"><span>Most hours a week (optional)</span><input @bind="_max" @bind:after="Check" placeholder="e.g. 20 or 18:30" /></label>
+            <label class="field"><span>Longest gap in a day (optional)</span><input @bind="_gap" @bind:after="Check" placeholder="e.g. 2:00" /></label>
+        </div>
+        <p class="hint">Both limits warn and never block: real weeks break their own rules.</p>
+        <fieldset class="field"><legend>Available (optional; empty means any time)</legend>
+            @foreach (var w in _windows.ToList())
+            {
+                <div class="person-row">
+                    <select value="@w.Day" @onchange="e => { w.Day = Enum.Parse<DayOfWeek>(e.Value!.ToString()!); Check(); }" aria-label="Day">
+                        @foreach (var d in DomainWeek.Days(new DateOnly(2030, 3, 4)).Select(d => d.DayOfWeek))
+                        {
+                            <option value="@d">@d</option>
+                        }
+                    </select>
+                    <label class="inline"><span>from</span><input type="time" step="900" value="@DomainWeek.Hm(w.Start)" @onchange="e => { if (TimeOnly.TryParse(e.Value?.ToString(), out var x)) w.Start = x; Check(); }" /></label>
+                    <label class="inline"><span>until</span><input type="time" step="900" value="@DomainWeek.Hm(w.End)" @onchange="e => { if (TimeOnly.TryParse(e.Value?.ToString(), out var x)) w.End = x; Check(); }" /></label>
+                    <button type="button" class="btn quiet" @onclick="() => { _windows.Remove(w); Check(); }">Remove</button>
+                </div>
+            }
+            <button type="button" class="btn" @onclick="() => { _windows.Add(new Window()); Check(); }">Add a time they are available</button>
+        </fieldset>
+        @if (_why is not null)
+        {
+            <p class="form-error">@_why</p>
+        }
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete">Remove</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private sealed class Window { public DayOfWeek Day = DayOfWeek.Monday; public TimeOnly Start = new(9, 0); public TimeOnly End = new(17, 0); }
+    private Facilitator? _old;
+    private string _name = "", _email = "", _colour = "#00838F", _max = "", _gap = "";
+    private bool _guest;
+    private readonly List<Window> _windows = [];
+    private string? _why;
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.Facilitators[id] : null;
+        if (_old is not null)
+        {
+            _name = _old.Name; _email = _old.Email; _colour = _old.Colour; _guest = _old.IsGuest;
+            _max = HoursText.Show(_old.MaxWeeklyHours); _gap = HoursText.Show(_old.MaxGap);
+            _windows.AddRange(_old.Availability.Select(a => new Window { Day = a.Day, Start = a.Start, End = a.End }));
+        }
+        Check();
+    }
+
+    private void Check()
+    {
+        _why = _name.Trim().Length == 0 ? "Give them a name."
+            : !HoursText.TryRead(_max, out _) ? "Most hours a week is not a number of hours."
+            : !HoursText.TryRead(_gap, out _) ? "Longest gap is not a number of hours."
+            : _windows.Any(w => w.End <= w.Start) ? "An available time has to finish after it starts."
+            : null;
+    }
+
+    private void Save()
+    {
+        Check();
+        if (_why is not null) return;
+        HoursText.TryRead(_max, out var max);
+        HoursText.TryRead(_gap, out var gap);
+        var f = (_old ?? new Facilitator()) with
+        {
+            Name = _name.Trim(), Email = _email.Trim(), Colour = _colour, IsGuest = _guest, MaxWeeklyHours = max, MaxGap = gap,
+            Availability = _windows.Select(w => new AvailabilityWindow(w.Day, w.Start, w.End)).ToImmutableList(),
+        };
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Facilitators, f).ToBatch((_old is null ? "Added " : "Changed ") + f.Name))) D.Close();
+    }
+
+    private void Delete()
+    {
+        if (W.Commit(t => Edits.RemoveFacilitator(t, _old!.Id, W.Today))) D.Close();
+    }
+}

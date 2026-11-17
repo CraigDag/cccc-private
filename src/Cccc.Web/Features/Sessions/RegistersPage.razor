@@ -1,0 +1,81 @@
+@page "/registers"
+@implements IDisposable
+@inject WeekView V
+@inject Dialogs D
+
+<PageTitle>Registers · CCCC Scheduler</PageTitle>
+@{
+    var t = W.T;
+    var rows = Occurrences.ForWeek(t, V.Monday)
+        .Where(o => Roster.For(t, o.Session).Count > 0 || t.Registers.Contains(o.Session.Id))
+        .Where(o => !_mine || Registers.MayChange(W.Access.Registers, o.Session))
+        .ToList();
+}
+<WeekNav Monday="V.Monday" Today="W.Today" Title="Registers" Go="d => V.GoTo(d)">
+    @if (W.Access.FacilitatorId is not null && W.Access.MayTakeEveryRegister)
+    {
+        <label class="check"><input type="checkbox" @bind="_mine" /> Only the ones I can take</label>
+    }
+</WeekNav>
+<p class="hint">Everybody can read every register. A facilitator takes the register for a class they were in the room for; administrators can take them all. A register with nobody ticked is not missing: it says nobody came.</p>
+@if (rows.Count == 0)
+{
+    <p class="week-empty">No classes with students on them this week@(_mine ? " that you can take" : "").</p>
+}
+else
+{
+    <div class="table-wrap">
+        <table class="grid-table" data-testid="registers-table">
+            <thead><tr><th>Day</th><th>Time</th><th>Class</th><th>For</th><th>In the room</th><th>Register</th></tr></thead>
+            <tbody>
+                @foreach (var o in rows)
+                {
+                    var state = Registers.StateOf(t, o, W.Today);
+                    var r = t.Registers[o.Session.Id];
+                    <tr @onclick="() => Open(o.Session.Id)" class="@(o.Happens ? "" : "off")" data-testid="register-line">
+                        <td>@Looks.DayHeading(o.Date)</td>
+                        <td class="nowrap">@Looks.When(o.Session)</td>
+                        <td>@Looks.Title(t, o.Session)</td>
+                        <td>@Looks.Audience(t, o.Session)</td>
+                        <td>@Looks.Names(t, o.InTheRoom)</td>
+                        <td>
+                            @switch (state)
+                            {
+                                case RegisterState.Taken when r is not null:
+                                    var (p, e, a) = r.Tally();
+                                    <span>@p present · @e excused · @a absent</span>
+                                    break;
+                                case RegisterState.Missing:
+                                    <span class="form-error">Missing</span>
+                                    break;
+                                case RegisterState.ToCome:
+                                    <span class="muted">To come</span>
+                                    break;
+                                default:
+                                    <span class="muted">@(state == RegisterState.Closed ? "Closed" : "No register")</span>
+                                    break;
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    private bool _mine;
+
+    protected override void OnInitialized()
+    {
+        V.Start(W.Today, null);
+        _mine = !W.Access.MayTakeEveryRegister && W.Access.FacilitatorId is not null;
+        V.Moved += Refresh;
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    private void Open(Guid id) => D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = id });
+
+    public void Dispose() => V.Moved -= Refresh;
+}

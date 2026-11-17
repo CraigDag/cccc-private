@@ -1,0 +1,23 @@
+<div class="section" style="max-width:520px">
+    <p class="hint">The timetable's own name is changed in Administration ▸ Projects.</p>
+    <label class="field"><span>School name</span><input @bind="_school" /></label>
+    <label class="field"><span>Scheduled hours a week a student should have (optional)</span><input @bind="_target" placeholder="e.g. 24" /></label>
+    <div class="form-actions"><button type="button" class="btn primary" @onclick="Save" disabled="@(!HoursText.TryRead(_target, out _))">Save the settings</button></div>
+</div>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    private string _school = "", _target = "";
+
+    protected override void OnInitialized()
+    {
+        var s = W.T.Settings;
+        _school = s.SchoolName; _target = HoursText.Show(s.WeeklyScheduledTarget);
+    }
+
+    private void Save()
+    {
+        HoursText.TryRead(_target, out var target);
+        var s = W.T.Settings with { SchoolName = _school.Trim(), WeeklyScheduledTarget = target };
+        W.Commit(t => new DraftOf(t).PutSettings(s).ToBatch("Changed the settings"));
+    }
+}

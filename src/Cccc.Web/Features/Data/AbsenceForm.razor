@@ -1,0 +1,103 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Record an absence" : "Edit an absence")" OnOk="Save" OkEnabled="@(_why is null)">
+    <ChildContent>
+        <label class="field"><span>Who</span>
+            <select @bind="_who" @bind:after="Check">
+                <option value="">Choose…</option>
+                <optgroup label="Facilitators">
+                    @foreach (var f in W.T.Facilitators.OrderBy(f => f.Name, NameOrder.Comparer))
+                    {
+                        <option value="@("f:" + f.Id)">@f.Name</option>
+                    }
+                </optgroup>
+                <optgroup label="Students">
+                    @foreach (var s in W.T.Students.OrderBy(s => s.Name, NameOrder.Comparer))
+                    {
+                        <option value="@("s:" + s.Id)">@s.Name</option>
+                    }
+                </optgroup>
+            </select>
+        </label>
+        <div class="field two">
+            <label><span>From</span><input type="date" @bind="_from" @bind:after="Check" /></label>
+            <label><span>To</span><input type="date" @bind="_to" @bind:after="Check" /></label>
+        </div>
+        <div class="field two">
+            <label><span>From time (optional)</span><input type="time" step="900" @bind="_startTime" @bind:after="Check" /></label>
+            <label><span>Until time (optional)</span><input type="time" step="900" @bind="_endTime" @bind:after="Check" /></label>
+        </div>
+        <div class="field two">
+            <label><span>Notice</span>
+                <select @bind="_notice"><option value="">Not said</option><option value="Planned">Planned</option><option value="Unplanned">Unplanned</option></select>
+            </label>
+            <label><span>Cause</span>
+                <select @bind="_cause"><option value="">Not said</option><option value="Illness">Illness</option><option value="Personal">Personal</option><option value="ApprovedLeave">Approved leave</option><option value="Other">Other</option></select>
+            </label>
+        </div>
+        <label class="field"><span>Reason (administrators only)</span><input @bind="_reason" maxlength="200" /></label>
+        <p class="hint"><b>Never write health details here.</b> This box is for things like "conference" or "family". It is kept in the project and in its history.</p>
+        @if (_why is not null)
+        {
+            <p class="form-error">@_why</p>
+        }
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete">Remove</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private Absence? _old;
+    private string _who = "", _notice = "", _cause = "";
+    private string? _reason;
+    private DateOnly _from, _to;
+    private TimeOnly? _startTime, _endTime;
+    private string? _why;
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.Absences[id] : null;
+        _from = _old?.From ?? W.Today;
+        _to = _old?.To ?? W.Today;
+        if (_old is not null)
+        {
+            _who = (_old.Person == AbsentPerson.Facilitator ? "f:" : "s:") + _old.PersonId;
+            _startTime = _old.StartTime; _endTime = _old.EndTime; _reason = _old.Reason;
+            _notice = _old.Notice?.ToString() ?? ""; _cause = _old.Cause?.ToString() ?? "";
+        }
+        Check();
+    }
+
+    private void Check()
+    {
+        _why = _who.Length < 3 ? "Choose who is away."
+            : _to < _from ? "It has to end on or after the day it starts."
+            : (_startTime is null) != (_endTime is null) ? "Give both times, or neither for whole days."
+            : _startTime is { } a && _endTime is { } b && b <= a ? "The time has to finish after it starts."
+            : null;
+    }
+
+    private void Save()
+    {
+        Check();
+        if (_why is not null) return;
+        var a = (_old ?? new Absence()) with
+        {
+            Person = _who.StartsWith("f:") ? AbsentPerson.Facilitator : AbsentPerson.Student,
+            PersonId = Guid.Parse(_who[2..]), From = _from, To = _to, StartTime = _startTime, EndTime = _endTime,
+            Reason = string.IsNullOrWhiteSpace(_reason) ? null : _reason.Trim(),
+            Notice = Enum.TryParse<AbsenceNotice>(_notice, out var n) ? n : null,
+            Cause = Enum.TryParse<AbsenceCause>(_cause, out var c) ? c : null,
+        };
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Absences, a).ToBatch(_old is null ? "Recorded an absence" : "Changed an absence"))) D.Close();
+    }
+
+    private void Delete()
+    {
+        if (W.Commit(t => new DraftOf(t).Remove(Collections.Absences, _old!.Id).ToBatch("Removed an absence"))) D.Close();
+    }
+}

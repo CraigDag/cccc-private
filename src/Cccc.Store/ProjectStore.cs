@@ -434,7 +434,14 @@ public sealed class ProjectStore
         cmd.CommandText = "VACUUM INTO $p";
         cmd.Parameters.AddWithValue("$p", Path.GetFullPath(path));
         cmd.ExecuteNonQuery();
+        // Administration ▸ System reads this, so a backup that stopped running is visible on screen
+        // rather than only to whoever reads the laptop's journal.
+        SetMeta("last_backup", DateTimeOffset.UtcNow.ToString("O"));
     }
+
+    /// <summary>Bytes on disk: the database and its write-ahead log, which holds recent changes until a checkpoint.</summary>
+    public long SizeOnDisk =>
+        new[] { DatabasePath, DatabasePath + "-wal" }.Where(File.Exists).Sum(f => new FileInfo(f).Length);
 
     private static byte[] Zip(string s)
     {

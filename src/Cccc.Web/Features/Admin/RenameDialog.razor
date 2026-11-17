@@ -1,0 +1,17 @@
+@inject ProjectStore Store
+@inject Dialogs D
+<DialogFrame Title="Rename the timetable" OnOk="Save" OkEnabled="@(_name.Trim().Length > 0)">
+    <label class="field"><span>Name (seen inside the app only: never on paper, in a browser tab or a link)</span><input @bind="_name" @bind:event="oninput" /></label>
+</DialogFrame>
+@code {
+    [Parameter] public Guid ProjectId { get; set; }
+    private string _name = "";
+
+    protected override void OnInitialized() => _name = Store.Find(ProjectId)?.Name ?? "";
+
+    private void Save()
+    {
+        Store.Rename(ProjectId, _name.Trim());
+        D.Close();
+    }
+}

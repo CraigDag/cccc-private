@@ -1,0 +1,60 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add a semester" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@(_why is null)">
+    <ChildContent>
+        <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" @bind:after="Check" /></label>
+        <label class="field"><span>First week (any day in it)</span><input type="date" @bind="_start" @bind:after="Check" /></label>
+        <label class="field"><span>Number of weeks</span><input type="number" min="1" max="@Semester.MaxWeekCount" @bind="_weeks" @bind:after="Check" /></label>
+        <p class="hint">Runs @DomainWeek.ShortDate(DomainWeek.MondayOf(_start)) to @DomainWeek.ShortDate(DomainWeek.MondayOf(_start).AddDays(7 * Math.Max(1, _weeks) - 1)). The weeks of a semester are what Copy week offers and what the reports count.</p>
+        @if (_why is not null)
+        {
+            <p class="form-error">@_why</p>
+        }
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete">Delete</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private Semester? _old;
+    private string _name = "";
+    private DateOnly _start;
+    private int _weeks = 16;
+    private string? _why;
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.Semesters[id] : null;
+        _start = _old?.StartMonday ?? DomainWeek.MondayOf(W.Today);
+        if (_old is not null) { _name = _old.Name; _weeks = _old.WeekCount; }
+        Check();
+    }
+
+    private void Check()
+    {
+        var first = DomainWeek.MondayOf(_start);
+        var last = first.AddDays(7 * (_weeks - 1));
+        _why = _name.Trim().Length == 0 ? "Give it a name."
+            : _weeks is < 1 or > Semester.MaxWeekCount ? $"A semester has between 1 and {Semester.MaxWeekCount} weeks."
+            : W.T.Semesters.Where(s => s.Id != _old?.Id).FirstOrDefault(s => s.FirstMonday <= last && first <= s.LastMonday) is { } other
+                ? $"It would overlap {other.Name}."
+            : null;
+    }
+
+    private void Save()
+    {
+        Check();
+        if (_why is not null) return;
+        var s = (_old ?? new Semester()) with { Name = _name.Trim(), StartMonday = DomainWeek.MondayOf(_start), WeekCount = _weeks };
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Semesters, s).ToBatch((_old is null ? "Added " : "Changed ") + s.Name))) D.Close();
+    }
+
+    private void Delete()
+    {
+        if (W.Commit(t => new DraftOf(t).Remove(Collections.Semesters, _old!.Id).ToBatch("Deleted " + _old.Name))) D.Close();
+    }
+}

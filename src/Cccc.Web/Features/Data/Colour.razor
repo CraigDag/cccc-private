@@ -1,0 +1,11 @@
+<label class="field colour-field"><span>@Label</span>
+    <span class="colour-row">
+        <input type="color" value="@Value" @onchange="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? Value)" aria-label="@Label" />
+        <span class="muted">@Value</span>
+    </span>
+</label>
+@code {
+    [Parameter] public string Label { get; set; } = "Colour";
+    [Parameter] public string Value { get; set; } = "#607D8B";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+}

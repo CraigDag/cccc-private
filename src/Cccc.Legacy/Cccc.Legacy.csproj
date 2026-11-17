@@ -9,6 +9,6 @@
     <RootNamespace>CCCCScheduler</RootNamespace>
     <!-- Frozen copy of the old app's loader: its own warnings are not this repo's to fix. -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <NoWarn>$(NoWarn);CS1591;CS8618;CS0618</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;CS8618;CS0618;CS0649</NoWarn>
   </PropertyGroup>
 </Project>

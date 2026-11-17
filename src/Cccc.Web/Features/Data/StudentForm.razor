@@ -1,0 +1,65 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add a student" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@((_first + _surname).Trim().Length > 0)">
+    <ChildContent>
+        <div class="form-grid">
+            <label class="field"><span>First name</span><input @bind="_first" @bind:event="oninput" /></label>
+            <label class="field"><span>Surname</span><input @bind="_surname" @bind:event="oninput" /></label>
+            <label class="field span2"><span>Email (optional)</span><input type="email" @bind="_email" /></label>
+            <label class="field"><span>Group</span>
+                <select @bind="_group">
+                    <option value="">No group</option>
+                    @foreach (var g in W.T.Groups.OrderBy(g => g.Name, NameOrder.Comparer))
+                    {
+                        <option value="@g.Id">@g.Name</option>
+                    }
+                </select>
+            </label>
+            <label class="field"><span>Discipline</span>
+                <select @bind="_discipline">
+                    <option value="">None</option>
+                    @foreach (var d in W.T.Disciplines.OrderBy(d => d.Name, NameOrder.Comparer))
+                    {
+                        <option value="@d.Id">@d.Name</option>
+                    }
+                </select>
+            </label>
+        </div>
+        <p class="hint">A student is on every class for their group, unless a class leaves them off. Changing the group changes the classes ahead; registers already taken keep the list they were taken against.</p>
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete" title="Takes them off the timetable. To remove their name from the stored history too, use Administration ▸ Erase a person.">Remove</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private Student? _old;
+    private string _first = "", _surname = "", _email = "", _group = "", _discipline = "";
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.Students[id] : null;
+        if (_old is null) return;
+        _first = _old.FirstName; _surname = _old.Surname; _email = _old.Email;
+        _group = _old.GroupId?.ToString() ?? ""; _discipline = _old.DisciplineId?.ToString() ?? "";
+    }
+
+    private void Save()
+    {
+        var s = (_old ?? new Student()) with
+        {
+            FirstName = _first.Trim(), Surname = _surname.Trim(), Email = _email.Trim(),
+            GroupId = Guid.TryParse(_group, out var g) ? g : null,
+            DisciplineId = Guid.TryParse(_discipline, out var d) ? d : null,
+        };
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Students, s).ToBatch(_old is null ? "Added a student" : "Changed a student"))) D.Close();
+    }
+
+    private void Delete()
+    {
+        if (W.Commit(t => Edits.RemoveStudent(t, _old!.Id, W.Today))) D.Close();
+    }
+}

@@ -1,0 +1,82 @@
+@page "/cover"
+@implements IDisposable
+@inject WeekView V
+@inject Dialogs D
+
+<PageTitle>Cover · CCCC Scheduler</PageTitle>
+@{
+    var t = W.T;
+    var week = Occurrences.ForWeek(t, V.Monday);
+    var needed = week.Where(o => o.NeedsCover).ToList();
+    var covered = week.Where(o => o.Covered).ToList();
+    var away = t.Absences.Where(a => a.Person == AbsentPerson.Facilitator && a.From <= V.Monday.AddDays(6) && a.To >= V.Monday)
+        .OrderBy(a => a.From).ToList();
+}
+<WeekNav Monday="V.Monday" Today="W.Today" Title="Cover" Go="d => V.GoTo(d)" />
+<p class="hint">A class needs cover when every facilitator on it is away. Cover stands in for whoever is away and leaves a co-teacher on it.</p>
+
+<div class="section">
+    <h2>Needs cover (@needed.Count)</h2>
+    @if (needed.Count == 0)
+    {
+        <p class="muted">Nothing this week.</p>
+    }
+    <ul class="pick-list">
+        @foreach (var o in needed)
+        {
+            <li>
+                <button type="button" class="pick" @onclick="() => Open(o.Session.Id)" disabled="@(!W.Access.MayEdit)">
+                    <b>@Looks.Title(t, o.Session)</b> <span>@Looks.WhenWithDay(o.Session)@(Looks.Room(t, o.Session) is { Length: > 0 } r ? " · " + r : "")</span>
+                    <small>Away: @Looks.Names(t, o.AwayIds)@(o.Date < W.Today ? " · already past" : "")</small>
+                </button>
+            </li>
+        }
+    </ul>
+</div>
+<div class="section">
+    <h2>Covered (@covered.Count)</h2>
+    <ul class="pick-list">
+        @foreach (var o in covered)
+        {
+            <li>
+                <button type="button" class="pick" @onclick="() => Open(o.Session.Id)" disabled="@(!W.Access.MayEdit)">
+                    <b>@Looks.Title(t, o.Session)</b> <span>@Looks.WhenWithDay(o.Session)</span>
+                    <small>@Looks.Names(t, o.AwayIds) → @Looks.Names(t, o.Session.CoverIds)@(o.Session.CoverNote is { Length: > 0 } n ? " · " + n : "")</small>
+                </button>
+            </li>
+        }
+    </ul>
+</div>
+<div class="section">
+    <h2>Away this week</h2>
+    @if (away.Count == 0)
+    {
+        <p class="muted">Nobody is recorded as away.</p>
+    }
+    <ul class="list">
+        @foreach (var a in away)
+        {
+            <li class="list-row"><span class="name">@(t.Facilitators[a.PersonId]?.Name ?? "Removed")</span>
+                <small>@Cccc.Domain.Week.ShortDate(a.From)@(a.To != a.From ? " – " + Cccc.Domain.Week.ShortDate(a.To) : "")@(a.StartTime is { } s && a.EndTime is { } e ? $", {Cccc.Domain.Week.Hm(s)}–{Cccc.Domain.Week.Hm(e)}" : "")</small></li>
+        }
+    </ul>
+    @if (W.Access.MayUseAdminTools)
+    {
+        <p><a href="data/absences">Record an absence in Data ▸ Absences</a></p>
+    }
+</div>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        V.Start(W.Today, null);
+        V.Moved += Refresh;
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    private void Open(Guid id) => D.Show<CoverForm>(new Dictionary<string, object?> { [nameof(CoverForm.SessionId)] = id });
+
+    public void Dispose() => V.Moved -= Refresh;
+}

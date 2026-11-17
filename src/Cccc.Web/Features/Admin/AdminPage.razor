@@ -1,0 +1,32 @@
+@page "/admin/{Slug?}"
+
+<PageTitle>Administration · CCCC Scheduler</PageTitle>
+@if (!W.Access.MayUseAdminTools)
+{
+    <div class="empty-state"><h1>Administration</h1><p>This is for administrators.</p></div>
+}
+else
+{
+    <div class="page-head"><h1>Administration</h1></div>
+    <nav class="tabs">
+        @foreach (var (slug, title) in Tabs)
+        {
+            <NavLink href="@("admin/" + slug)" class="@(Current == slug ? "active" : "")" Match="NavLinkMatch.All">@title</NavLink>
+        }
+    </nav>
+    @switch (Current)
+    {
+        case "projects": <ProjectsTab />; break;
+        case "system": <SystemTab />; break;
+        case "erase": <EraseTab />; break;
+        default: <AccountsTab />; break;
+    }
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public string? Slug { get; set; }
+
+    private static readonly (string, string)[] Tabs = [("accounts", "Accounts"), ("projects", "Projects"), ("system", "System"), ("erase", "Erase a person")];
+
+    private string Current => Tabs.Any(x => x.Item1 == Slug) ? Slug! : "accounts";
+}

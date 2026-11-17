@@ -1,0 +1,106 @@
+@page "/data/{Slug?}"
+@inject Dialogs D
+
+<PageTitle>Data · CCCC Scheduler</PageTitle>
+@if (!W.Access.MayUseAdminTools)
+{
+    <div class="empty-state"><h1>Data</h1><p>Only an administrator can change the school's data.</p></div>
+}
+else
+{
+    var t = W.T;
+    var k = Kinds.Find(Slug);
+    <div class="page-head">
+        <h1>Data</h1>
+        <TypedText @key="k.Slug" Value="@_search" ValueChanged="s => _search = s" Placeholder="Find…" Label="Find in this list" Class="find" />
+    </div>
+    <nav class="tabs" aria-label="Kinds of data">
+        @foreach (var kind in Kinds.All)
+        {
+            <NavLink href="@("data/" + kind.Slug)" class="@(kind == k ? "active" : "")" Match="NavLinkMatch.All">@kind.Title</NavLink>
+        }
+    </nav>
+    @switch (k.Slug)
+    {
+        case "rooms":
+            <AddBar Kind="k" OnAdd="() => Show<RoomForm>(null)" />
+            <Rows Items="@Filter(t.Rooms.Select(r => Row.Of(r.Id, r.Name, r.Colour, $"{t.Sessions.Count(s => s.RoomId == r.Id && s.Date >= W.Today)} sessions ahead" + (r.Category is { Length: > 0 } c ? " · " + c : ""))))" OnOpen="id => Show<RoomForm>(id)" />
+            break;
+        case "programmes":
+            <AddBar Kind="k" OnAdd="() => Show<ProgrammeForm>(null)" />
+            <Rows Items="@Filter(t.Programmes.Select(p => Row.Of(p.Id, p.Name + (p.IsGuest ? " (guest)" : ""), p.Colour, $"{t.GroupsOf(p.Id).Count()} groups")))" OnOpen="id => Show<ProgrammeForm>(id)" />
+            break;
+        case "groups":
+            <AddBar Kind="k" OnAdd="() => Show<GroupForm>(null)" />
+            <Rows Items="@Filter(t.Groups.Select(g => Row.Of(g.Id, g.Name, g.Colour, (t.Programmes.Find(g.ProgrammeId)?.Name ?? "No programme") + $" · {t.Students.Count(s => s.GroupId == g.Id)} students")))" OnOpen="id => Show<GroupForm>(id)" />
+            break;
+        case "students":
+            <AddBar Kind="k" OnAdd="() => Show<StudentForm>(null)" />
+            <Rows Items="@Filter(t.Students.Select(s => Row.Of(s.Id, s.Name, t.Groups.Find(s.GroupId)?.Colour, (t.Groups.Find(s.GroupId)?.Name ?? "No group") + (t.Disciplines.Find(s.DisciplineId) is { } dd ? " · " + dd.Name : ""))))" OnOpen="id => Show<StudentForm>(id)" />
+            break;
+        case "facilitators":
+            <AddBar Kind="k" OnAdd="() => Show<FacilitatorForm>(null)" />
+            <Rows Items="@Filter(t.Facilitators.Select(f => Row.Of(f.Id, f.Name + (f.IsGuest ? " (guest)" : ""), f.Colour, f.Initials + (f.MaxWeeklyHours is { } m ? " · up to " + DomainWeek.Duration(m) + " a week" : ""))))" OnOpen="id => Show<FacilitatorForm>(id)" />
+            break;
+        case "classes":
+            <AddBar Kind="k" OnAdd="() => Show<ClassForm>(null)" />
+            <Rows Items="@Filter(t.Classes.Select(c => Row.Of(c.Id, c.Name, c.Colour, WorkloadWords.For(c.Workload) + (t.Areas.Find(c.AreaId) is { } a ? " · " + a.Name : ""))))" OnOpen="id => Show<ClassForm>(id)" />
+            break;
+        case "areas":
+            <AddBar Kind="k" OnAdd="() => Show<AreaForm>(null)" />
+            <Rows Items="@Filter(t.Areas.Select(a => Row.Of(a.Id, a.Name, null, a.WeeklyTarget is { } w ? "Target " + DomainWeek.Duration(w) + " a week" : "No target")))" OnOpen="id => Show<AreaForm>(id)" />
+            break;
+        case "disciplines":
+            <AddBar Kind="k" OnAdd="() => Show<DisciplineForm>(null)">
+                <button type="button" class="btn" @onclick="() => Show<BranchForm>(null)">Add a branch…</button>
+            </AddBar>
+            <h2>Branches</h2>
+            <Rows Items="@Filter(t.Branches.Select(b => Row.Of(b.Id, b.Name, b.Colour, $"{t.Disciplines.Count(d => d.BranchId == b.Id)} disciplines")))" OnOpen="id => Show<BranchForm>(id)" />
+            <h2 style="margin-top:16px">Disciplines</h2>
+            <Rows Items="@Filter(t.Disciplines.Select(d => Row.Of(d.Id, d.Name, d.Colour, (t.Branches.Find(d.BranchId)?.Name ?? "No branch") + $" · {t.Students.Count(s => s.DisciplineId == d.Id)} students")))" OnOpen="id => Show<DisciplineForm>(id)" />
+            break;
+        case "time-rules":
+            <p class="hint">Time a facilitator is credited beyond teaching. Preparation: the rule's classes earn a share of their length for each person in the room, never divided between co-teachers. Break: fixed minutes to whoever meets the rule's condition that day. Reported beside teaching hours, and counted towards the limit.</p>
+            <AddBar Kind="k" OnAdd="() => Show<TimeRuleForm>(null)" />
+            <Rows Items="@Filter(t.TimeRules.Select(r => Row.Of(r.Id, r.DisplayName, null, r.Kind == TimeRuleKind.Preparation ? $"{r.Percent}% of {r.ClassIds.Count} classes" : $"{r.Minutes} min on {string.Join(", ", r.Days.Select(DomainWeek.ShortDay))}")))" OnOpen="id => Show<TimeRuleForm>(id)" />
+            break;
+        case "semesters":
+            <AddBar Kind="k" OnAdd="() => Show<SemesterForm>(null)">
+                <button type="button" class="btn" @onclick="() => Show<ClosureForm>(null)">Add a closure…</button>
+            </AddBar>
+            <h2>Semesters</h2>
+            <Rows Items="@Filter(t.Semesters.OrderBy(s => s.FirstMonday).Select(s => Row.Of(s.Id, s.Name, null, $"{DomainWeek.ShortDate(s.FirstMonday)} – {DomainWeek.ShortDate(s.LastMonday.AddDays(6))}, {s.WeekCount} weeks")), sorted: false)" OnOpen="id => Show<SemesterForm>(id)" />
+            <h2 style="margin-top:16px">Closures</h2>
+            <Rows Items="@Filter(t.Closures.OrderBy(c => c.From).Select(c => Row.Of(c.Id, c.Name, null, DomainWeek.ShortDate(c.From) + (c.To != c.From ? " – " + DomainWeek.ShortDate(c.To) : "") + (c.Scope == ClosureScope.Groups ? (c.GroupIds.Count == 0 ? " · closes nothing (no groups chosen)" : " · " + string.Join(", ", c.GroupIds.Select(g => t.Groups[g]?.Name ?? "?"))) : " · whole building"))), sorted: false)" OnOpen="id => Show<ClosureForm>(id)" />
+            break;
+        case "absences":
+            <p class="hint">An absence decides who needs cover and pre-fills registers. A facilitator is away for a whole day unless a time is given.</p>
+            <AddBar Kind="k" OnAdd="() => Show<AbsenceForm>(null)" />
+            <Rows Items="@Filter(t.Absences.OrderByDescending(a => a.From).Select(a => Row.Of(a.Id, (a.Person == AbsentPerson.Facilitator ? t.Facilitators[a.PersonId]?.Name : t.Students[a.PersonId]?.Name) ?? "Removed", null, (a.Person == AbsentPerson.Facilitator ? "Facilitator · " : "Student · ") + DomainWeek.ShortDate(a.From) + (a.To != a.From ? " – " + DomainWeek.ShortDate(a.To) : "") + (a.StartTime is { } st && a.EndTime is { } en ? $", {DomainWeek.Hm(st)}–{DomainWeek.Hm(en)}" : ""))), sorted: false)" OnOpen="id => Show<AbsenceForm>(id)" />
+            break;
+        default:
+            <SettingsForm />
+            break;
+    }
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public string? Slug { get; set; }
+    private string _search = "";
+    private string? _lastSlug;
+
+    protected override void OnParametersSet()
+    {
+        if (_lastSlug != Slug) { _search = ""; _lastSlug = Slug; }
+    }
+
+    private IEnumerable<Row> Filter(IEnumerable<Row> rows, bool sorted = true)
+    {
+        var q = _search.Trim();
+        var list = q.Length == 0 ? rows : rows.Where(r => r.Name.Contains(q, StringComparison.CurrentCultureIgnoreCase) || r.Detail.Contains(q, StringComparison.CurrentCultureIgnoreCase));
+        return sorted ? list.OrderBy(r => r.Name, NameOrder.Comparer).ThenBy(r => r.Id) : list;
+    }
+
+    private void Show<T>(Guid? id) where T : IComponent =>
+        D.Show<T>(new Dictionary<string, object?> { ["Id"] = id });
+}

@@ -1,0 +1,44 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add an area" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@(_name.Trim().Length > 0 && HoursText.TryRead(_target, out _))">
+    <ChildContent>
+        <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" /></label>
+        <label class="field"><span>Weekly target for a group (optional)</span><input @bind="_target" @bind:event="oninput" placeholder="e.g. 6 or 4:30" /></label>
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete">Delete</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private Area? _old;
+    private string _name = "", _target = "";
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.Areas[id] : null;
+        if (_old is null) return;
+        _name = _old.Name; _target = HoursText.Show(_old.WeeklyTarget);
+    }
+
+    private void Save()
+    {
+        HoursText.TryRead(_target, out var target);
+        var a = (_old ?? new Area()) with { Name = _name.Trim(), WeeklyTarget = target };
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Areas, a).ToBatch((_old is null ? "Added the area " : "Changed the area ") + a.Name))) D.Close();
+    }
+
+    private void Delete()
+    {
+        var id = _old!.Id;
+        if (W.Commit(t =>
+        {
+            var d = new DraftOf(t);
+            foreach (var c in t.Classes.Where(c => c.AreaId == id)) d.Put(Collections.Classes, c with { AreaId = null });
+            return d.Remove(Collections.Areas, id).ToBatch("Deleted the area " + _old.Name);
+        })) D.Close();
+    }
+}

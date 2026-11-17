@@ -1,0 +1,28 @@
+@inject AccountDirectory Accounts
+@inject Dialogs D
+@{
+    var all = Accounts.All();
+    var last = Accounts.LastSignIns();
+}
+<div class="bar">
+    <button type="button" class="btn primary" @onclick="() => D.Show<AccountForm>()" data-testid="add-account">Add an account…</button>
+</div>
+<p class="hint">Viewer: reads the timetable and takes their own registers. Editor: changes the week and its events. Administrator: everything, including Data, Reports and this page. Tags put a person in an event's audience; a link to a facilitator gives them My week and their registers. Only an administrator sets either.</p>
+<ul class="list" data-testid="accounts">
+    @foreach (var a in all)
+    {
+        <li>
+            <button type="button" class="list-row" @onclick="() => D.Show<AccountForm>(new Dictionary<string, object?> { [nameof(AccountForm.Id)] = a.Id })" data-testid="account-row">
+                <span class="disc">@Rail.Initials(a.Display)</span>
+                <span class="name"><b>@a.Display</b> <small class="muted">@a.Login</small>
+                    @if (a.Suspended) { <span class="badge">Suspended</span> }
+                    @if (a.MustChange) { <span class="badge">Must choose a passphrase</span> }
+                </span>
+                <small>@a.Role@(a.Tags != AccountTags.None ? " · " + a.Tags.ToString().Replace(",", " ·") : "")@(a.FacilitatorId is { } f ? " · " + (W.T.Facilitators[f]?.Name ?? "linked") : "")<br />@(last.TryGetValue(a.Id, out var at) ? "Signed in " + W.Clock.Describe(at) : "Never signed in")</small>
+            </button>
+        </li>
+    }
+</ul>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+}

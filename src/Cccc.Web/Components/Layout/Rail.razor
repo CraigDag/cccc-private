@@ -7,7 +7,7 @@
     <div class="rail-body" @onclick="() => _open = false">
         @if (W.Project is not null)
         {
-            <div class="rail-project" title="The timetable everybody is looking at">@W.T.Settings.Name</div>
+            <div class="rail-project" title="The timetable everybody is looking at">@W.ProjectName</div>
         }
         <div class="rail-section">Schedule</div>
         <NavLink class="rail-link" href="" Match="NavLinkMatch.All" data-testid="nav-week">Week</NavLink>

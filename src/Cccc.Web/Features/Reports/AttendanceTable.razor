@@ -1,0 +1,23 @@
+<div class="table-wrap">
+    <table class="grid-table static">
+        <thead><tr><th>@What</th><th class="num">Registers</th><th class="num">Present</th><th class="num">Excused</th><th class="num">Absent</th><th class="num">Present share</th></tr></thead>
+        <tbody>
+            @if (Rows.Count == 0)
+            {
+                <tr><td colspan="6" class="muted">No registers taken in these weeks.</td></tr>
+            }
+            @foreach (var r in Rows)
+            {
+                <tr>
+                    <td><span class="spine" style="@(r.Colour is null ? "" : $"--c:{r.Colour}")"></span>@r.Name</td>
+                    <td class="num">@r.Registers</td><td class="num">@r.Present</td><td class="num">@r.Excused</td><td class="num">@r.Absent</td>
+                    <td class="num">@ReportMath.Share(r.PresentShare)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<AttendanceRow> Rows { get; set; } = [];
+    [Parameter] public string What { get; set; } = "";
+}

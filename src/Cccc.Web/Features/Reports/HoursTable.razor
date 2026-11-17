@@ -1,0 +1,24 @@
+@using DomainWeek = Cccc.Domain.Week
+<div class="table-wrap">
+    <table class="grid-table static">
+        <thead><tr><th>Name</th><th class="num">Hours</th>@if (ShowTarget) { <th>Average</th><th>Target</th> }</tr></thead>
+        <tbody>
+            @foreach (var r in Rows)
+            {
+                <tr>
+                    <td><span class="spine" style="@(r.Colour is null ? "" : $"--c:{r.Colour}")"></span>@r.Name @if (!ShowTarget && r.Note is { } n) { <small> · @n</small> }</td>
+                    <td class="num">@DomainWeek.Duration(r.Hours)</td>
+                    @if (ShowTarget)
+                    {
+                        <td>@r.Note</td>
+                        <td>@(r.Target is { } x ? DomainWeek.Duration(x) + " a week" : "")</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<HoursRow> Rows { get; set; } = [];
+    [Parameter] public bool ShowTarget { get; set; }
+}

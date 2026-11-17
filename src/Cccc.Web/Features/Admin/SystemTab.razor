@@ -1,0 +1,19 @@
+@inject ProjectStore Store
+@inject IWebHostEnvironment Env
+@{
+    var size = Store.SizeOnDisk;
+    var backup = Store.GetMeta("last_backup");
+    var prune = Store.GetMeta("last_prune");
+}
+<div class="cards">
+    <div class="card"><small>Version</small><b>@AppVersion.Current</b><small>@Env.EnvironmentName</small></div>
+    <div class="card"><small>Timetables</small><b>@Store.List().Count</b></div>
+    <div class="card"><small>The store</small><b>@(size / 1024 / 1024.0 < 1 ? $"{size / 1024} KB" : $"{size / 1024.0 / 1024:0.0} MB")</b><small>One file, every change in it</small></div>
+    @{ var hasBackup = DateTimeOffset.TryParse(backup, out var b); var stale = !hasBackup || W.Clock.Now - b > TimeSpan.FromHours(36); }
+    <div class="card @(stale ? "warn" : "")"><small>Last backup</small><b>@(hasBackup ? W.Clock.Describe(b) : "Not reported")</b><small>@(hasBackup && stale ? "More than a night ago: the nightly job may have stopped. " : "")Taken by the laptop's nightly job with <code>cccc backup</code></small></div>
+    <div class="card"><small>History folded</small><b>@(DateTimeOffset.TryParse(prune, out var p) ? W.Clock.Describe(p) : "Not yet")</b><small>Changes older than 30 days, every hour</small></div>
+</div>
+<p class="hint">The nightly backup copies the whole store while the app runs; the runbook in <code>docs/deployment</code> has the steps.</p>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+}

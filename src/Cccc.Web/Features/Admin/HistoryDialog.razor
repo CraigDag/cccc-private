@@ -1,0 +1,36 @@
+@inject ProjectStore Store
+@inject LiveProjects Live
+@inject Dialogs D
+@{ var history = Store.History(ProjectId); }
+<DialogFrame Title="History" Class="wide">
+    <p class="hint">Every change, newest first, kept for 30 days. Putting an earlier moment back is itself a new change, so nothing here is ever lost by doing it. A week that has ended is not changed by it.</p>
+    @if (_error is not null)
+    {
+        <p class="form-error">@_error</p>
+    }
+    <ul class="list" data-testid="history">
+        @foreach (var h in history)
+        {
+            <li class="list-row" style="cursor:default">
+                <span class="name">@h.Label <small class="muted">· @W.NameOf(h.By), @W.Clock.Describe(h.At) · @h.Changes thing@(h.Changes == 1 ? "" : "s")</small></span>
+                <button type="button" class="btn quiet" @onclick="() => PutBack(h.Sequence)">Put back as it was after this</button>
+            </li>
+        }
+    </ul>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid ProjectId { get; set; }
+    private string? _error;
+
+    private void PutBack(long seq)
+    {
+        try
+        {
+            Live.Get(ProjectId).PutBack(seq, W.Access.By);
+            W.Say("Put the timetable back. Undo takes that back too.");
+            D.Close();
+        }
+        catch (EditRefused e) { _error = e.Message; }
+    }
+}

@@ -1,0 +1,104 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add a time rule" : "Edit " + _old.DisplayName)" OnOk="Save" OkEnabled="@(_why is null)" Class="wide">
+    <ChildContent>
+        <div class="form-grid">
+            <label class="field"><span>Name (shown beside teaching hours)</span><input @bind="_name" placeholder="@(_kind == TimeRuleKind.Preparation ? "Prep time" : "Lunch")" /></label>
+            <label class="field"><span>Kind</span>
+                <select @bind="_kind" @bind:after="Check">
+                    <option value="@TimeRuleKind.Preparation">Preparation: a share of each class's length</option>
+                    <option value="@TimeRuleKind.Break">Break: fixed minutes on certain days</option>
+                </select>
+            </label>
+        </div>
+        @if (_kind == TimeRuleKind.Preparation)
+        {
+            <label class="field"><span>Share of the class's length, in percent</span><input type="number" min="1" max="200" @bind="_percent" @bind:after="Check" /></label>
+            <fieldset class="field checks columns"><legend>Classes that earn it</legend>
+                @foreach (var c in W.T.Classes.OrderBy(c => c.Name, NameOrder.Comparer))
+                {
+                    <label><input type="checkbox" checked="@_classes.Contains(c.Id)" @onchange="e => { if ((bool)e.Value!) _classes.Add(c.Id); else _classes.Remove(c.Id); Check(); }" /> @c.Name</label>
+                }
+            </fieldset>
+            <p class="hint">For each person in the room, per class, never divided between co-teachers. Cover moves it with the teaching.</p>
+        }
+        else
+        {
+            <label class="field"><span>Minutes credited</span><input type="number" min="1" max="600" @bind="_minutes" @bind:after="Check" /></label>
+            <fieldset class="field checks inline"><legend>On</legend>
+                @foreach (var d in DomainWeek.Days(new DateOnly(2030, 3, 4)).Select(d => d.DayOfWeek))
+                {
+                    <label><input type="checkbox" checked="@_days.Contains(d)" @onchange="e => { if ((bool)e.Value!) _days.Add(d); else _days.Remove(d); Check(); }" /> @DomainWeek.ShortDay(d)</label>
+                }
+            </fieldset>
+            <label class="field"><span>To whom</span>
+                <select @bind="_condition">
+                    <option value="@TimeRuleCondition.TeachesBeforeAndAfter">Somebody teaching both before and after it (in school either side)</option>
+                    <option value="@TimeRuleCondition.TeachesThatDay">Anybody teaching that day</option>
+                </select>
+            </label>
+            <fieldset class="field checks columns"><legend>The class it is (for example Lunch), optional</legend>
+                @foreach (var c in W.T.Classes.OrderBy(c => c.Name, NameOrder.Comparer))
+                {
+                    <label><input type="checkbox" checked="@_classes.Contains(c.Id)" @onchange="e => { if ((bool)e.Value!) _classes.Add(c.Id); else _classes.Remove(c.Id); }" /> @c.Name</label>
+                }
+            </fieldset>
+        }
+        @if (_why is not null)
+        {
+            <p class="form-error">@_why</p>
+        }
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete">Delete</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private TimeRule? _old;
+    private string _name = "";
+    private TimeRuleKind _kind;
+    private int _percent = 50, _minutes = 30;
+    private TimeRuleCondition _condition;
+    private readonly HashSet<Guid> _classes = [];
+    private readonly HashSet<DayOfWeek> _days = [];
+    private string? _why;
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.TimeRules[id] : null;
+        if (_old is not null)
+        {
+            _name = _old.Name; _kind = _old.Kind; _percent = _old.Percent; _minutes = _old.Minutes; _condition = _old.Condition;
+            _classes.UnionWith(_old.ClassIds); _days.UnionWith(_old.Days);
+        }
+        Check();
+    }
+
+    private void Check()
+    {
+        _why = _kind == TimeRuleKind.Preparation
+            ? (_percent is < 1 or > 200 ? "The share has to be between 1 and 200 percent." : _classes.Count == 0 ? "Tick the classes that earn it." : null)
+            : (_minutes is < 1 or > 600 ? "The minutes have to be between 1 and 600." : _days.Count == 0 ? "Tick the days it applies on." : null);
+    }
+
+    private void Save()
+    {
+        Check();
+        if (_why is not null) return;
+        var r = (_old ?? new TimeRule()) with
+        {
+            Name = _name.Trim(), Kind = _kind, Percent = _percent, Minutes = _minutes, Condition = _condition,
+            ClassIds = _classes.ToImmutableList(), Days = _days.OrderBy(DomainWeek.DayIndex).ToImmutableList(),
+        };
+        if (W.Commit(t => new DraftOf(t).Put(Collections.TimeRules, r).ToBatch((_old is null ? "Added the time rule " : "Changed the time rule ") + r.DisplayName))) D.Close();
+    }
+
+    private void Delete()
+    {
+        if (W.Commit(t => new DraftOf(t).Remove(Collections.TimeRules, _old!.Id).ToBatch("Deleted the time rule " + _old.DisplayName))) D.Close();
+    }
+}

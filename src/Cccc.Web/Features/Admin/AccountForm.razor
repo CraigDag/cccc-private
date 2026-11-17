@@ -1,0 +1,136 @@
+@inject AccountDirectory Accounts
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add an account" : _old.Display)" OnOk="Save" OkEnabled="@(_why is null)">
+    <ChildContent>
+        @if (_old is null)
+        {
+            <label class="field"><span>Sign-in name</span><input @bind="_login" @bind:event="oninput" @bind:after="Check" autocomplete="off" data-testid="account-login" /></label>
+        }
+        <label class="field"><span>Name people see</span><input @bind="_display" @bind:event="oninput" @bind:after="Check" data-testid="account-display" /></label>
+        <label class="field"><span>Role</span>
+            <select @bind="_role" @bind:after="Check" data-testid="account-role">
+                <option value="@Role.Viewer">Viewer</option>
+                <option value="@Role.Editor">Editor</option>
+                <option value="@Role.Administrator">Administrator</option>
+            </select>
+        </label>
+        <fieldset class="field checks inline"><legend>Tags</legend>
+            <label><input type="checkbox" @bind="_student" /> Student</label>
+            <label><input type="checkbox" @bind="_staff" /> Staff</label>
+        </fieldset>
+        <label class="field"><span>Linked to a facilitator</span>
+            <select @bind="_link">
+                <option value="">Not linked</option>
+                @foreach (var f in W.T.Facilitators.Where(f => !f.IsGuest).OrderBy(f => f.Name, NameOrder.Comparer))
+                {
+                    <option value="@f.Id">@f.Name</option>
+                }
+            </select>
+        </label>
+        @if (_old is null)
+        {
+            <label class="field"><span>A first passphrase (they choose their own when they sign in)</span><input type="text" @bind="_pass" @bind:event="oninput" @bind:after="Check" autocomplete="off" data-testid="account-passphrase" /></label>
+        }
+        else
+        {
+            <label class="check"><input type="checkbox" @bind="_suspended" /> Suspended (cannot sign in; signed out at once)</label>
+            <details class="field">
+                <summary>Reset their passphrase</summary>
+                <label class="field"><span>New passphrase (they choose their own when they next sign in)</span><input type="text" @bind="_pass" @bind:event="oninput" autocomplete="off" /></label>
+                <button type="button" class="btn" @onclick="Reset" disabled="@(Verifier.WhyNot(_pass) is not null)">Reset</button>
+            </details>
+        }
+        @if (_why is not null && (_login.Length > 0 || _old is not null))
+        {
+            <p class="form-error">@_why</p>
+        }
+        @if (_error is not null)
+        {
+            <p class="form-error" role="alert">@_error</p>
+        }
+        <p class="hint">Changing someone's role, suspending them or resetting their passphrase signs them out everywhere.</p>
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Remove">Remove</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private Account? _old;
+    private string _login = "", _display = "", _pass = "", _link = "";
+    private Role _role = Role.Viewer;
+    private bool _student, _staff, _suspended;
+    private string? _why, _error;
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? Accounts.Find(id) : null;
+        if (_old is not null)
+        {
+            _display = _old.Display; _role = _old.Role; _student = _old.Tags.HasFlag(AccountTags.Student); _staff = _old.Tags.HasFlag(AccountTags.Staff);
+            _link = _old.FacilitatorId?.ToString() ?? ""; _suspended = _old.Suspended;
+        }
+        Check();
+    }
+
+    private void Check()
+    {
+        _why = _old is null && _login.Trim().Length == 0 ? "Give a sign-in name."
+            : _display.Trim().Length == 0 ? "Give the name people see."
+            : _old is null && Verifier.WhyNot(_pass) is { } w ? w
+            : null;
+    }
+
+    private AccountTags Tags => (_student ? AccountTags.Student : 0) | (_staff ? AccountTags.Staff : 0);
+
+    private void Save()
+    {
+        Check();
+        if (_why is not null || W.Access.Account is not { } me) return;
+        try
+        {
+            Guid? link = Guid.TryParse(_link, out var g) ? g : null;
+            if (_old is null)
+            {
+                var a = Accounts.Add(me.Id, _login.Trim(), _display.Trim(), _role, _pass);
+                Accounts.Update(me.Id, a.Id, _display.Trim(), _role, Tags, link, false);
+                W.Say($"Added {_display.Trim()}. Give them their sign-in name and first passphrase in person.");
+            }
+            else
+            {
+                Accounts.Update(me.Id, _old.Id, _display.Trim(), _role, Tags, link, _suspended);
+                W.Say("Changed " + _display.Trim());
+            }
+            D.Close();
+        }
+        catch (AccountRefused e) { _error = e.Message; }
+    }
+
+    private void Reset()
+    {
+        if (_old is null || W.Access.Account is not { } me) return;
+        try
+        {
+            Accounts.Reset(me.Id, _old.Id, _pass);
+            W.Say($"Reset {_old.Display}'s passphrase. They choose their own when they next sign in.");
+            D.Close();
+        }
+        catch (AccountRefused e) { _error = e.Message; }
+    }
+
+    private void Remove()
+    {
+        if (_old is null || W.Access.Account is not { } me) return;
+        try
+        {
+            Accounts.Remove(me.Id, _old.Id);
+            W.Say("Removed " + _old.Display);
+            D.Close();
+        }
+        catch (AccountRefused e) { _error = e.Message; }
+    }
+}

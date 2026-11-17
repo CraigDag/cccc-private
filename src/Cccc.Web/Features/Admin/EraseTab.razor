@@ -1,0 +1,64 @@
+@inject ProjectStore Store
+@inject LiveProjects Live
+@inject AccountDirectory Accounts
+@inject ILogger<EraseTab> Log
+<div style="max-width:620px">
+    <p>Erasing a person takes them off the timetable <b>and rewrites every stored change and snapshot that names them</b>, in every timetable on this server, so their name and email are gone from the history too. Their id is kept, so registers and counts still add up. It cannot be undone.</p>
+    <p class="notice">The nightly off-site backup keeps older copies for 90 days. To finish an erasure request, also delete the backups older than today from Drive, as the runbook says.</p>
+    <label class="field"><span>Who</span>
+        <select @bind="_who">
+            <option value="">Choose…</option>
+            <optgroup label="Students">
+                @foreach (var s in W.T.Students.OrderBy(s => s.Name, NameOrder.Comparer))
+                {
+                    <option value="@("s:" + s.Id)">@s.Name</option>
+                }
+            </optgroup>
+            <optgroup label="Facilitators">
+                @foreach (var f in W.T.Facilitators.OrderBy(f => f.Name, NameOrder.Comparer))
+                {
+                    <option value="@("f:" + f.Id)">@f.Name</option>
+                }
+            </optgroup>
+        </select>
+    </label>
+    @if (Name is { } name)
+    {
+        <label class="field"><span>Type their name to confirm: <b>@name</b></span><input @bind="_confirm" @bind:event="oninput" autocomplete="off" /></label>
+        <button type="button" class="btn danger" disabled="@(_confirm.Trim() != name)" @onclick="Erase">Erase @name</button>
+    }
+    @if (_done is not null)
+    {
+        <p class="notice" role="status">@_done</p>
+    }
+</div>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    private string _who = "", _confirm = "";
+    private string? _done;
+
+    private string? Name => _who.Length < 3 || !Guid.TryParse(_who[2..], out var id) ? null
+        : _who[0] == 's' ? W.T.Students[id]?.Name : W.T.Facilitators[id]?.Name;
+
+    private void Erase()
+    {
+        if (W.Project is not { } project || !Guid.TryParse(_who[2..], out var id)) return;
+        bool student = _who[0] == 's';
+        bool removed = W.Commit(t => student ? Edits.RemoveStudent(t, id, W.Today) : Edits.RemoveFacilitator(t, id, W.Today), announce: false);
+        if (!removed) return;
+        if (!student && W.Access.Account is { } me)
+            foreach (var a in Accounts.All().Where(a => a.FacilitatorId == id))
+                Accounts.Update(me.Id, a.Id, a.Display, a.Role, a.Tags, null, a.Suspended);
+        // Every copy held in memory is written down first (a settle writes a snapshot), and only then is
+        // the store rewritten, so nothing writes the name back afterwards.
+        var all = Store.List(includeDeleted: true);
+        foreach (var p in all.Where(p => p.Id != project.Id)) Live.Forget(p.Id);
+        project.Settle();
+        int changed = 0;
+        foreach (var p in all) changed += Store.Rewrite(p.Id, ProjectFiles.Eraser(id));
+        project.ForgetUndo();
+        Log.LogWarning("A person was erased; {Count} stored records were rewritten.", changed);
+        _done = "Erased. Their name and email are gone from every stored change and snapshot on this server.";
+        _who = ""; _confirm = "";
+    }
+}
