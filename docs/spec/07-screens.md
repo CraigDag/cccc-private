@@ -100,8 +100,9 @@ covering*), who changed it and when, from `Recent`; then today's events and what
 - **Issues** (a count beside the lens): clashes, cover needed and missing registers for what is on
   screen; choosing one opens that class.
 - The side panel for a chosen class: title, when, where, who teaches (and who is away), the group and
-  roster count, state tags, the clash or cover note, and its verbs: Edit, Register, Cancel/Restore,
-  Cover, Duplicate, Delete.
+  roster count, where it moved from, state tags, the clash or cover note, and its verbs: Edit, Register,
+  Cancel/Restore, Cover, Another time…, Duplicate, Delete.
+- **Find a time** beside *+ Class*, for editors (below).
 - **Copy** (day, week, clear the weeks after), **Print** (the four documents, narrowed as the screen
   is, and a facilitator's semester for their phone when the plan is narrowed to one) and **Show** (open
   sessions, guest groups) sit in one *More* menu. Guest groups start hidden on
@@ -293,10 +294,40 @@ The code keeps `Session`.
 ## Adding a class
 
 The form says which spaces are in use at the date and times in it (*Aerial Hall — busy: Aerial
-09:00–11:00*) and offers the free ones as chips to press: *Free then: Big Top, Gym, Loft*. Hidden guest
-classes still make a space busy. On the plan, pressing on empty time and dragging across it draws the
+09:00–11:00*), and which an event has (*Big Top — booked: Work-in-progress showing 16:00–17:30*, or
+only *booked* for an event the reader may not see), and offers the free ones as chips to press: *Free
+then: Gym, Loft*. Hidden guest classes still make a space busy. *Find a time…* takes the class as typed
+to Find a time and back. On the plan, pressing on empty time and dragging across it draws the
 class there and opens the form with that space (or group, or person, or day) and those times; a
 double-click does the same with an hour and a half.
+
+## Find a time
+
+A form like any other, from three doors: *Find a time* on the plan (starting from whoever or whatever
+the plan is narrowed to; a student's group, for a student), Ctrl+K, and *Find a time…* in the add form.
+
+- **Asked fresh**, it takes who teaches (chips, and a pick list that starts afresh after each pick), who
+  it is for (Everyone, or groups to tick), the class (only so the notes can name it), how long (quarter
+  hours to 4h, then 5h and 6h), the space (none needed; any; any of a kind, naming them; one), which
+  weeks (this one, two, four or eight, from the week on screen) and the hours (08:00 to 18:00 to start).
+  Nothing is listed until somebody, a group or a space is chosen: a list of every free quarter hour
+  answers nothing.
+- **From the add form**, the class is as typed there (*Find a time for Rigging check*): who teaches,
+  who it is for and how long are shown, not asked. Its Close button reads *Back to the class*, and it,
+  the × and Escape all go back to the add form with everything as it was.
+- **The list**: one sentence of what was asked (*8 times for 1h 30m when Ada Brightwater and BA 1 are
+  all free and a Hall is*), then day by day: a heading, a bar of the hours looked in with where the class
+  can be marked on it, and each time as a button (*16:00–17:30*), its space and the others free then, how
+  late it can start, and its notes, ✓ for, ! against. A day with no time, and the days not looked in, sit
+  in their place in the order, saying why. When there were more than 30, *And 4 more times after these*.
+  Nothing at all says what to try: a shorter time, any space, more weeks, longer hours.
+- **Pressing a time** opens the add form filled in with it: the date, the times, the space (each
+  person's part moved with the class), to look over and save.
+- **Another time…** on a class's side panel looks only in that class's week, from now, and pressing a
+  time **moves it there** at once (Undo takes it back), each person's part with it, and the plan goes
+  to it with it chosen. *Mark it on the plan as moved from Thu 19 Nov, 09:00–11:00* is ticked for this
+  week, where somebody may have known the old time, and not for a week ahead; ticked, the block says
+  MOVED and the side panel where it was.
 
 ## Printed documents
 

@@ -63,6 +63,10 @@
             {
                 <button type="button" class="btn primary" @onclick="() => AddSession(null, null)" data-testid="add-session">+ Class</button>
             }
+            @if (editable && !m.Scratch)
+            {
+                <button type="button" class="btn" @onclick="FindTime" title="When everybody a class needs, and a space, are free" data-testid="find-time">Find a time</button>
+            }
             @if (W.Access.MayEdit && !m.Scratch)
             {
                 <button type="button" class="btn" @onclick="() => D.Show<EventForm>(new Dictionary<string, object?> { [nameof(EventForm.Date)] = V.Day })" data-testid="new-event">+ Event</button>
@@ -423,6 +427,9 @@
             [nameof(SessionForm.Room)] = V.Focus is { Kind: "room" } r ? r.Id : null,
             [nameof(SessionForm.Facilitator)] = V.Focus is { Kind: "facilitator" } p ? p.Id : null,
         });
+
+    /// <summary>Find a time, starting from whoever or whatever the plan is looking at.</summary>
+    private void FindTime() => D.Show<FindTimeForm>(FindTimeForm.From(W.T, V));
 
     private void OpenSession(Guid id) =>
         D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.SessionId)] = id });

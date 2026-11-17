@@ -69,6 +69,7 @@ public static class FindIndex
         {
             actions.Insert(0, new FindHit("add-class", "Add a class", "Plan", null, null));
             actions.Insert(1, new FindHit("add-event", "Add an event", "Plan", null, null));
+            actions.Insert(2, new FindHit("find-time", "Find a time", "When everybody a class needs, and a space, are free", null, null));
         }
         if (admin)
         {

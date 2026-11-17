@@ -111,6 +111,8 @@
                 D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.Date)] = V.Day }); break;
             case "add-event":
                 D.Show<EventForm>(new Dictionary<string, object?> { [nameof(EventForm.Date)] = V.RealDay }); break;
+            case "find-time":
+                D.Show<FindTimeForm>(FindTimeForm.From(W.T, V)); break;
         }
     }
 

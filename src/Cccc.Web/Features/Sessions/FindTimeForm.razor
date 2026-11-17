@@ -1,0 +1,491 @@
+@inject Dialogs D
+@inject Cccc.Web.Features.Plan.PlanView PV
+@using System.Globalization
+@{
+    var t = W.T;
+    var existing = SessionId is { } sid ? t.Sessions[sid] : null;
+}
+@if (SessionId is not null && existing is null)
+{
+    <DialogFrame Title="This class has gone">
+        <p>Somebody removed it while it was open here.</p>
+    </DialogFrame>
+}
+else
+{
+    var c = Template(t);
+    var found = Asked(c) ? Search(t, c) : null;
+    var (from, to) = Range(c);
+    <DialogFrame Title="@Heading(t, c)" Class="wide find-time" OnDismiss="@(Draft is null ? default : EventCallback.Factory.Create(this, Back))" CloseLabel="@(Draft is null ? "Close" : "Back to the class")">
+        @if (Free)
+        {
+            <div class="form-grid">
+                <fieldset class="field span2"><legend>Who teaches it</legend>
+                    <div class="ft-people">
+                        @foreach (var id in _people.ToList())
+                        {
+                            var f = t.Facilitators[id];
+                            if (f is null) continue;
+                            <span class="chip" data-testid="find-time-person"><span class="disc" style="--c:@f.Colour">@f.Initials</span>@f.Name<button type="button" @onclick="() => _people.Remove(id)" aria-label="Remove @f.Name">×</button></span>
+                        }
+                        <select @key="_people.Count" @onchange="AddPerson" aria-label="Add a facilitator" data-testid="find-time-add-facilitator">
+                            <option value="" selected>@(_people.Count == 0 ? "Choose a facilitator…" : "Add another…")</option>
+                            @foreach (var f in t.Facilitators.Current().Where(f => !_people.Contains(f.Id)).OrderBy(f => f.IsGuest).ThenBy(f => f.Name, NameOrder.Comparer))
+                            {
+                                <option value="@f.Id">@f.Name@(f.IsGuest ? " (guest)" : "")</option>
+                            }
+                        </select>
+                    </div>
+                </fieldset>
+                <fieldset class="field span2"><legend>Who it is for</legend>
+                    <label class="check"><input type="checkbox" checked="@_everyone" @onchange="e => _everyone = (bool)e.Value!" data-testid="find-time-everyone" /> Everyone (the whole building)</label>
+                    @if (!_everyone)
+                    {
+                        <div class="checks columns" data-testid="find-time-groups">
+                            @foreach (var g in t.Groups.OrderBy(g => g.Name, NameOrder.Comparer))
+                            {
+                                <label><input type="checkbox" checked="@_groups.Contains(g.Id)" @onchange="e => Toggle(g.Id, (bool)e.Value!)" /> @g.Name</label>
+                            }
+                        </div>
+                    }
+                </fieldset>
+                <label class="field"><span>Class</span>
+                    <select @bind="ClassText" data-testid="find-time-class">
+                        <option value="">Any, or none yet</option>
+                        @foreach (var k in t.Classes.Current().OrderBy(k => k.Name, NameOrder.Comparer))
+                        {
+                            <option value="@k.Id">@k.Name</option>
+                        }
+                    </select>
+                </label>
+                <label class="field"><span>How long</span>
+                    <select @bind="_minutes" data-testid="find-time-length">
+                        @foreach (var m in Lengths)
+                        {
+                            <option value="@m">@Cccc.Domain.Week.Duration(TimeSpan.FromMinutes(m))</option>
+                        }
+                    </select>
+                </label>
+            </div>
+        }
+        else
+        {
+            <dl class="facts" data-testid="find-time-facts">
+                <dt>Teaching</dt><dd>@Teachers(t, c)</dd>
+                <dt>For</dt><dd>@Looks.Audience(t, c) <small>@Looks.Count(Roster.For(t, c).Count, "student")</small></dd>
+                <dt>How long</dt><dd>@Cccc.Domain.Week.Duration(c.Length)</dd>
+                @if (existing is not null)
+                {
+                    <dt>Now</dt><dd>@Looks.WhenWithDay(existing)@(Looks.Room(t, existing) is { Length: > 0 } r ? ", " + r : "")</dd>
+                }
+            </dl>
+        }
+        <div class="form-grid">
+            <label class="field"><span>Space</span>
+                <select @bind="_where" data-testid="find-time-space">
+                    @if (c.RoomId is null || t.Rooms[c.RoomId.Value] is null)
+                    {
+                        <option value="none">No space needed</option>
+                    }
+                    <option value="any">Any space</option>
+                    @{ var kinds = Kinds(t); }
+                    @if (kinds.Count > 0)
+                    {
+                        <optgroup label="A kind of space">
+                            @foreach (var k in kinds)
+                            {
+                                <option value="@("kind:" + k.Key)">Any @k.Key (@(string.Join(", ", k.Select(r => r.Name))))</option>
+                            }
+                        </optgroup>
+                    }
+                    <optgroup label="One space">
+                        @foreach (var r in SpacesInOrder(t))
+                        {
+                            <option value="@("room:" + r.Id)">@r.Name</option>
+                        }
+                    </optgroup>
+                </select>
+            </label>
+            @if (existing is null)
+            {
+                <label class="field"><span>Look in</span>
+                    <select @bind="_weeks" data-testid="find-time-weeks">
+                        @foreach (var n in new[] { 1, 2, 4, 8 })
+                        {
+                            <option value="@n">@Weeks(n)</option>
+                        }
+                    </select>
+                </label>
+            }
+            else
+            {
+                <div class="field"><span>Look in</span><p class="ft-plain">Its own week, @Cccc.Domain.Week.Range(existing.Date). To move it to another week, copy it there.</p></div>
+            }
+            <div class="field two">
+                <label><span>No earlier than</span><input type="time" step="900" @bind="_dayStart" data-testid="find-time-from" /></label>
+                <label><span>Ending by</span><input type="time" step="900" @bind="_dayEnd" data-testid="find-time-until" /></label>
+            </div>
+            @if (existing is not null)
+            {
+                <label class="check field ft-moved"><input type="checkbox" @bind="_sayMoved" data-testid="find-time-say-moved" /> Mark it on the plan as moved from @Looks.WhenWithDay(existing.MovedFrom is { } mf ? existing with { Date = mf.Date, Start = mf.Start, End = mf.End } : existing)</label>
+            }
+        </div>
+
+        @if (found is null)
+        {
+            <p class="notice" data-testid="find-time-start">Choose who teaches it, who it is for, or a space, and the times they are all free are listed here, soonest first.</p>
+        }
+        else if (c.Length <= TimeSpan.Zero || _dayEnd <= _dayStart)
+        {
+            <p class="form-error" role="alert">@(c.Length <= TimeSpan.Zero ? "The class has to finish after it starts." : "The hours to look in have to end after they begin.")</p>
+        }
+        else
+        {
+            var entries = Entries(found);
+            <div class="ft-results" data-testid="openings" data-from="@from.ToString("yyyy-MM-dd")" data-to="@to.ToString("yyyy-MM-dd")" aria-live="polite">
+                @if (found.Openings.Count == 0)
+                {
+                    <p class="ft-sum" data-testid="openings-none"><b>Nothing fits</b> @Cccc.Domain.Week.ShortDate(from) to @Cccc.Domain.Week.ShortDate(to). @Hint(c)</p>
+                }
+                else
+                {
+                    <p class="ft-sum" data-testid="openings-sum">@Summary(t, c, found)</p>
+                }
+                @foreach (var e in entries)
+                {
+                    if (e.Openings is { } day)
+                    {
+                        <section class="ft-day" data-testid="opening-day" data-date="@e.From.ToString("yyyy-MM-dd")">
+                            <h3>@e.From.ToString("dddd d MMMM", CultureInfo.InvariantCulture)</h3>
+                            <div class="ft-bar" aria-hidden="true" title="@($"{Cccc.Domain.Week.Hm(_dayStart)} to {Cccc.Domain.Week.Hm(_dayEnd)}")">
+                                @foreach (var o in day)
+                                {
+                                    <span style="@Bar(o)"></span>
+                                }
+                                <i class="ft-bar-from">@Cccc.Domain.Week.Hm(_dayStart)</i><i class="ft-bar-to">@Cccc.Domain.Week.Hm(_dayEnd)</i>
+                            </div>
+                            @foreach (var o in day)
+                            {
+                                <div class="ft-open" data-testid="opening">
+                                    <button type="button" class="btn ft-when" @onclick="() => Take(c, o)" data-testid="opening-take" aria-label="@($"{e.From.ToString("dddd d MMMM", CultureInfo.InvariantCulture)}, {Looks.When(o.Start, o.End)}{(o.Space is { } sp && t.Rooms[sp] is { } rr ? ", " + rr.Name : "")}")">@Looks.When(o.Start, o.End)</button>
+                                    <div class="ft-what">
+                                        <div class="ft-where">
+                                            @if (o.Space is { } space && t.Rooms[space] is { } room)
+                                            {
+                                                <span class="space-dot" style="--c:@room.Colour"></span><b>@room.Name</b>
+                                                @if (o.Spaces.Count > 1)
+                                                {
+                                                    <small> or @(string.Join(", ", o.Spaces.Skip(1).Select(x => t.Rooms[x]?.Name).Where(n => n is not null)))</small>
+                                                }
+                                            }
+                                            else if (c.RoomId is { } own && t.Rooms[own] is { } ownRoom)
+                                            {
+                                                <b>@ownRoom.Name</b><small> (not checked)</small>
+                                            }
+                                            @if (o.Latest > o.Start)
+                                            {
+                                                <small class="ft-later" data-testid="opening-later">can start as late as @Cccc.Domain.Week.Hm(o.Latest)</small>
+                                            }
+                                        </div>
+                                        @if (o.Notes.Count > 0)
+                                        {
+                                            <ul class="ft-notes">
+                                                @foreach (var n in o.Notes)
+                                                {
+                                                    <li class="@(n.Good ? "good" : "against")" data-testid="opening-note">@n.Text</li>
+                                                }
+                                            </ul>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </section>
+                    }
+                    else
+                    {
+                        <p class="ft-gap @(e.Looked ? "looked" : "")" data-testid="opening-gap"><span class="ft-gap-days">@Days(e.From, e.To)</span> @(e.Looked ? "No time: " : "")@e.Why</p>
+                    }
+                }
+                @if (found.More > 0)
+                {
+                    <p class="ft-more" data-testid="openings-more">And @Looks.Count(found.More, "more time") after these. Look in fewer weeks, or ask for less, to see them.</p>
+                }
+            </div>
+        }
+    </DialogFrame>
+}
+
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+
+    /// <summary>A class the timetable has: another time for it, moved there when one is chosen, inside its week.</summary>
+    [Parameter] public Guid? SessionId { get; set; }
+
+    /// <summary>A class being added, as the add form had it: a time chosen goes back to that form, filled in.</summary>
+    [Parameter] public Session? Draft { get; set; }
+
+    /// <summary>The week to start looking in, and somebody, a group or a space to start with (from the plan).</summary>
+    [Parameter] public DateOnly? Monday { get; set; }
+    [Parameter] public Guid? Facilitator { get; set; }
+    [Parameter] public Guid? Group { get; set; }
+    [Parameter] public Guid? Room { get; set; }
+
+    /// <summary>
+    /// The form opened from the plan or Find: the real week on screen, and whoever or whatever the plan is
+    /// looking at to start with (a student's group, for a student).
+    /// </summary>
+    public static Dictionary<string, object?> From(Timetable t, Cccc.Web.Features.Plan.PlanView v) => new()
+    {
+        [nameof(Monday)] = Cccc.Domain.Week.MondayOf(v.RealDay),
+        [nameof(Facilitator)] = v.Focus is { Kind: "facilitator" } f ? f.Id : null,
+        [nameof(Group)] = v.Focus switch
+        {
+            { Kind: "group" } g => g.Id,
+            { Kind: "student" } s => t.Students[s.Id]?.GroupId,
+            _ => null,
+        },
+        [nameof(Room)] = v.Focus is { Kind: "room" } r ? r.Id : null,
+    };
+
+    private static readonly int[] Lengths = [.. Enumerable.Range(1, 16).Select(i => i * 15), 300, 360];
+
+    private bool Free => SessionId is null && Draft is null;
+
+    private readonly Guid _newId = Guid.NewGuid();
+    private readonly List<Guid> _people = [];
+    private readonly HashSet<Guid> _groups = [];
+    private bool _everyone;
+    private Guid? _classId;
+    private int _minutes = 90;
+    private string _where = "any";
+    private int _weeks = 1;
+    private TimeOnly _dayStart = new(8, 0), _dayEnd = new(18, 0);
+    private bool _sayMoved;
+    private DateOnly _anchor;
+
+    private string ClassText { get => _classId?.ToString() ?? ""; set => _classId = Guid.TryParse(value, out var g) ? g : null; }
+
+    protected override void OnInitialized()
+    {
+        var t = W.T;
+        var thisWeek = Cccc.Domain.Week.MondayOf(W.Today);
+        var asked = Cccc.Domain.Week.MondayOf(Monday ?? Draft?.Date ?? W.Today);
+        _anchor = asked < thisWeek ? thisWeek : asked;
+        if (Facilitator is { } f && t.Facilitators[f] is not null) _people.Add(f);
+        if (Group is { } g && t.Groups[g] is not null) _groups.Add(g);
+        var template = SessionId is { } id ? t.Sessions[id] : Draft;
+        if (template is not null)
+        {
+            // Its own space first, or any like it; nowhere asked of a class that has no space.
+            _where = template.RoomId is { } own && t.Rooms[own] is { } r
+                ? r.Category is { } kind && t.Rooms.Current().Count(x => x.Category == kind) > 1 ? "kind:" + kind : "room:" + own
+                : "none";
+            // Somebody who knew the old time this week would look for it there.
+            _sayMoved = SessionId is not null && Cccc.Domain.Week.MondayOf(template.Date) <= W.Today;
+        }
+        else if (Room is { } room && t.Rooms[room] is not null) _where = "room:" + room;
+    }
+
+    /// <summary>The class looked for: the one asked about, the one being added, or one made of what is chosen here.</summary>
+    private Session Template(Timetable t)
+    {
+        if (SessionId is { } id && t.Sessions[id] is { } s) return s;
+        if (Draft is not null) return Draft;
+        var start = new TimeOnly(9, 0);
+        return new Session
+        {
+            Id = _newId,
+            ClassId = _classId,
+            // As the class form does on choosing a class, so a note beside a time names it.
+            Title = t.Classes.Find(_classId)?.Name ?? "",
+            Date = _anchor,
+            Start = start,
+            End = start.AddMinutes(_minutes),
+            Audience = _everyone ? Audience.Everyone
+                : _groups.Count == 1 ? Audience.ForGroup(_groups.First())
+                : _groups.Count > 1 ? Audience.ForGroups(_groups.Where(t.Groups.Contains))
+                : new Audience { Kind = AudienceKind.Group },
+            Facilitators = _people.Select(p => new Assignment(p)).ToImmutableList(),
+        };
+    }
+
+    /// <summary>
+    /// Whether there is anything to look for yet: somebody, a group, or a space or kind of space. Any space
+    /// at all, and nobody, would list every quarter hour the building has a room free, which answers nothing.
+    /// </summary>
+    private bool Asked(Session c) => !Free || _people.Count > 0 || _everyone || _groups.Count > 0
+        || _where.StartsWith("room:", StringComparison.Ordinal) || _where.StartsWith("kind:", StringComparison.Ordinal);
+
+    private (DateOnly From, DateOnly To) Range(Session c)
+    {
+        if (SessionId is not null)
+        {
+            var monday = Cccc.Domain.Week.MondayOf(c.Date);
+            return (monday < W.Today ? W.Today : monday, monday.AddDays(6));
+        }
+        var first = _anchor < W.Today ? W.Today : _anchor;
+        return (first, _anchor.AddDays(7 * _weeks - 1));
+    }
+
+    private OpeningsFound? _found;
+    private string? _key;
+    private Timetable? _searched;
+
+    /// <summary>The times, worked out again only when something asked or the timetable has changed.</summary>
+    private OpeningsFound Search(Timetable t, Session c)
+    {
+        var (from, to) = Range(c);
+        var spaces = SpacesAsked(t, c);
+        var now = TimeOnly.FromDateTime(W.Clock.Local(W.Clock.Now).DateTime);
+        var key = string.Join("|", System.Text.Json.JsonSerializer.Serialize(c, ModelJson.Options), string.Join(",", spaces), from, to, _dayStart, _dayEnd, W.Today, now.Hour * 60 + now.Minute);
+        if (_found is not null && _key == key && ReferenceEquals(_searched, t)) return _found;
+        var ask = new OpeningAsk { Class = c, Spaces = spaces, From = from, To = to, DayStart = _dayStart, DayEnd = _dayEnd };
+        _found = Openings.Find(t, ask, W.Today, now, W.Access.Events);
+        _key = key;
+        _searched = t;
+        return _found;
+    }
+
+    private IEnumerable<Room> SpacesInOrder(Timetable t) => t.Rooms.Current()
+        .OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer);
+
+    private List<IGrouping<string, Room>> Kinds(Timetable t) =>
+        SpacesInOrder(t).Where(r => r.Category is not null).GroupBy(r => r.Category!).ToList();
+
+    /// <summary>The spaces it may go in, its own first.</summary>
+    private IReadOnlyList<Guid> SpacesAsked(Timetable t, Session c)
+    {
+        IEnumerable<Room> rooms = _where switch
+        {
+            "none" => [],
+            "any" => SpacesInOrder(t),
+            _ when _where.StartsWith("kind:", StringComparison.Ordinal) => SpacesInOrder(t).Where(r => r.Category == _where[5..]),
+            _ when _where.StartsWith("room:", StringComparison.Ordinal) && Guid.TryParse(_where[5..], out var id) && t.Rooms[id] is { } one => [one],
+            _ => SpacesInOrder(t),
+        };
+        var ids = rooms.Select(r => r.Id).ToList();
+        if (c.RoomId is { } own && ids.Remove(own)) ids.Insert(0, own);
+        return ids;
+    }
+
+    private sealed record Entry(DateOnly From, DateOnly To, IReadOnlyList<Opening>? Openings, string Why = "", bool Looked = false);
+
+    /// <summary>
+    /// Every day looked at, in order: the times on it, or why there are none. Past the last time listed, when
+    /// there are more, a day without a time would read as though the days between had none either.
+    /// </summary>
+    private static List<Entry> Entries(OpeningsFound found)
+    {
+        var list = found.Openings.GroupBy(o => o.Date).Select(g => new Entry(g.Key, g.Key, g.ToList()))
+            .Concat(found.NoTime.Select(n => new Entry(n.From, n.To, null, n.Why, true)))
+            .Concat(found.NotSearched.Select(n => new Entry(n.From, n.To, null, n.Why)))
+            .OrderBy(e => e.From).ThenBy(e => e.Openings is null).ToList();
+        if (found.More > 0 && found.Openings.Count > 0)
+        {
+            var last = found.Openings[^1].Date;
+            list.RemoveAll(e => e.Openings is null && e.From > last);
+        }
+        return list;
+    }
+
+    private string Heading(Timetable t, Session c) =>
+        SessionId is not null ? "Find another time for " + Looks.Title(t, c)
+        : Draft is not null ? "Find a time for " + (c.ClassId is null && string.IsNullOrWhiteSpace(c.Title) ? "the class" : Looks.Title(t, c))
+        : "Find a time";
+
+    private static string Teachers(Timetable t, Session c)
+    {
+        var names = c.Facilitators.Select(a => t.Facilitators[a.FacilitatorId] is { } f
+                ? f.Name + (TimeWindows.Describe(c, a.FacilitatorId) is { } part ? $" ({part})" : "")
+                : null)
+            .Where(n => n is not null).ToList();
+        return names.Count > 0 ? string.Join(", ", names) : "Nobody yet";
+    }
+
+    private string Summary(Timetable t, Session c, OpeningsFound found)
+    {
+        var who = c.FacilitatorIds.Select(id => t.Facilitators[id]?.Name).Where(n => n is not null).Cast<string>().ToList();
+        if (c.Audience.IsEveryone) who.Add("everyone");
+        else who.AddRange(c.Audience.Cohorts.Select(g => t.Groups[g]?.Name).Where(n => n is not null).Cast<string>().OrderBy(n => n, NameOrder.Comparer));
+        string? place = _where switch
+        {
+            "none" => null,
+            "any" => "a space",
+            _ when _where.StartsWith("kind:", StringComparison.Ordinal) => "a " + _where[5..],
+            _ => SpacesAsked(t, c) is [var one] && t.Rooms[one] is { } r ? r.Name : null,
+        };
+        var when = who.Count switch
+        {
+            0 => place is null ? "" : $" when {place} is free",
+            1 => $" when {who[0]} is free" + (place is null ? "" : $" and {place} is"),
+            _ => $" when {string.Join(", ", who.Take(who.Count - 1))} and {who[^1]} are all free" + (place is null ? "" : $" and {place} is"),
+        };
+        return $"{Looks.Count(found.Openings.Count, "time")} for {Cccc.Domain.Week.Duration(c.Length)}{when}" +
+               (found.More > 0 ? $", and {found.More} more after these." : ".") + " Choose one to " +
+               (SessionId is not null ? "move the class there." : "carry on with the class there.");
+    }
+
+    private string Hint(Session c)
+    {
+        var tries = new List<string>();
+        if (c.Length > TimeSpan.FromMinutes(30)) tries.Add("a shorter time");
+        if (_where.StartsWith("room:", StringComparison.Ordinal) || _where.StartsWith("kind:", StringComparison.Ordinal)) tries.Add("any space");
+        if (SessionId is null && _weeks < 8) tries.Add("more weeks");
+        if (_dayStart > new TimeOnly(7, 0) || _dayEnd < new TimeOnly(20, 0)) tries.Add("longer hours");
+        return tries.Count == 0 ? "" : "Try " + (tries.Count == 1 ? tries[0] : string.Join(", ", tries.Take(tries.Count - 1)) + " or " + tries[^1]) + ".";
+    }
+
+    private string Weeks(int n)
+    {
+        var inv = CultureInfo.InvariantCulture;
+        var last = _anchor.AddDays(7 * n - 1);
+        return n == 1 ? $"Week {Cccc.Domain.Week.IsoNumber(_anchor)}, {Cccc.Domain.Week.Range(_anchor)}"
+            : $"{(n == 2 ? "Two" : n == 4 ? "Four" : "Eight")} weeks, to {last.Day} {last.ToString("MMMM", inv)}";
+    }
+
+    private static string Days(DateOnly from, DateOnly to) =>
+        from == to ? Cccc.Domain.Week.ShortDate(from) : $"{Cccc.Domain.Week.ShortDate(from)} – {Cccc.Domain.Week.ShortDate(to)}";
+
+    /// <summary>Where in the hours looked in the class can be: from its earliest start to its latest end.</summary>
+    private string Bar(Opening o)
+    {
+        double span = (_dayEnd.ToTimeSpan() - _dayStart.ToTimeSpan()).TotalMinutes;
+        if (span <= 0) return "";
+        double left = (o.Start.ToTimeSpan() - _dayStart.ToTimeSpan()).TotalMinutes / span * 100;
+        double width = (o.LatestEnd.ToTimeSpan() - o.Start.ToTimeSpan()).TotalMinutes / span * 100;
+        return FormattableString.Invariant($"left:{Math.Max(0, left):0.##}%;width:{Math.Min(100 - Math.Max(0, left), width):0.##}%");
+    }
+
+    private void AddPerson(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var g) && !_people.Contains(g)) _people.Add(g);
+    }
+
+    private void Toggle(Guid id, bool on)
+    {
+        if (on) _groups.Add(id); else _groups.Remove(id);
+    }
+
+    /// <summary>
+    /// A time chosen: a class the timetable has moves there at once (Undo takes it back); a class being
+    /// added goes back to its form with the time and space filled in, to be looked over and saved.
+    /// </summary>
+    private void Take(Session c, Opening o)
+    {
+        var space = _where == "none" ? c.RoomId : o.Space;
+        if (SessionId is { } id)
+        {
+            if (W.Commit(t => Edits.MoveTo(t, id, o.Date, o.Start, space, _sayMoved)))
+            {
+                if (PV.Started && (PV.Scale == Cccc.Web.Features.Plan.Scale.Day ? o.Date != PV.Day : Cccc.Domain.Week.MondayOf(o.Date) != PV.Monday)) PV.GoTo(o.Date);
+                PV.Chosen = id;
+                PV.Changed();
+                D.Close();
+            }
+            return;
+        }
+        D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.Draft)] = Openings.Placed(c, o.Date, o.Start, space) });
+    }
+
+    private void Back() => D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.Draft)] = Draft });
+}

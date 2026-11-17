@@ -152,6 +152,41 @@ Offer **everybody not away**, ranked rather than filtered: non-guests before gue
 teaching at that time (the week as it runs), lightest week first, then by name. Busy or over a limit
 is advice, never a refusal.
 
+## Finding a time (`Openings`)
+
+WHO is in what SPACE and WHEN, asked the other way round. Given a class as it would be (who teaches it,
+each in their part; who it is for; how long) and the spaces it may go in, the times it fits, soonest
+first, from now. A time is offered only when:
+
+- every facilitator is free for their part: not away, in no other class (`Teaching.At`), and named on
+  no event the reader may see;
+- no group it is for has a class then, and none of its students is on another class. An open session
+  is the exception, because nobody is required at it; lunch is not one, so it keeps everybody;
+- no student on it is named on an event then;
+- one of its spaces has no class and **no event** in it (`Spaces.Booked`): any event with a space,
+  whoever may read it, so a space is never offered over a booking the reader cannot see.
+
+Everything else the clash check would say about the time (a limit, a long gap, outside somebody's
+hours, a whole-building class over it) is a **note beside it, never a reason to leave it out**: bounds
+advise, never refuse. So is an event its people are expected at (a staff meeting, for facilitators; a
+showing, for students), and how it sits in each person's and group's day: *comes straight from*, *goes
+straight on to*, *has nothing else that day*. A group's day counts only counted classes, so lunch is
+nothing to come straight from.
+
+- A class the timetable has is looked for **as itself**: never in its own way, its own time not offered
+  as another, and each person's part moved with it.
+- One entry per stretch where it can start at any quarter hour, saying the latest start, in the spaces
+  free at the first, its own first.
+- **Not looked in, and said**: a day the building is closed, or closed for a group it is for; a week
+  with nothing in it yet (a week ahead is blank until it is filled, so nothing there can be checked). A
+  weekend is looked in only when the timetable has a class that day; the Scratch Week never.
+- **A day looked in with no time says why**: somebody away all of it; never all free at once; free
+  together for so long at most; or no space free when they are.
+- At most 30 times, and how many more; at most half a year of days.
+- **Moving a class to a time found** (`Edits.MoveTo`) carries each part and takes the space chosen. It
+  can say it has moved (`MovedFrom`, kept from the first move and dropped when it goes back there),
+  which stays inside its own week: a move to another week is a copy.
+
 ## Guests (schemas 20 and 21)
 
 - **A guest facilitator is nobody's account**: no link offered, no address match, and an existing link
@@ -165,6 +200,8 @@ is advice, never a refusal.
 ## Events (schemas 16 and 19)
 
 - An event never counts: no hours, no clash, no register, no cover. Repeats always end.
+- **An event with a space books it**: Find a time and the class form never offer that space as free
+  then, whoever may read the event (one the reader may not see says only *booked*).
 - **Who sees an event is one rule** (`EventViewer.Sees`): administrators see all; editors all but
   Administrators-only; everybody else sees Everyone, plus Students / Facilitators / Staff by their
   account's tags and link. Only administrators may choose Administrators.

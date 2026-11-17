@@ -130,7 +130,7 @@ else
                         }
                     </fieldset>
                 }
-                @{ var busy = BusyRooms(); }
+                @{ var busy = BusyRooms(); var booked = BookedRooms(); }
                 <label class="field"><span>Space</span>
                     <select @bind="RoomText" @bind:after="Check" data-testid="session-room">
                         <option value="">No space</option>
@@ -142,7 +142,7 @@ else
                                 <optgroup label="@part.Key">
                                     @foreach (var r in part)
                                     {
-                                        @SpaceOption(r, busy)
+                                        @SpaceOption(r, busy, booked)
                                     }
                                 </optgroup>
                             }
@@ -150,14 +150,14 @@ else
                             {
                                 @foreach (var r in part)
                                 {
-                                    @SpaceOption(r, busy)
+                                    @SpaceOption(r, busy, booked)
                                 }
                             }
                         }
                     </select>
                 </label>
                 @* Who is in what space and when, asked from the form: the spaces nobody is using at the time chosen. *@
-                @if (_end > _start && SpacesInOrder().Where(r => !busy.ContainsKey(r.Id) && r.Id != _roomId).ToList() is var free)
+                @if (_end > _start && SpacesInOrder().Where(r => !busy.ContainsKey(r.Id) && !booked.ContainsKey(r.Id) && r.Id != _roomId).ToList() is var free)
                 {
                     <div class="free-spaces span2" data-testid="free-spaces">
                         @if (free.Count == 0)
@@ -194,7 +194,7 @@ else
                         <button type="button" class="btn quiet" @onclick="() => { _people.Remove(a); Check(); }" aria-label="Remove @f?.Name">Remove</button>
                     </div>
                 }
-                <select @onchange="AddPerson" aria-label="Add a facilitator" data-testid="session-add-facilitator">
+                <select @key="_people.Count" @onchange="AddPerson" aria-label="Add a facilitator" data-testid="session-add-facilitator">
                     <option value="" selected>Add a facilitator…</option>
                     @foreach (var f in t.Facilitators.Current().Where(f => _people.All(p => p.Id != f.Id)).OrderBy(f => f.IsGuest).ThenBy(f => f.Name, NameOrder.Comparer))
                     {
@@ -219,7 +219,7 @@ else
                             <label><input type="checkbox" checked="@(roster.Contains(id))" @onchange="e => SetOnIt(id, members.Contains(id), (bool)e.Value!)" /> @st.Name</label>
                         }
                     </div>
-                    <select @onchange="AddStudent" aria-label="Add a student from another group">
+                    <select @key="_added.Count" @onchange="AddStudent" aria-label="Add a student from another group">
                         <option value="" selected>Add a student from another group…</option>
                         @foreach (var st in t.Students.Where(s => !members.Contains(s.Id) && !_added.Contains(s.Id)).OrderBy(s => s.Name, NameOrder.Comparer))
                         {
@@ -252,6 +252,10 @@ else
             }
         </ChildContent>
         <Extra>
+            @if (existing is null && !_scratch)
+            {
+                <button type="button" class="btn" disabled="@(_end <= _start)" @onclick="FindTime" title="When everybody it needs, and a space, are free" data-testid="session-find-time">Find a time…</button>
+            }
             @if (existing is not null)
             {
                 <button type="button" class="btn danger" @onclick="Delete" data-testid="session-delete">Delete</button>
@@ -275,6 +279,9 @@ else
     [Parameter] public Guid? Room { get; set; }
     /// <summary>A new class added from a person's row or week starts with that person on it.</summary>
     [Parameter] public Guid? Facilitator { get; set; }
+
+    /// <summary>A new class as it was, back from Find a time with the time chosen there: the form starts from it.</summary>
+    [Parameter] public Session? Draft { get; set; }
 
     private sealed class Person { public Guid Id; public TimeOnly? From; public TimeOnly? Until; }
 
@@ -318,13 +325,16 @@ else
     {
         _scratch = SessionId is { } asked
             ? W.T.Sessions[asked] is null && W.T.Scratch[asked] is not null
-            : Cccc.Domain.Week.IsScratch(Date ?? W.Today);
+            : Cccc.Domain.Week.IsScratch(Date ?? Draft?.Date ?? W.Today);
         var t = T;
         var s = SessionId is { } id ? t.Sessions[id] : null;
         if (s is null && SessionId is not null) return;
         _lockedWeek = s is not null && Cccc.Domain.Week.HasEnded(s.Date, W.Today);
-        _editable = W.Access.MayEdit && !_lockedWeek && !(s is null && Cccc.Domain.Week.HasEnded(Date ?? W.Today, W.Today));
-        if (s is null)
+        _editable = W.Access.MayEdit && !_lockedWeek && !(s is null && Cccc.Domain.Week.HasEnded(Date ?? Draft?.Date ?? W.Today, W.Today));
+        // Only a class the timetable already has is compared on saving: a draft back from Find a time is new.
+        if (s is not null) _original = System.Text.Json.JsonSerializer.Serialize(s, ModelJson.Options);
+        else if (Draft is not null) s = Draft;
+        else
         {
             var start = Start ?? new TimeOnly(9, 0);
             s = new Session
@@ -336,7 +346,6 @@ else
                 RoomId = Room,
             };
         }
-        else _original = System.Text.Json.JsonSerializer.Serialize(s, ModelJson.Options);
         _base = s;
         _id = s.Id;
         _classId = s.ClassId; _roomId = s.RoomId; _title = s.Title; _date = s.Date; _start = s.Start; _end = s.End;
@@ -358,8 +367,16 @@ else
 
     private IReadOnlyDictionary<Guid, Occurrence> BusyRooms() => Spaces.InUse(T, _date, _start, _end, except: _id);
 
-    private RenderFragment SpaceOption(Room r, IReadOnlyDictionary<Guid, Occurrence> busy) =>
-        @<option value="@r.Id">@r.Name@(busy.TryGetValue(r.Id, out var b) ? $" — busy: {Cccc.Web.Features.Week.Looks.Title(T, b.Session)} {Hm(b.Start)}–{Hm(b.End)}" : "")</option>;
+    /// <summary>The spaces an event has then, as Find a time counts them. The Scratch Week has no events.</summary>
+    private IReadOnlyDictionary<Guid, EventOnDay> BookedRooms() =>
+        _scratch || _end <= _start ? new Dictionary<Guid, EventOnDay>() : Spaces.Booked(T, _date, _start, _end);
+
+    private RenderFragment SpaceOption(Room r, IReadOnlyDictionary<Guid, Occurrence> busy, IReadOnlyDictionary<Guid, EventOnDay> booked) =>
+        @<option value="@r.Id">@r.Name@(busy.TryGetValue(r.Id, out var b) ? $" — busy: {Cccc.Web.Features.Week.Looks.Title(T, b.Session)} {Hm(b.Start)}–{Hm(b.End)}" : booked.TryGetValue(r.Id, out var e) ? " — " + Booking(e) : "")</option>;
+
+    /// <summary>An event in a space, as the reader may see it: its name and hours, or only that the space is taken.</summary>
+    private string Booking(EventOnDay e) => !W.Access.Events.Sees(e.Event) ? "booked"
+        : $"booked: {(e.Event.Title.Trim() is { Length: > 0 } title ? title : "an event")}{(e.AllDay ? " all day" : $" {Hm(e.From)}–{Hm(e.Until)}")}";
 
     /// <summary>
     /// Where a facilitator is instead, for the stretch they would be in this class: away, or teaching
@@ -478,6 +495,9 @@ else
             D.Close();
         }
     }
+
+    private void FindTime() =>
+        D.Show<FindTimeForm>(new Dictionary<string, object?> { [nameof(FindTimeForm.Draft)] = Proposal() });
 
     private void Register(Guid id) =>
         D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = id });

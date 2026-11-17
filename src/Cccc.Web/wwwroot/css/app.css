@@ -77,6 +77,8 @@ input[type=time] { min-width: 6.5rem; }
 .field { display: flex; flex-direction: column; gap: 5px; margin: 0 0 14px; min-width: 0; border: 0; padding: 0; }
 .field > span, .field > legend, .field label > span { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: .01em; }
 .field input, .field select { width: 100%; }
+/* A box to tick is the size of a box, wherever it sits: stretched to the width it drew mid-row. */
+.field input[type=checkbox], .field input[type=radio] { width: auto; flex: none; }
 .field.two { flex-direction: row; gap: 10px; }
 .field.two label { display: flex; flex-direction: column; gap: 5px; flex: 1; }
 .check { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
@@ -652,6 +654,45 @@ ul.said li + li { margin-top: 4px; }
 }
 .space-pick::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--border)); }
 .space-pick:hover { background: var(--hover); border-color: var(--border); }
+
+/* ---- Find a time: when everybody a class needs, and a space, are free --------------------------- */
+.ft-people { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ft-people .chip { gap: 6px; padding-left: 3px; }
+.ft-people .chip .disc { width: 22px; height: 22px; font-size: 9px; }
+.ft-people select { width: auto; flex: 1 1 200px; }
+.ft-plain { margin: 0; padding: 7px 0; font-size: 13px; }
+.ft-moved { grid-column: 1 / -1; }
+.ft-results { margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--divider); }
+.ft-sum { margin: 0 0 14px; }
+.ft-day { margin: 0 0 16px; }
+.ft-day h3 { margin: 0 0 8px; font-family: var(--serif); font-size: 17px; font-weight: 600; }
+/* The hours looked in, with where the class can be on them. */
+.ft-bar { position: relative; height: 8px; margin: 0 0 22px; border-radius: 4px; background: var(--well); }
+.ft-bar span { position: absolute; top: 0; bottom: 0; min-width: 4px; border-radius: 4px; background: var(--accent); }
+.ft-bar i { position: absolute; top: 11px; font-style: normal; font-size: 11px; line-height: 1; color: var(--text-quiet); }
+.ft-bar .ft-bar-from { left: 0; }
+.ft-bar .ft-bar-to { right: 0; }
+.ft-open { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 4px 14px; align-items: start; padding: 10px 0; border-top: 1px solid var(--rule); }
+.ft-when { font-variant-numeric: tabular-nums; font-weight: 650; }
+.ft-where { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-height: 34px; }
+.ft-where b { font-weight: 650; }
+.space-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--border)); }
+.ft-later { flex-basis: 100%; margin-top: -2px; }
+.ft-notes { list-style: none; margin: 4px 0 0; padding: 0; font-size: 13px; }
+.ft-notes li { position: relative; padding-left: 18px; overflow-wrap: anywhere; }
+.ft-notes li + li { margin-top: 2px; }
+.ft-notes li::before { position: absolute; left: 0; width: 12px; text-align: center; font-weight: 750; }
+.ft-notes li.good { color: var(--text-muted); }
+.ft-notes li.good::before { content: "✓"; }
+.ft-notes li.against::before { content: "!"; color: var(--warning); }
+.ft-gap { margin: 0 0 14px; padding: 8px 12px; border-radius: 8px; background: var(--well); font-size: 13px; color: var(--text-muted); overflow-wrap: anywhere; }
+.ft-gap.looked { background: transparent; border: 1px dashed var(--divider); }
+.ft-gap-days { margin-right: 4px; font-weight: 650; color: var(--text); }
+.ft-more { font-size: 13px; color: var(--text-muted); }
+@media (max-width: 560px) {
+    .ft-open { grid-template-columns: minmax(0, 1fr); }
+    .ft-when { justify-self: start; }
+}
 
 .register { display: flex; flex-direction: column; }
 .register-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }

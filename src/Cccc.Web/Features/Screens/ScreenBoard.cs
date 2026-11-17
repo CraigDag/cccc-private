@@ -143,15 +143,11 @@ public static class ScreenBoard
             if (o.Session.RoomId is { } room && t.Rooms.Contains(room)) Add(bookings, room, b);
             else elsewhere.Add(b);
         }
-        foreach (var e in t.Events.Where(e => e.RoomId is { } r && t.Rooms.Contains(r)))
-            foreach (var o in EventSchedule.Occurrences(t, e))
-            {
-                if (o.Date > day) break;
-                if (!o.Covers(day)) continue;
-                bool seen = Corridor.Sees(e);
-                Add(bookings, e.RoomId!.Value, new Booking(o.IsAllDayStrip ? TimeOnly.MinValue : e.Start, o.IsAllDayStrip ? TimeOnly.MaxValue : e.End,
-                    seen ? Title(e) : "Booked", seen ? "Event" : "", null, AllDay: o.IsAllDayStrip));
-            }
+        foreach (var e in EventSchedule.On(t, day).Where(e => e.Event.RoomId is { } r && t.Rooms.Contains(r)))
+        {
+            bool seen = Corridor.Sees(e.Event);
+            Add(bookings, e.Event.RoomId!.Value, new Booking(e.From, e.Until, seen ? Title(e.Event) : "Booked", seen ? "Event" : "", null, AllDay: e.AllDay));
+        }
         return (bookings, elsewhere);
     }
 

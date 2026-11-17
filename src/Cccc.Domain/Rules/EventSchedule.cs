@@ -9,6 +9,16 @@ public sealed record EventOccurrence(SchoolEvent Event, DateOnly Date, DateOnly 
     public bool Covers(DateOnly day) => day >= Date && day <= LastDay;
 }
 
+/// <summary>An event on one day, and the stretch of that day it takes: all of it, for an all-day event or one over several days.</summary>
+public sealed record EventOnDay(EventOccurrence Occurrence, TimeOnly From, TimeOnly Until)
+{
+    public SchoolEvent Event => Occurrence.Event;
+    public bool AllDay => Occurrence.IsAllDayStrip;
+
+    /// <summary>Whether it takes any moment between start and end. One that ends as the other starts does not.</summary>
+    public bool Overlaps(TimeOnly start, TimeOnly end) => From < end && start < Until;
+}
+
 /// <summary>Expands an event's repeat into dates. A repeat always ends: at most 1000 times, or five years.</summary>
 public static class EventSchedule
 {
@@ -105,6 +115,23 @@ public static class EventSchedule
             number++;
             yield return (new EventOccurrence(e, date, date.AddDays(span - 1), number), !skipped.Contains(date) && !closures.Any(c => c.Covers(date)));
         }
+    }
+
+    /// <summary>
+    /// Every event on one day, seen by anybody or not, with the stretch it takes: the one answer to what
+    /// an event holds up on a day, for a space it is in (the screens, finding a time) and the people it names.
+    /// </summary>
+    public static IReadOnlyList<EventOnDay> On(Timetable t, DateOnly day)
+    {
+        var found = new List<EventOnDay>();
+        foreach (var e in t.Events)
+            foreach (var o in Occurrences(t, e))
+            {
+                if (o.Date > day) break;
+                if (!o.Covers(day)) continue;
+                found.Add(o.IsAllDayStrip ? new EventOnDay(o, TimeOnly.MinValue, TimeOnly.MaxValue) : new EventOnDay(o, e.Start, e.End));
+            }
+        return found;
     }
 
     /// <summary>The occurrences touching these dates that this viewer may see.</summary>

@@ -146,6 +146,21 @@ public static class Edits
         return PutSession(t, moved, $"Rescheduled {s.DisplayTitle}");
     }
 
+    /// <summary>
+    /// A class put at a time found for it (Find a time), in the space given, each person's part moved with
+    /// it. Saying it has moved remembers where it was first, as a reschedule does, so the plan and the
+    /// screens show it; that stays inside its own week. Back where it first was, it no longer says so.
+    /// </summary>
+    public static Batch MoveTo(Timetable t, Guid sessionId, DateOnly date, TimeOnly start, Guid? roomId, bool sayMoved)
+    {
+        var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");
+        if (sayMoved && Week.MondayOf(date) != s.WeekMonday) throw new EditRefused("A class says it has moved only inside its own week. To move it to another week, copy it there.");
+        var moved = Openings.Placed(s, date, Snap(start), roomId);
+        var from = sayMoved ? s.MovedFrom ?? new MovedFrom(s.Date, s.Start, s.End) : s.MovedFrom;
+        moved = moved with { MovedFrom = from is { } f && f.Date == moved.Date && f.Start == moved.Start && f.End == moved.End ? null : from };
+        return PutSession(t, moved, $"Moved {s.DisplayTitle} to {Week.ShortDate(date)}, {Week.Hm(moved.Start)}");
+    }
+
     public static Batch SetCancelled(Timetable t, Guid sessionId, bool cancelled, string? note)
     {
         var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");

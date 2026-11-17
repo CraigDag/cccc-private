@@ -116,6 +116,44 @@ public class EditDecisionTests
         var rescheduled = Apply.Batch(b.T, Edits.Reschedule(b.T, s.Id, Monday.AddDays(1), new(8, 0), new(10, 0), null)).Sessions[s.Id]!;
         Assert.Equal((new TimeOnly(9, 0), new TimeOnly(10, 0)), TimeWindows.Assigned(rescheduled, dag.Id));
     }
+
+    [Fact]
+    public void AClassMovedToATimeFoundForItTakesItsPartsAndSpaceAndSaysWhereItWasOnlyWhenAsked()
+    {
+        var b = new Build();
+        var ada = b.Facilitator("Ada");
+        var dag = b.Facilitator("Dag");
+        var hall = b.Room("Hall");
+        var top = b.Room("Big Top");
+        var s = b.Session(Monday, "13:00", "15:00", null, hall, null, In(ada), In(dag, from: "14:00"));
+
+        var batch = Edits.MoveTo(b.T, s.Id, Monday.AddDays(2), new(9, 0), top.Id, sayMoved: true);
+        Assert.Equal("Moved Class to Wed 6 Mar, 09:00", batch.Label);
+        var moved = Apply.Batch(b.T, batch).Sessions[s.Id]!;
+        Assert.Equal((Monday.AddDays(2), new TimeOnly(9, 0), new TimeOnly(11, 0), (Guid?)top.Id), (moved.Date, moved.Start, moved.End, moved.RoomId));
+        Assert.Equal((new TimeOnly(10, 0), new TimeOnly(11, 0)), TimeWindows.Assigned(moved, dag.Id));
+        Assert.Equal(new MovedFrom(Monday, new(13, 0), new(15, 0)), moved.MovedFrom);
+
+        // Moved again, it still says where it first was; moved back there, it says nothing.
+        var t = Apply.Batch(b.T, batch);
+        var again = Apply.Batch(t, Edits.MoveTo(t, s.Id, Monday.AddDays(3), new(10, 0), top.Id, sayMoved: true)).Sessions[s.Id]!;
+        Assert.Equal(new MovedFrom(Monday, new(13, 0), new(15, 0)), again.MovedFrom);
+        var home = Apply.Batch(t, Edits.MoveTo(t, s.Id, Monday, new(13, 0), hall.Id, sayMoved: true)).Sessions[s.Id]!;
+        Assert.Null(home.MovedFrom);
+        var sameTimeAnotherDay = Apply.Batch(t, Edits.MoveTo(t, s.Id, Monday.AddDays(1), new(13, 0), hall.Id, sayMoved: true)).Sessions[s.Id]!;
+        Assert.Equal(new MovedFrom(Monday, new(13, 0), new(15, 0)), sameTimeAnotherDay.MovedFrom);
+        Assert.Equal((new TimeOnly(14, 0), new TimeOnly(15, 0)), TimeWindows.Assigned(home, dag.Id));
+
+        // Not asked, it says nothing new, and keeps what it already said.
+        Assert.Null(Apply.Batch(b.T, Edits.MoveTo(b.T, s.Id, Monday.AddDays(1), new(9, 0), null, sayMoved: false)).Sessions[s.Id]!.MovedFrom);
+        Assert.Equal(new MovedFrom(Monday, new(13, 0), new(15, 0)),
+            Apply.Batch(t, Edits.MoveTo(t, s.Id, Monday.AddDays(4), new(9, 0), null, sayMoved: false)).Sessions[s.Id]!.MovedFrom);
+
+        // Saying so stays inside its week; a move to another week is a copy.
+        var away = Assert.Throws<EditRefused>(() => Edits.MoveTo(b.T, s.Id, Monday.AddDays(7), new(9, 0), null, sayMoved: true));
+        Assert.Contains("inside its own week", away.Message);
+        Assert.Equal(Monday.AddDays(7), Apply.Batch(b.T, Edits.MoveTo(b.T, s.Id, Monday.AddDays(7), new(9, 0), null, sayMoved: false)).Sessions[s.Id]!.Date);
+    }
 }
 
 public class LateNewsTests

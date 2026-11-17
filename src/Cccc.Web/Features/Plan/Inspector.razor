@@ -56,6 +56,10 @@
                     <div class="insp-person"><span class="disc">@Rail(t.Facilitators[c]?.Name ?? "?")</span><span>@(t.Facilitators[c]?.Name) <small>covering</small></span></div>
                 }
             </dd>
+            @if (s.MovedFrom is { } mf)
+            {
+                <dt>Moved</dt><dd data-testid="inspector-moved">from @Cccc.Domain.Week.ShortDate(mf.Date), @Looks.When(mf.Start, mf.End)</dd>
+            }
             @if (!string.IsNullOrWhiteSpace(s.Notes))
             {
                 <dt>Notes</dt><dd class="pre">@s.Notes</dd>
@@ -93,6 +97,10 @@
                 @if (!M.Scratch)
                 {
                     <button type="button" class="btn" @onclick="() => D.Show<CancelForm>(new Dictionary<string, object?> { [nameof(CancelForm.SessionId)] = s.Id })" data-testid="inspector-cancel">@(s.Cancelled ? "Restore" : "Cancel")</button>
+                }
+                @if (!M.Scratch)
+                {
+                    <button type="button" class="btn" @onclick="() => D.Show<FindTimeForm>(new Dictionary<string, object?> { [nameof(FindTimeForm.SessionId)] = s.Id })" title="When everybody it needs, and a space, are free this week" data-testid="inspector-find-time">Another time…</button>
                 }
                 <button type="button" class="btn" @onclick="() => Duplicate(s)" data-testid="inspector-duplicate">Duplicate</button>
                 <button type="button" class="btn danger" @onclick="() => Delete(s)" data-testid="inspector-delete">Delete</button>

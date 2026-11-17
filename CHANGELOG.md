@@ -20,7 +20,7 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   and the add form opens with that space and those times. Adding a class says which spaces are busy
   then, and offers the free ones to press.
 - **A class opens beside the plan**, not over it: when, where, who it is for and how many, who teaches
-  and who is away, what is wrong with it, and Edit, Register, Cover, Cancel, Duplicate and Delete.
+  and who is away, what is wrong with it, and Edit, Register, Cover, Cancel, Another time, Duplicate and Delete.
   Forms slide in from the right, so the plan stays in sight.
 - **Cover in one press.** Beside every class that needs cover, on the Cover page and in the class's
   side panel on the plan, are the three people best placed to take it (free first, then the lightest
@@ -28,6 +28,17 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   they have the class; Undo takes it back. Everybody else, and a note, are one more press away.
 - **Adding or changing a class says who is busy**: a facilitator teaching another class then, or away,
   says so beside their name, the same way a busy space does.
+- **Find a time**: say who teaches a class, who it is for, how long and which spaces will do, and the
+  timetable lists the times they are all free and a space is, soonest first, from now. Beside each time
+  is what to know about it (*Ada comes straight from Creation lab*, *BA 1 has nothing else that day*,
+  *Staff meeting then*, or anything the clash check would warn about), and a day with no time says why
+  (*Ada is away*, *free together for 45m at most*, a closure, a week not filled yet). Press a time and the
+  add form opens filled in, to look over and save. It sits beside *+ Class* on the plan and in Ctrl+K,
+  and *Find a time…* in the add form takes what was typed there along and back. **Another time…** on a
+  class looks inside its week and moves it on a press, each person's part with it, marked on the plan as
+  moved when ticked; Undo takes it back.
+- **An event in a space books it**: adding a class says *Big Top — booked: Work-in-progress showing
+  16:00–17:30* (only *booked*, for an event you may not see) and never offers it as free then.
 - **Registers start with today's classes as big cards**, made to be tapped on a phone in the room. A
   class that ended earlier today says *not taken yet* rather than *to come*.
 - **Now says when registers from earlier days are still to take**: a coach's own, matching My week's

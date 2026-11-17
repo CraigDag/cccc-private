@@ -4,7 +4,7 @@
     <form class="dialog-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault="true" autocomplete="off">
         <header class="dialog-head">
             <h2 id="dialog-title">@Title</h2>
-            <button type="button" class="dialog-x" aria-label="Close" data-close data-testid="dialog-x" @onclick="D.Close">×</button>
+            <button type="button" class="dialog-x" aria-label="@CloseLabel" data-close data-testid="dialog-x" @onclick="DismissAsync">×</button>
         </header>
         <div class="dialog-body">
             @if (Held)
@@ -22,11 +22,11 @@
             @if (OnOk.HasDelegate && !Held)
             {
                 <button type="submit" class="btn primary" disabled="@(!OkEnabled)" data-testid="dialog-ok">@OkLabel</button>
-                <button type="button" class="btn" @onclick="D.Close" data-testid="dialog-cancel">@DismissLabel</button>
+                <button type="button" class="btn" @onclick="DismissAsync" data-testid="dialog-cancel">@DismissLabel</button>
             }
             else
             {
-                <button type="button" class="btn" @onclick="D.Close" data-testid="dialog-close">Close</button>
+                <button type="button" class="btn" @onclick="DismissAsync" data-testid="dialog-close">@CloseLabel</button>
             }
         </footer>
     </form>
@@ -41,6 +41,13 @@
     [Parameter] public bool OkEnabled { get; set; } = true;
     [Parameter] public string DismissLabel { get; set; } = "Cancel";
 
+    /// <summary>
+    /// What closing does when it is more than closing: a form that is a step of another goes back to it, by
+    /// its Close button, the × and Escape alike, so what was typed there is not lost.
+    /// </summary>
+    [Parameter] public EventCallback OnDismiss { get; set; }
+    [Parameter] public string CloseLabel { get; set; } = "Close";
+
     /// <summary>False for a form that changes no timetable (an account, a timetable's name).</summary>
     [Parameter] public bool ChangesTheTimetable { get; set; } = true;
 
@@ -54,6 +61,12 @@
     protected override async Task OnAfterRenderAsync(bool first)
     {
         if (first) await JS.InvokeVoidAsync("ccccShell.trap", _panel);
+    }
+
+    private async Task DismissAsync()
+    {
+        if (OnDismiss.HasDelegate) await OnDismiss.InvokeAsync();
+        else D.Close();
     }
 
     private async Task SubmitAsync()

@@ -18,11 +18,15 @@ public static class Teaching
     /// does not overlap it, and <paramref name="except"/> (the class being edited or covered) never
     /// makes anybody look busy.
     /// </summary>
-    public static IReadOnlyDictionary<Guid, Occurrence> At(Timetable t, DateOnly date, TimeOnly start, TimeOnly end, Guid? except = null)
+    public static IReadOnlyDictionary<Guid, Occurrence> At(Timetable t, DateOnly date, TimeOnly start, TimeOnly end, Guid? except = null) =>
+        At(Occurrences.Between(t, date, date), start, end, except);
+
+    /// <summary>The same, over one day's occurrences (<see cref="Occurrences.Between"/>), for a caller asking about many times of that day.</summary>
+    public static IReadOnlyDictionary<Guid, Occurrence> At(IReadOnlyList<Occurrence> day, TimeOnly start, TimeOnly end, Guid? except = null)
     {
         var busy = new Dictionary<Guid, Occurrence>();
         if (end <= start) return busy;
-        foreach (var o in Occurrences.Between(t, date, date).OrderBy(o => o.Start))
+        foreach (var o in day.OrderBy(o => o.Start))
         {
             if (o.Session.Id == except || !o.Happens || o.Start >= end || start >= o.End) continue;
             foreach (var id in o.InTheRoom)
