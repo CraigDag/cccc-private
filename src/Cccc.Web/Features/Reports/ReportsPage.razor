@@ -23,7 +23,10 @@ else
             }
         </div>
     </div>
-    <p class="muted">@weeks.Count week@(weeks.Count == 1 ? "" : "s"): @DomainWeek.ShortDate(DomainWeek.MondayOf(_from)) to @DomainWeek.ShortDate(DomainWeek.MondayOf(_to).AddDays(6)). Only classes that happen count: closed and cancelled ones do not.</p>
+    <p class="muted">@weeks.Count week@(weeks.Count == 1 ? "" : "s"): @DomainWeek.ShortDate(DomainWeek.MondayOf(_from)) to @DomainWeek.ShortDate(DomainWeek.MondayOf(_to).AddDays(6)). Only classes that happen count: closed and cancelled ones do not.
+        <span class="csv-links">Download as a spreadsheet:
+            <a href="@Csv("hours")" download data-enhance-nav="false" data-testid="csv-hours">Hours</a> ·
+            <a href="@Csv("attendance")" download data-enhance-nav="false" data-testid="csv-attendance">Attendance</a></span></p>
     <nav class="tabs">
         @foreach (var (slug, title) in Tabs)
         {
@@ -109,6 +112,9 @@ else
 @code {
     [CascadingParameter] public Workspace W { get; set; } = default!;
     [Parameter] public string? Slug { get; set; }
+
+    private string Csv(string kind) =>
+        $"reports/csv/{kind}?from={DomainWeek.MondayOf(_from):yyyy-MM-dd}&to={DomainWeek.MondayOf(_to).AddDays(6):yyyy-MM-dd}";
     private DateOnly _from, _to;
 
     private static readonly (string, string)[] Tabs =

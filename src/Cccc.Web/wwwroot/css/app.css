@@ -401,6 +401,8 @@ details.field summary { cursor: pointer; font-size: 13px; }
 
 /* ---- Narrow widths: the media queries come last, so they override the rules above. ------------ */
 
+.csv-links { margin-left: 8px; white-space: nowrap; }
+
 /* The morning Today list on Data ▸ Absences */
 .today-list { margin: 0 0 20px; padding: 12px 14px; border: 1px solid var(--divider); border-radius: 8px; background: var(--well); }
 .today-list h2 { margin: 0 0 4px; font-size: 15px; }

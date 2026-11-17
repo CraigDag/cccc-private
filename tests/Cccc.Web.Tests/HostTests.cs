@@ -138,3 +138,44 @@ public class HostTests : IClassFixture<Host>
         Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString((await r.Content.ReadAsByteArrayAsync())[..4]));
     }
 }
+
+public class ReportCsvTests : IClassFixture<Host>
+{
+    private readonly Host _host;
+    public ReportCsvTests(Host host) => _host = host;
+
+    [Fact]
+    public async Task TheSpreadsheetsAreAnAdministratorsAndCarryOnlyDatesInTheirAddress()
+    {
+        var admin = _host.Admin();
+        var accounts = _host.Services.GetRequiredService<AccountDirectory>();
+        var editor = accounts.All().FirstOrDefault(a => a.Login == "csv-editor")
+                     ?? accounts.Add(admin.Id, "csv-editor", "Test Editor", Role.Editor, "an editor passphrase");
+        accounts.ClearMustChange(editor.Id);
+        var store = _host.Services.GetRequiredService<ProjectStore>();
+        var day = new DateOnly(2030, 3, 6);
+        if (store.List().Count == 0) store.Create("Test", Cccc.Domain.Sample.SampleSchool.Create(day, day), "test", DateTimeOffset.UtcNow);
+        const string url = "/reports/csv/hours?from=2030-02-04&to=2030-03-10";
+
+        var e = _host.Client();
+        await Host.SignIn(e, "csv-editor", "an editor passphrase");
+        Assert.NotEqual(HttpStatusCode.OK, (await e.GetAsync(url)).StatusCode);
+
+        var a = _host.Client();
+        await Host.SignIn(a, "admin", Host.AdminPassphrase);
+        var r = await a.GetAsync(url);
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        var bytes = await r.Content.ReadAsByteArrayAsync();
+        Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF }, bytes[..3]);   // so Excel reads Æ Ø Å
+        var text = System.Text.Encoding.UTF8.GetString(bytes[3..]);
+        Assert.Contains("Facilitator,Teaching", text);
+        Assert.DoesNotContain("Test", r.Content.Headers.ContentDisposition?.FileName ?? "");
+    }
+
+    [Theory]
+    [InlineData("=HYPERLINK(\"x\")", "\"'=HYPERLINK(\"\"x\"\")\"")]
+    [InlineData("Dag, Øverlie", "\"Dag, Øverlie\"")]
+    [InlineData("Plain", "Plain")]
+    public void ACellIsQuotedAndNeverRunAsAFormula(string cell, string written) =>
+        Assert.Equal(written, Cccc.Web.Features.Reports.ReportCsv.Quote(cell));
+}

@@ -25,6 +25,8 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
 - **Import people from a spreadsheet**: Data ▸ Students and Facilitators take rows pasted from Excel,
   show what would be added (and who is left out, and why) before anything changes, and one Undo
   takes the whole import back.
+- **Reports download as spreadsheets** (Hours, and Attendance) for whatever weeks are chosen, with
+  each time rule in its own column and Æ Ø Å intact in Excel.
 - **The line at "now"** on today's column moves by itself through the day.
 - **Bring in a file…** reads the current app's `.cccc` (every version) and says what came across.
 

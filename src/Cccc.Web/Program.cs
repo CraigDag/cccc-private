@@ -115,6 +115,7 @@ app.MapStaticAssets().AllowAnonymous();
 app.MapSignInEndpoints();
 app.MapDownloads();
 app.MapProjectDownload();
+Cccc.Web.Features.Reports.ReportCsv.MapReportCsv(app);
 // Our own Content-Security-Policy already says frame-ancestors 'none'; Blazor would add a second header.
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode(o => o.ContentSecurityFrameAncestorsPolicy = null);
 
