@@ -27,11 +27,20 @@ public static class SampleSchool
         var prepGroup = new Group { Id = g.Next(), Name = "Prep", Colour = "#4CB782", ProgrammeId = prep.Id };
         var guests = new Group { Id = g.Next(), Name = "Nordlys Troupe", Colour = "#B07CE8", ProgrammeId = visiting.Id };
 
-        var bigTop = new Room { Id = g.Next(), Name = "Big Top", Colour = "#E0A040", Category = "Hall" };
-        var studioA = new Room { Id = g.Next(), Name = "Studio A", Colour = "#5FB0C8", Category = "Studio" };
-        var studioB = new Room { Id = g.Next(), Name = "Studio B", Colour = "#6FC8A0", Category = "Studio" };
-        var aerial = new Room { Id = g.Next(), Name = "Aerial Hall", Colour = "#C88FE0", Category = "Hall" };
-        var gym = new Room { Id = g.Next(), Name = "Gym", Colour = "#E08080", Category = "Gym" };
+        // What each space has, and what a class cannot be taught without (below): every class here is in a space
+        // with what it needs, so nothing is in the wrong space until somebody puts it there. Their own ids, so
+        // every other id stays as it was.
+        var kit = new Ids("5a5a0000-0000-4000-8001-");
+        var rigging = new Equipment { Id = kit.Next(), Name = "Rigging points" };
+        var mats = new Equipment { Id = kit.Next(), Name = "Crash mats" };
+        var sprung = new Equipment { Id = kit.Next(), Name = "Sprung floor" };
+        var mirrors = new Equipment { Id = kit.Next(), Name = "Mirrors" };
+
+        var bigTop = new Room { Id = g.Next(), Name = "Big Top", Colour = "#E0A040", Category = "Hall", Has = [rigging.Id, mats.Id, sprung.Id] };
+        var studioA = new Room { Id = g.Next(), Name = "Studio A", Colour = "#5FB0C8", Category = "Studio", Has = [sprung.Id, mirrors.Id] };
+        var studioB = new Room { Id = g.Next(), Name = "Studio B", Colour = "#6FC8A0", Category = "Studio", Has = [mats.Id, sprung.Id, mirrors.Id] };
+        var aerial = new Room { Id = g.Next(), Name = "Aerial Hall", Colour = "#C88FE0", Category = "Hall", Has = [rigging.Id, mats.Id] };
+        var gym = new Room { Id = g.Next(), Name = "Gym", Colour = "#E08080", Category = "Gym", Has = [mats.Id] };
         var canteen = new Room { Id = g.Next(), Name = "Canteen", Colour = "#A0A0A0" };
 
         var tumbling = new Branch { Id = g.Next(), Name = "Acrobatics", Colour = "#E0A040" };
@@ -64,12 +73,12 @@ public static class SampleSchool
         // How hard each is on the body: with the limits below, BA 1's Monday morning (Strength, then Acrobatics
         // a quarter of an hour later) runs past two hours in a row and its day past four, and BA 2's Wednesday
         // morning past two in a row. The guest workshop is not said, so it is nobody's hard training.
-        Class C(string name, string colour, Area? area = null, Workload w = Workload.Counted, Effort e = Effort.NotSet) =>
-            new() { Id = g.Next(), Name = name, Colour = colour, AreaId = area?.Id, Workload = w, Effort = e };
-        var acro = C("Acrobatics", "#E0A040", areaTechnique, e: Effort.Hard);
-        var aerialClass = C("Aerial", "#C88FE0", areaTechnique, e: Effort.Hard);
+        Class C(string name, string colour, Area? area = null, Workload w = Workload.Counted, Effort e = Effort.NotSet, params Equipment[] needs) =>
+            new() { Id = g.Next(), Name = name, Colour = colour, AreaId = area?.Id, Workload = w, Effort = e, Needs = [.. needs.Select(n => n.Id)] };
+        var acro = C("Acrobatics", "#E0A040", areaTechnique, e: Effort.Hard, needs: [mats]);
+        var aerialClass = C("Aerial", "#C88FE0", areaTechnique, e: Effort.Hard, needs: [rigging, mats]);
         var juggling = C("Juggling", "#5FB0C8", areaTechnique, e: Effort.Moderate);
-        var dance = C("Contemporary dance", "#F07090", areaBody, e: Effort.Moderate);
+        var dance = C("Contemporary dance", "#F07090", areaBody, e: Effort.Moderate, needs: [sprung]);
         var strength = C("Strength and conditioning", "#E08080", areaBody, e: Effort.Hard);
         var creation = C("Creation lab", "#70C8A0", areaCreation, e: Effort.Light);
         var disciplineClass = C("Circus disciplines", "#D0B060", areaTechnique, e: Effort.Hard);
@@ -171,6 +180,7 @@ public static class SampleSchool
                 new Closure { Id = g.Next(), Name = "Prep study day", From = anchor.AddDays(4), To = anchor.AddDays(4), Scope = ClosureScope.Groups, GroupIds = [prepGroup.Id] },
             ]),
             Rooms = EntitySet<Room>.Of([bigTop, studioA, studioB, aerial, gym, canteen]),
+            Equipment = EntitySet<Equipment>.Of([rigging, mats, sprung, mirrors]),
             Programmes = EntitySet<Programme>.Of([degree, prep, visiting]),
             Groups = EntitySet<Group>.Of([ba1, ba2, prepGroup, guests]),
             Branches = EntitySet<Branch>.Of([tumbling, air, objects]),
@@ -233,9 +243,9 @@ public static class SampleSchool
         new string(name.ToLowerInvariant().Select(c => char.IsLetter(c) && c < 128 ? c : '.').ToArray()).Trim('.').Replace("..", ".");
 
     /// <summary>Deterministic ids, so the sample is the same every time it is made.</summary>
-    private sealed class Ids
+    private sealed class Ids(string prefix = "5a5a0000-0000-4000-8000-")
     {
         private int _n;
-        public Guid Next() => new($"5a5a0000-0000-4000-8000-{++_n:D12}");
+        public Guid Next() => new($"{prefix}{++_n:D12}");
     }
 }

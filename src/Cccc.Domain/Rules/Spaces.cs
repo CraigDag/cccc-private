@@ -59,6 +59,31 @@ public static class Spaces
         return booked;
     }
 
+    /// <summary>
+    /// What a class needs (<see cref="Class.Needs"/>) that a space does not have (<see cref="Room.Has"/>), in the
+    /// order a person reads names. Nothing for a class that needs nothing, a session with no class, or no space:
+    /// a class with nowhere given is not in the wrong place, only in none. A piece of equipment the school has
+    /// since taken off its list is needed by nobody.
+    /// </summary>
+    public static IReadOnlyList<Equipment> Lacking(Timetable t, Guid? classId, Guid? roomId)
+    {
+        if (t.Classes.Find(classId) is not { Needs.Count: > 0 } c || t.Rooms.Find(roomId) is not { } room) return [];
+        return c.Needs.Where(n => !room.Has.Contains(n)).Select(n => t.Equipment[n]).OfType<Equipment>()
+            .DistinctBy(e => e.Id).OrderBy(e => e.Name, NameOrder.Comparer).ToList();
+    }
+
+    /// <summary>What this class needs that its own space does not have.</summary>
+    public static IReadOnlyList<Equipment> Lacking(Timetable t, Session s) => Lacking(t, s.ClassId, s.RoomId);
+
+    /// <summary>Whether a space has everything the class needs: the spaces Find a time and a way out may offer it.</summary>
+    public static bool Suits(Timetable t, Guid? classId, Guid roomId) => Lacking(t, classId, roomId).Count == 0;
+
+    /// <summary>What a class needs, in the order a person reads names: the pieces still on the school's list.</summary>
+    public static IReadOnlyList<Equipment> Needed(Timetable t, Guid? classId) =>
+        t.Classes.Find(classId) is { } c
+            ? c.Needs.Select(n => t.Equipment[n]).OfType<Equipment>().DistinctBy(e => e.Id).OrderBy(e => e.Name, NameOrder.Comparer).ToList()
+            : [];
+
     /// <summary>Each event in a space over one day's events, earliest first, whoever may read it.</summary>
     public static IEnumerable<(Guid Room, EventOnDay E)> Bookings(Timetable t, IReadOnlyList<EventOnDay> day)
     {

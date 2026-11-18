@@ -462,6 +462,14 @@ div.agenda-row { cursor: default; }
 .tl-eff { position: absolute; bottom: 0; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--text) 45%, transparent); }
 .tl-eff.moderate { height: 2px; background: color-mix(in srgb, var(--text) 22%, transparent); }
 .tl-eff.over { z-index: 1; background: var(--warning); }
+/* A space without what the chosen class needs: said under its name, and its day faintly washed. */
+.tl-row.lacks .tl-track { background-color: color-mix(in srgb, var(--warning) 7%, transparent); }
+.tl-label:has(.row-lacks) { flex-wrap: wrap; align-content: center; row-gap: 1px; }
+.tl-label:has(.row-lacks) .tl-name { flex: 1 1 0; }
+.tl-label small.row-lacks {
+    flex-basis: 100%; margin-left: 0; padding-left: 12px; font-size: 10.5px; line-height: 1.2; color: var(--warning);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .tl-label small.hard-sum { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tl-label small.hard-sum.over { color: var(--warning); font-weight: 700; }
 .wm-hard { margin-top: 2px; font-size: 11px; color: var(--text-quiet); font-variant-numeric: tabular-nums; }
@@ -794,8 +802,12 @@ ul.said li + li { margin-top: 4px; }
 }
 .space-pick::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--border)); }
 .space-pick:hover { background: var(--hover); border-color: var(--border); }
+/* Free, but without what the class needs: the wrong space, offered last and quieter. */
+.space-pick.lacks { border-style: dashed; color: var(--text-muted); }
+.space-pick.lacks small { font-size: 11.5px; color: var(--warning); }
 
 /* ---- Find a time: when everybody a class needs, and a space, are free --------------------------- */
+.ft-needs { margin: 0 0 8px; font-size: 13px; color: var(--text-muted); }
 .ft-people { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .ft-people .chip { gap: 6px; padding-left: 3px; }
 .ft-people .chip .disc { width: 22px; height: 22px; font-size: 9px; }
@@ -1074,7 +1086,7 @@ ul.said li + li { margin-top: 4px; }
     .tl-name .day-short { display: inline; }
     /* "free" beside a row's name cut "Studio B" to "Studi…" on a phone; the empty row and its quieter
        name already say it. A group's hard training goes under its name instead, lined up with it. */
-    .tl-label small:not(.hard-sum) { display: none; }
+    .tl-label small:not(.hard-sum, .row-lacks) { display: none; }
     .tl-label:has(.hard-sum) { flex-wrap: wrap; align-content: center; row-gap: 1px; }
     .tl-label:has(.hard-sum) .tl-name { flex: 1 1 0; }
     .tl-label small.hard-sum { flex-basis: 100%; margin-left: 0; padding-left: 12px; font-size: 10.5px; line-height: 1.2; }

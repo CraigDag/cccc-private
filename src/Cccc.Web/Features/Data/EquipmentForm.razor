@@ -1,0 +1,51 @@
+@inject Dialogs D
+<DialogFrame Title="@(_old is null ? "Add a piece of equipment" : "Edit " + _old.Name)" OnOk="Save" OkEnabled="@(_name.Trim().Length > 0 && !Taken)">
+    <ChildContent>
+        <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" placeholder="Rigging points, crash mats, a sprung floor…" data-testid="equipment-name" /></label>
+        @if (Taken)
+        {
+            <p class="notice" data-testid="equipment-taken">The school already lists @_name.Trim().</p>
+        }
+        <p class="hint">Tick it on the spaces that have it (Spaces) and on the classes that cannot be taught without it
+            (Classes). A class in a space without what it needs is in the wrong space: the plan rings it and offers a
+            space that has it, and Find a time looks only in those.</p>
+        @if (_old is not null)
+        {
+            <p class="hint" data-testid="equipment-uses">@EquipmentWords.Uses(W.T, _old.Id)@(Used ? ". Deleting it takes it off them too." : "")</p>
+        }
+    </ChildContent>
+    <Extra>
+        @if (_old is not null)
+        {
+            <button type="button" class="btn danger" @onclick="Delete" data-testid="data-delete">Delete</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? Id { get; set; }
+    private Equipment? _old;
+    private string _name = "";
+
+    protected override void OnInitialized()
+    {
+        _old = Id is { } id ? W.T.Equipment[id] : null;
+        if (_old is not null) _name = _old.Name;
+    }
+
+    /// <summary>Another piece already called this: two lists of the same thing would never agree.</summary>
+    private bool Taken => W.T.Equipment.Any(e => e.Id != _old?.Id && string.Equals(e.Name.Trim(), _name.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    private bool Used => _old is { } e && (W.T.Rooms.Any(r => r.Has.Contains(e.Id)) || W.T.Classes.Any(c => c.Needs.Contains(e.Id)));
+
+    private void Save()
+    {
+        var e = (_old ?? new Equipment()) with { Name = _name.Trim() };
+        if (W.Commit(t => new DraftOf(t).Put(Collections.Equipment, e).ToBatch((_old is null ? "Added the equipment " : "Changed the equipment ") + e.Name))) D.Close();
+    }
+
+    private void Delete()
+    {
+        if (W.Commit(t => Edits.RemoveEquipment(t, _old!.Id))) D.Close();
+    }
+}

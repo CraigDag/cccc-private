@@ -149,6 +149,15 @@ covering*), who changed it and when, from `Recent`; then today's events and what
   classes it is about, with no ring and no ways out. On a phone the figure sits under the group's name.
   People & places ▸ Classes says how hard each class is; ▸ Settings holds the limits and the rest (*2*,
   *1:30*, *90m*; empty is no limit), and Reports counts the week's warnings beside the hours target.
+- **Equipment**, on the Spaces lens: choosing a class that needs any marks each space without it, a faint
+  wash along its day and the lack under its name (*without Rigging points*), dragging it onto one says so
+  over the class (*Studio A without Crash mats and Rigging points*), and the side panel says what the class
+  **Needs**. A class in such a space is ringed, its panel says what the space lacks, and its ways out are
+  the same time in a space that has it. Ctrl+K finds a space by what it has (*rigging*). The add form offers the free spaces without it last,
+  dashed and saying what each lacks, and the space list says it beside each; Find a time says which
+  spaces it left out (*Aerial needs Crash mats and Rigging points, so only Aerial Hall and Big Top are
+  looked in*). People & places ▸ Equipment lists each piece with where it is and what needs it; Spaces
+  and Classes tick theirs.
 - **Find a time** beside *+ Class*, for editors (below).
 - **Copy** (day, week, clear the weeks after), **Print** (the four documents, narrowed as the screen
   is, and a facilitator's semester for their phone when the plan is narrowed to one) and **Show** (open

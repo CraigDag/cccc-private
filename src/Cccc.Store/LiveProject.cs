@@ -193,6 +193,7 @@ public sealed class LiveProject
         "students" => "a student",
         "facilitators" => "a facilitator",
         "rooms" => "a room",
+        "equipment" => "a piece of equipment",
         "classes" => "a class",
         "events" => "an event",
         "absences" => "an absence",

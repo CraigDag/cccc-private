@@ -134,6 +134,35 @@ public class PlanTests
     }
 
     [Fact]
+    public void FindReachesASpaceByWhatItHasAfterEveryNameAndNeverAFormerOne()
+    {
+        var rigging = new Equipment { Name = "Rigging points" };
+        var mats = new Equipment { Name = "Crash mats" };
+        var b = new Timetable() with
+        {
+            Equipment = EntitySet<Equipment>.Of([rigging, mats]),
+            Rooms = EntitySet<Room>.Of([
+                new Room { Name = "Big Top", Category = "Hall", Has = [rigging.Id, mats.Id] },
+                new Room { Name = "Aerial Hall", Category = "Hall", Has = [rigging.Id] },
+                new Room { Name = "Old Barn", Has = [rigging.Id], FormerSince = new DateOnly(2026, 1, 5) },
+                new Room { Name = "Gym", Has = [mats.Id] },
+                new Room { Name = "Mat store", Has = [mats.Id] }]),
+            Facilitators = EntitySet<Facilitator>.Of([new Facilitator { Name = "Rigmor Lund" }, new Facilitator { Name = "Brigitte Holm" }]),
+        };
+        var hits = FindIndex.Search(b, "rig", mayEdit: false, admin: false);
+        // Every name it is in first, even in the middle of one, then the spaces that have it, in Danish order;
+        // never a former space.
+        Assert.Equal(["Rigmor Lund", "Brigitte Holm", "Aerial Hall", "Big Top"], hits.Select(h => h.Label));
+        Assert.Equal(["Facilitator", "Facilitator", "Hall · has Rigging points", "Hall · has Rigging points"], hits.Select(h => h.Detail));
+        Assert.Equal("room", hits[2].Kind);
+        // A word of the piece's name finds it; a space found by its own name is found once.
+        Assert.Equal(["Big Top · Hall · has Crash mats", "Gym · Space · has Crash mats", "Mat store · Space · has Crash mats"],
+            FindIndex.Search(b, "mats", false, false).Select(h => h.Label + " · " + h.Detail));
+        Assert.Equal(["Mat store · Space", "Big Top · Hall · has Crash mats", "Gym · Space · has Crash mats"],
+            FindIndex.Search(b, "mat", false, false).Select(h => h.Label + " · " + h.Detail));
+    }
+
+    [Fact]
     public void FindReachesAnActionByWhereItLivesAfterEveryNameAndEveryActionItsOwnWordsFind()
     {
         var b = new Timetable() with { Facilitators = EntitySet<Facilitator>.Of([new Facilitator { Name = "Ida Termansen" }]) };

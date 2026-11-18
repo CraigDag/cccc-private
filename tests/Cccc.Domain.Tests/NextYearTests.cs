@@ -130,6 +130,7 @@ public class NextYearTests
 
         Assert.Equal(t.Settings with { Name = "Northlight 2031" }, next.Settings);
         Assert.Same(t.Rooms, next.Rooms);
+        Assert.Same(t.Equipment, next.Equipment);
         Assert.Same(t.Programmes, next.Programmes);
         Assert.Same(t.Groups, next.Groups);
         Assert.Same(t.Students, next.Students);
@@ -143,7 +144,7 @@ public class NextYearTests
         Assert.NotEmpty(next.Sessions);
         // A collection added to the timetable later has to be decided about here, or this goes red: a
         // hand-written list of what carries over is how a rollover silently drops something.
-        string[] decided = ["Settings", "Semesters", "Closures", "Rooms", "Programmes", "Groups", "Branches", "Disciplines", "Students",
+        string[] decided = ["Settings", "Semesters", "Closures", "Rooms", "Equipment", "Programmes", "Groups", "Branches", "Disciplines", "Students",
                             "Facilitators", "Areas", "Classes", "TimeRules", "Sessions", "Registers", "Absences", "Events", "Scratch", "Requests", "Offers"];
         Assert.Equal(decided.Order(StringComparer.Ordinal),
             typeof(Timetable).GetProperties().Where(p => p.CanWrite).Select(p => p.Name).Order(StringComparer.Ordinal));

@@ -17,7 +17,7 @@ namespace Cccc.Domain.Editing;
 /// semester moves by its own whole number of weeks, so everything inside it keeps its weekday and its
 /// place in the semester.</item>
 /// </list>
-/// What carries over and what is dropped is the current app's: the building, the people, the groups
+/// What carries over and what is dropped is the current app's: the building and its equipment, the people, the groups
 /// (unchanged: nothing here can know who has graduated), the catalogue and the rules carry over; the
 /// timetable carries over as its first timetabled week only, onto next year's, because a week ahead is
 /// blank until somebody fills it; registers and every other week are dropped, being a record of what

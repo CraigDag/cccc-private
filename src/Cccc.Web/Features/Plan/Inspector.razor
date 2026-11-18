@@ -61,6 +61,11 @@
         </div>
         <dl class="insp-facts">
             <dt>Where</dt><dd>@(Looks.Room(t, s) is { Length: > 0 } r ? r : "No space given")</dd>
+            @* What its space has to have, so the reason a space is the wrong one is in sight beside it. *@
+            @if (Spaces.Needed(t, s.ClassId) is { Count: > 0 } needs)
+            {
+                <dt>Needs</dt><dd data-testid="inspector-needs">@Cccc.Web.Features.Data.EquipmentWords.And([.. needs.Select(e => e.Name)])</dd>
+            }
             <dt>For</dt><dd>@Looks.Audience(t, s) <small>@(roster.Count == 1 ? "1 student" : $"{roster.Count} students")</small></dd>
             <dt>Teaching</dt>
             <dd>

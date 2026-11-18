@@ -1,0 +1,21 @@
+@* The school's equipment as ticks: what a space has, or what a class needs. *@
+@if (W.T.Equipment.Count == 0)
+{
+    <p class="hint" data-testid="@(TestId + "-none")">The school lists no equipment yet. Add it in People &amp; places ▸ Equipment, then tick it here.</p>
+}
+else
+{
+    <fieldset class="field checks columns" data-testid="@TestId"><legend>@Label</legend>
+        @foreach (var e in W.T.Equipment.OrderBy(e => e.Name, NameOrder.Comparer))
+        {
+            <label><input type="checkbox" checked="@Chosen.Contains(e.Id)" @onchange="ev => { if ((bool)ev.Value!) Chosen.Add(e.Id); else Chosen.Remove(e.Id); }" /> @e.Name</label>
+        }
+    </fieldset>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    /// <summary>The ticked pieces, changed in place as boxes are ticked.</summary>
+    [Parameter, EditorRequired] public HashSet<Guid> Chosen { get; set; } = [];
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public string TestId { get; set; } = "";
+}

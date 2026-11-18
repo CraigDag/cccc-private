@@ -223,6 +223,8 @@
                 if (other === blk || other.dataset.id === blk.dataset.id || other.classList.contains('cancelled') || other.classList.contains('closed')) continue;
                 if (+other.dataset.start < ne && ns < +other.dataset.end) { add(row.dataset.space + ' in use'); break; }
             }
+        // Another space's row without what the chosen class needs: the wrong space, whenever it is free.
+        if (row.dataset.lacks && row !== blk.closest('.tl-row')) add(row.dataset.lacks);
         return words;
     }
 

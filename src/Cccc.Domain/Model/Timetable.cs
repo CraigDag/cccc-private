@@ -46,6 +46,7 @@ public sealed record Timetable
     public EntitySet<Semester> Semesters { get; init; } = EntitySet<Semester>.Empty;
     public EntitySet<Closure> Closures { get; init; } = EntitySet<Closure>.Empty;
     public EntitySet<Room> Rooms { get; init; } = EntitySet<Room>.Empty;
+    public EntitySet<Equipment> Equipment { get; init; } = EntitySet<Equipment>.Empty;
     public EntitySet<Programme> Programmes { get; init; } = EntitySet<Programme>.Empty;
     public EntitySet<Group> Groups { get; init; } = EntitySet<Group>.Empty;
     public EntitySet<Branch> Branches { get; init; } = EntitySet<Branch>.Empty;

@@ -13,6 +13,7 @@ public static class Kinds
         new("students", "Students", "student"),
         new("facilitators", "Facilitators", "facilitator"),
         new("classes", "Classes", "class"),
+        new("equipment", "Equipment", "piece of equipment"),
         new("areas", "Areas", "area"),
         new("disciplines", "Disciplines", "discipline"),
         new("time-rules", "Time rules", "time rule"),

@@ -43,16 +43,23 @@ internal sealed class Build
         return s;
     }
 
-    public Room Room(string name)
+    public Equipment Equipment(string name)
     {
-        var r = new Room { Name = name };
+        var e = new Equipment { Name = name };
+        T = T with { Equipment = T.Equipment.Put(e) };
+        return e;
+    }
+
+    public Room Room(string name, params Equipment[] has)
+    {
+        var r = new Room { Name = name, Has = [.. has.Select(e => e.Id)] };
         T = T with { Rooms = T.Rooms.Put(r) };
         return r;
     }
 
-    public Class Class(string name, Workload w = Workload.Counted, Effort effort = Effort.NotSet)
+    public Class Class(string name, Workload w = Workload.Counted, Effort effort = Effort.NotSet, params Equipment[] needs)
     {
-        var c = new Class { Name = name, Workload = w, Effort = effort };
+        var c = new Class { Name = name, Workload = w, Effort = effort, Needs = [.. needs.Select(e => e.Id)] };
         T = T with { Classes = T.Classes.Put(c) };
         return c;
     }

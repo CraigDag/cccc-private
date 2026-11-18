@@ -101,7 +101,7 @@ else
                     <optgroup label="One space">
                         @foreach (var r in SpacesInOrder(t))
                         {
-                            <option value="@("room:" + r.Id)">@r.Name</option>
+                            <option value="@("room:" + r.Id)">@r.Name@(Spaces.Lacking(t, c.ClassId, r.Id) is { Count: > 0 } lacking ? " — " + Cccc.Web.Features.Data.EquipmentWords.Without(lacking) : "")</option>
                         }
                     </optgroup>
                 </select>
@@ -143,6 +143,11 @@ else
         {
             var entries = Entries(found);
             <div class="ft-results" data-testid="openings" data-from="@from.ToString("yyyy-MM-dd")" data-to="@to.ToString("yyyy-MM-dd")" aria-live="polite">
+                @* A space without what the class needs is the wrong space however free it is, so it is not looked in: said, so its absence is no mystery. *@
+                @if (Cccc.Web.Features.Data.EquipmentWords.LeftOut(t, c, SpacesAsked(t, c), found.Unsuited) is { } leftOut)
+                {
+                    <p class="ft-needs" data-testid="find-time-needs">@leftOut</p>
+                }
                 @if (found.Openings.Count == 0)
                 {
                     <p class="ft-sum" data-testid="openings-none"><b>Nothing fits</b> @Cccc.Domain.Week.ShortDate(from) to @Cccc.Domain.Week.ShortDate(to). @Hint(c)</p>

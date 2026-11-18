@@ -13,6 +13,8 @@ public enum ClashKind
     FacilitatorLongGap,
     StudentDoubleBooked,
     GroupDoubleBooked,
+    /// <summary>A class in a space without the equipment it needs (<see cref="Spaces.Lacking(Timetable, Session)"/>): the wrong space, so a ring.</summary>
+    SpaceLacksEquipment,
     /// <summary>A group's hard training runs longer without a rest than the school's limit (<see cref="HardTraining"/>).</summary>
     GroupHardInARow,
     /// <summary>A group has more hard training in a day than the school's limit.</summary>
@@ -122,6 +124,12 @@ public static class Clashes
                     found.Add(new Clash(ClashKind.FacilitatorUnavailable,
                         $"{f.Name} is not available {When(o.Date, from, until)} (outside their availability) — \"{o.Session.DisplayTitle}\"", [o.Session.Id]));
             }
+
+        // The wrong space for the class: one warning naming everything it lacks there, on that class alone.
+        foreach (var o in list)
+            if (Spaces.Lacking(t, o.Session) is { Count: > 0 } lacking)
+                found.Add(new Clash(ClashKind.SpaceLacksEquipment,
+                    $"Space \"{RoomOf(o)}\" lacks what \"{o.Session.DisplayTitle}\" needs: {string.Join(", ", lacking.Select(e => e.Name))} ({When(o)})", [o.Session.Id]));
 
         foreach (var o in list.Where(o => o.NeedsCover))
         {

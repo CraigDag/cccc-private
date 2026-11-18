@@ -4,6 +4,7 @@
         <label class="field"><span>Name</span><input @bind="_name" @bind:event="oninput" data-testid="room-name" /></label>
         <label class="field"><span>Kind of space (optional)</span><input @bind="_category" placeholder="Studio, gym, aerial hall…" /></label>
         <Colour @bind-Value="_colour" />
+        <EquipmentTicks Chosen="_has" Label="What it has" TestId="room-has" />
         @if (_old is not null && FormerWords.For(W.T, _old, W.Today) is { } said)
         {
             <p class="@(_old.IsFormer() ? "notice" : "hint")" data-testid="former-note">@said</p>
@@ -26,17 +27,20 @@
     private Room? _old;
     private string _name = "", _colour = "#3F51B5";
     private string? _category;
+    private HashSet<Guid> _has = [];
 
     protected override void OnInitialized()
     {
         _old = Id is { } id ? W.T.Rooms[id] : null;
         if (_old is null) return;
-        _name = _old.Name; _category = _old.Category; _colour = _old.Colour;
+        _name = _old.Name; _category = _old.Category; _colour = _old.Colour; _has = [.. _old.Has];
     }
 
     private void Save()
     {
-        var r = (_old ?? new Room()) with { Name = _name.Trim(), Category = string.IsNullOrWhiteSpace(_category) ? null : _category.Trim(), Colour = _colour };
+        // In the school's order, and only what it still lists: a piece taken off the list since is nobody's.
+        var has = W.T.Equipment.Where(e => _has.Contains(e.Id)).OrderBy(e => e.Name, NameOrder.Comparer).Select(e => e.Id);
+        var r = (_old ?? new Room()) with { Name = _name.Trim(), Category = string.IsNullOrWhiteSpace(_category) ? null : _category.Trim(), Colour = _colour, Has = [.. has] };
         if (W.Commit(t => new DraftOf(t).Put(Collections.Rooms, r).ToBatch((_old is null ? "Added the space " : "Changed the space ") + r.Name))) D.Close();
     }
 

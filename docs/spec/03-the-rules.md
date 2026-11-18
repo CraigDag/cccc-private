@@ -305,6 +305,30 @@ the timetable is where the loading is decided; the current app has no idea which
 - **The add form and Find a time say it** like any other warning, because they ask the clash check what a
   class would add: the figure growing past a limit is new, so it is said.
 
+## Equipment (`Spaces.Lacking`, the rebuild's own)
+
+WHO is in what SPACE: the space has to be fit for the class, and the current app knows only a space's kind.
+
+- **The school lists its equipment once** (`Timetable.Equipment`); a space ticks what it has (`Room.Has`)
+  and a class what it cannot be taught without (`Class.Needs`). Nothing needs anything until the school
+  says so.
+- **A class in a space without everything it needs is in the wrong space**: one warning on that class
+  naming all it lacks there, in the order a person reads names (`SpaceLacksEquipment`). It is **a ring**,
+  unlike hard training, because it is a placement with a fix: it has ways out, and it counts in Issues,
+  Now and the term. A class with no space is in none rather than the wrong one, and a piece taken off the
+  list is needed by nobody.
+- **Its ways out** are the same time in a space that has it (every such space is offered for a class
+  that needs anything, after the ones it has used and those of its kind), then another time in one; a
+  time in the wrong space is no way out.
+- **Find a time and Make room look only in spaces that have it** (`Openings.SpacesFor`) and say which of
+  the spaces asked they left out (`OpeningsFound.Unsuited`), so a missing space is no mystery. Bounds
+  advise: the add form still saves a class in the wrong space, warned.
+- **Deleting a piece takes it off every space and class in the same step** (`Edits.RemoveEquipment`),
+  so one Undo puts all of it back. Nothing is kept as former: the past has no need of it.
+- Next year carries the list, and the spaces' and classes' ticks, as they are. **The store's format 5**
+  brought it: a format-4 build would replay a piece as a collection it has never heard of, and save a
+  space or a class back without its ticks.
+
 ## A week against the one before (`WeekChanges`)
 
 - A week is compared with **the last week before it with anything in it**, at most half a year back: a

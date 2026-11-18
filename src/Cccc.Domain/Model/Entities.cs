@@ -84,6 +84,19 @@ public sealed record Room : IRetirable
     public string? Category { get; init; }
     public string Colour { get; init; } = "#3F51B5";
     public DateOnly? FormerSince { get; init; }
+
+    /// <summary>The equipment it has (<see cref="Equipment"/>), by id: what a class needing it may count on here.</summary>
+    public ImmutableList<Guid> Has { get; init; } = [];
+}
+
+/// <summary>
+/// Something a space can have and a class can need: rigging points, crash mats, a sprung floor, a tumble track.
+/// The rebuild's own; the current app knows only a space's kind. Nothing needs anything until the school says so.
+/// </summary>
+public sealed record Equipment : IEntity
+{
+    public Guid Id { get; init; } = Guid.NewGuid();
+    public string Name { get; init; } = "";
 }
 
 /// <summary>A programme. Still <c>Strand</c> in the old code and file.</summary>
@@ -197,6 +210,9 @@ public sealed record Class : IRetirable
     public Workload Workload { get; init; }
     public Effort Effort { get; init; }
     public DateOnly? FormerSince { get; init; }
+
+    /// <summary>The equipment it cannot be taught without (<see cref="Equipment"/>), by id: a space without it is the wrong space.</summary>
+    public ImmutableList<Guid> Needs { get; init; } = [];
 }
 
 public enum TimeRuleKind { Preparation, Break }

@@ -38,8 +38,9 @@ public static class WaysOut
         var like = SpacesLike(t, s);
         var ways = new List<WayOut>();
 
-        // Only a clash in its space can end in another space; the clash check would refuse any other the same.
-        if (s.RoomId is { } own && clashes.All(c => c.Kind == ClashKind.RoomDoubleBooked))
+        // Only a clash in its space can end in another space (in use, or without what the class needs); the
+        // clash check would refuse any other the same.
+        if (s.RoomId is { } own && clashes.All(c => c.Kind is ClashKind.RoomDoubleBooked or ClashKind.SpaceLacksEquipment))
         {
             var used = Spaces.InUse(day, s.Start, s.End, s.Id);
             var booked = Spaces.Booked(t, s.Date, s.Start, s.End);
@@ -80,6 +81,8 @@ public static class WaysOut
         DateOnly today, TimeOnly now, EventViewer viewer, List<WayOut> ways)
     {
         if (ways.Count >= Most) return;
+        // Only where it may go: a space without what the class needs is no way out, however free it is.
+        if (spaces.Count > 0 && (spaces = [.. spaces.Where(r => Spaces.Suits(t, s.ClassId, r))]).Count == 0) return;
         int at = Minutes(s.Start);
         var ask = new OpeningAsk
         {
@@ -116,16 +119,19 @@ public static class WaysOut
     }
 
     /// <summary>
-    /// Its own space, then each space its class has been in (the most used first), then the rest of the same kind:
-    /// where it could go, in the order to offer them. A space with no kind is like no other. None when it has no
-    /// space, so none is needed; a former space is offered to nothing ahead.
+    /// Its own space, then each space its class has been in (the most used first), then the rest of the same kind,
+    /// and for a class that needs equipment every space that has it: where it could go, in the order to offer them.
+    /// A space with no kind is like no other. None when it has no space, so none is needed; a former space is
+    /// offered to nothing ahead.
     /// </summary>
     private static IReadOnlyList<Guid> SpacesLike(Timetable t, Session s)
     {
         if (s.RoomId is not { } own || t.Rooms[own] is not { } room) return [];
         var used = Uses(t, s);
+        bool needs = Spaces.Needed(t, s.ClassId).Count > 0;
         var like = t.Rooms.Current()
-            .Where(r => r.Id != own && (used.ContainsKey(r.Id) || (room.Category is { Length: > 0 } kind && r.Category == kind)))
+            .Where(r => r.Id != own && (used.ContainsKey(r.Id) || (room.Category is { Length: > 0 } kind && r.Category == kind)
+                                        || (needs && Spaces.Suits(t, s.ClassId, r.Id))))
             .OrderByDescending(r => used.GetValueOrDefault(r.Id))
             .ThenBy(r => r.Name, NameOrder.Comparer)
             .Select(r => r.Id);

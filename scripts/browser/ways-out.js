@@ -126,8 +126,9 @@ const clashGone = (page, title) => page.waitForFunction(t => document.querySelec
     await waysShown(admin, 'Acrobatics');
     const listed = await ways(admin);
     said(listed).forEach(w => log('     ' + w));
-    // Ada is away on Thursday: another time would need her, and she is away all of it.
-    if (JSON.stringify(listed.map(w => w.where)) !== JSON.stringify(['Studio B, same time'])) throw new Error('Acrobatics is offered ' + JSON.stringify(said(listed)));
+    // Ada is away on Thursday: another time would need her, and she is away all of it. Studio B is where
+    // Acrobatics has been before, and the Gym has the crash mats it needs.
+    if (JSON.stringify(listed.map(w => w.where)) !== JSON.stringify(['Studio B, same time', 'Gym, same time'])) throw new Error('Acrobatics is offered ' + JSON.stringify(said(listed)));
     if (squash(await admin.locator('[data-testid=ways-other]').textContent()) !== 'Or move the other class instead: Creation lab.') throw new Error('no way back to Creation lab');
     await admin.click('[data-testid=ways-other-class]');
     await waysShown(admin, 'Creation lab');

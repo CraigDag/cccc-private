@@ -58,6 +58,15 @@ public static class FindIndex
         foreach (var r in t.Rooms) Add(r.IsFormer() ? 6 : 2, r.Name, new FindHit("room", r.Name, r.IsFormer() ? "Former space, " + Former.Since(r) : r.Category ?? "Space", r.Id, r.Colour));
         foreach (var g in t.Groups) Add(3, g.Name, new FindHit("group", g.Name, "Group" + (t.Programmes.Find(g.ProgrammeId) is { } p ? " · " + p.Name : ""), g.Id, g.Colour));
         foreach (var p in t.Programmes) Add(4, p.Name, new FindHit("programme", p.Name, p.IsGuest ? "Guest programme" : "Programme", p.Id, p.Colour));
+        // A space is found by what it has too ("rigging" finds the spaces with rigging points), after every name.
+        foreach (var r in t.Rooms.Current().Where(r => Score(r.Name) < 0))
+        {
+            var has = r.Has.Select(id => t.Equipment[id]).OfType<Cccc.Domain.Model.Equipment>()
+                .Select(e => (e.Name, Score: Score(e.Name))).Where(x => x.Score >= 0).ToList();
+            if (has.Count == 0) continue;
+            var names = string.Join(", ", has.Select(x => x.Name).Distinct().OrderBy(n => n, Cccc.Domain.NameOrder.Comparer));
+            hits.Add(((3 + has.Min(x => x.Score)) * 10 + 2, new FindHit("room", r.Name, (r.Category ?? "Space") + " · has " + names, r.Id, r.Colour)));
+        }
 
         var actions = new List<FindHit>
         {

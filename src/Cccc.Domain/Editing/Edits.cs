@@ -563,6 +563,23 @@ public static class Edits
     }
 
     /// <summary>
+    /// Taking a piece of equipment off the school's list takes it off every space that has it and every class that
+    /// needs it in the same step, so nothing is left naming what the school no longer lists, and one Undo puts
+    /// all of it back.
+    /// </summary>
+    public static Batch RemoveEquipment(Timetable t, Guid id)
+    {
+        var e = t.Equipment[id] ?? throw new EditRefused("That equipment has gone.");
+        var d = new Draft(t);
+        foreach (var r in t.Rooms.Where(r => r.Has.Contains(id)))
+            d.Put(Collections.Rooms, r with { Has = r.Has.RemoveAll(x => x == id) });
+        foreach (var c in t.Classes.Where(c => c.Needs.Contains(id)))
+            d.Put(Collections.Classes, c with { Needs = c.Needs.RemoveAll(x => x == id) });
+        d.Remove(Collections.Equipment, id);
+        return d.ToBatch($"Deleted the equipment {e.Name}");
+    }
+
+    /// <summary>
     /// Removing a facilitator takes them off every class from today on and every event not over by
     /// today. One who taught before today is kept as former, with every absence that began before today,
     /// so those days keep who taught, who was away and so who earned the hours; one who never taught is

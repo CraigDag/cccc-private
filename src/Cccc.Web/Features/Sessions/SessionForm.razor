@@ -185,9 +185,17 @@ else
                         else
                         {
                             <span class="muted">Free then:</span>
-                            @foreach (var r in free)
+                            @* A space without what the class needs is free all the same, and comes last: it is the wrong space. *@
+                            @foreach (var (r, lacking) in free.Select(r => (r, Spaces.Lacking(T, _classId, r.Id))).OrderBy(x => x.Item2.Count > 0).ToList())
                             {
-                                <button type="button" class="space-pick" style="--c:@r.Colour" @onclick="() => { _roomId = r.Id; Check(); }" data-testid="free-space">@r.Name</button>
+                                <button type="button" class="@(lacking.Count > 0 ? "space-pick lacks" : "space-pick")" style="--c:@r.Colour" @onclick="() => { _roomId = r.Id; Check(); }"
+                                        data-testid="free-space" data-lacks="@(lacking.Count > 0 ? "1" : "0")">
+                                    <span>@r.Name</span>
+                                    @if (lacking.Count > 0)
+                                    {
+                                        <small>@Cccc.Web.Features.Data.EquipmentWords.Without(lacking)</small>
+                                    }
+                                </button>
                             }
                         }
                     </div>
@@ -408,7 +416,8 @@ else
         _scratch || _end <= _start ? new Dictionary<Guid, EventOnDay>() : Spaces.Booked(T, _date, _start, _end);
 
     private RenderFragment SpaceOption(Room r, IReadOnlyDictionary<Guid, Occurrence> busy, IReadOnlyDictionary<Guid, EventOnDay> booked) =>
-        @<option value="@r.Id">@r.Name@(busy.TryGetValue(r.Id, out var b) ? $" — busy: {Cccc.Web.Features.Week.Looks.Title(T, b.Session)} {Hm(b.Start)}–{Hm(b.End)}" : booked.TryGetValue(r.Id, out var e) ? " — " + Booking(e) : "")</option>;
+        @<option value="@r.Id">@r.Name@(busy.TryGetValue(r.Id, out var b) ? $" — busy: {Cccc.Web.Features.Week.Looks.Title(T, b.Session)} {Hm(b.Start)}–{Hm(b.End)}" : booked.TryGetValue(r.Id, out var e) ? " — " + Booking(e)
+            : Spaces.Lacking(T, _classId, r.Id) is { Count: > 0 } lacking ? " — " + Cccc.Web.Features.Data.EquipmentWords.Without(lacking) : "")</option>;
 
     /// <summary>An event in a space, as the reader may see it: its name and hours, or only that the space is taken.</summary>
     private string Booking(EventOnDay e) => !W.Access.Events.Sees(e.Event) ? "booked"

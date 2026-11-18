@@ -96,6 +96,7 @@ public static class Collections
     public static readonly Collection<Semester> Semesters = new("semesters", t => t.Semesters, (t, s) => t with { Semesters = s });
     public static readonly Collection<Closure> Closures = new("closures", t => t.Closures, (t, s) => t with { Closures = s });
     public static readonly Collection<Room> Rooms = new("rooms", t => t.Rooms, (t, s) => t with { Rooms = s });
+    public static readonly Collection<Equipment> Equipment = new("equipment", t => t.Equipment, (t, s) => t with { Equipment = s });
     public static readonly Collection<Programme> Programmes = new("programmes", t => t.Programmes, (t, s) => t with { Programmes = s });
     public static readonly Collection<Group> Groups = new("groups", t => t.Groups, (t, s) => t with { Groups = s });
     public static readonly Collection<Branch> Branches = new("branches", t => t.Branches, (t, s) => t with { Branches = s });
@@ -117,7 +118,7 @@ public static class Collections
 
     public static IReadOnlyList<Collection> All { get; } =
     [
-        Settings, Semesters, Closures, Rooms, Programmes, Groups, Branches, Disciplines, Students,
+        Settings, Semesters, Closures, Rooms, Equipment, Programmes, Groups, Branches, Disciplines, Students,
         Facilitators, Areas, Classes, TimeRules, Sessions, Registers, Absences, Events, Scratch, Requests, Offers,
     ];
 

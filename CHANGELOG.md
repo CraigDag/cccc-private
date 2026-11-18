@@ -77,6 +77,16 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   is shown in orange, the stretch underlined, and the classes say why in their side panel; adding a class
   that would push a group past them says so before you save, and so does Find a time. It is advice about
   the shape of a day, never a clash and never a refusal, and with no limits set it only shows the figures.
+- **What a space has, and what a class cannot be taught without.** List the school's equipment once in
+  People & places ▸ Equipment (rigging points, crash mats, a sprung floor), then tick what each space has
+  and what each class needs. A class in a space without what it needs is in the wrong space: the plan
+  rings it, its side panel says what that space lacks (*Space "Studio A" lacks what "Aerial" needs: Crash
+  mats, Rigging points*), and its ways out are the same time in a space that has it. Choosing a class
+  marks every space without what it needs, and dragging it onto one says so. Typing a piece's name in Find
+  (Ctrl+K) finds the spaces that have it. Adding a class offers the spaces without it last, saying what
+  each lacks, and Find a time and making room look only in spaces that have it and say which they left
+  out. Deleting a piece takes it off every space and class at once, and Undo puts it all back. Nothing
+  needs anything until you say so.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

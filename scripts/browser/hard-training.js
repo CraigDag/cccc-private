@@ -204,13 +204,13 @@ const undo = page => said(page, () => page.click('[data-testid=undo]'), 'Undid: 
   await step('Classes: Acrobatics made moderate takes BA 1 inside the limits and leaves Prep none; Undo puts it back', async () => {
     await admin.goto(B + '/data/classes');
     const row = admin.locator('[data-testid=data-row]:has(.name:text-is("Acrobatics"))');
-    eq(squash(await row.locator('small').innerText()), 'Counted · Technique · Hard', 'its row');
+    eq(squash(await row.locator('small').innerText()), 'Counted · Technique · Hard · needs Crash mats', 'its row');
     await row.click();
     await titled(admin, 'Edit Acrobatics');
     eq(await admin.locator('[data-testid=class-effort]').evaluate(s => s.options[s.selectedIndex].text), 'Hard', 'the form');
     await admin.selectOption('[data-testid=class-effort]', { label: 'Moderate' });
     await admin.click('[data-testid=dialog-ok]');
-    await admin.waitForFunction(() => [...document.querySelectorAll('[data-testid=data-row]')].find(r => r.querySelector('.name').textContent.trim() === 'Acrobatics')?.querySelector('small').textContent.trim() === 'Counted · Technique · Moderate');
+    await admin.waitForFunction(() => [...document.querySelectorAll('[data-testid=data-row]')].find(r => r.querySelector('.name').textContent.trim() === 'Acrobatics')?.querySelector('small').textContent.trim() === 'Counted · Technique · Moderate · needs Crash mats');
     await groupsDay(admin, monday);
     await sumsAre(admin, ['BA 1 3h 30m hard', 'BA 2 3h 30m hard', 'Prep']);
     eq(await marks(admin, 'Prep'), { hard: 0, moderate: 2, over: [] }, 'Prep\'s marks');

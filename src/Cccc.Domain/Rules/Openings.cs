@@ -44,7 +44,11 @@ public sealed record DayNote(DateOnly From, DateOnly To, string Why);
 /// The times found, in the order they come; how many more there were past <see cref="Openings.Most"/>; the
 /// days not looked in (closed, or a week with nothing in it yet); and the days looked in where nothing fits.
 /// </summary>
-public sealed record OpeningsFound(IReadOnlyList<Opening> Openings, int More, IReadOnlyList<DayNote> NotSearched, IReadOnlyList<DayNote> NoTime);
+public sealed record OpeningsFound(IReadOnlyList<Opening> Openings, int More, IReadOnlyList<DayNote> NotSearched, IReadOnlyList<DayNote> NoTime)
+{
+    /// <summary>The spaces asked that were left out because they lack what the class needs (<see cref="Rules.Openings.SpacesFor"/>).</summary>
+    public IReadOnlyList<Guid> Unsuited { get; init; } = [];
+}
 
 /// <summary>
 /// Finding a time: when everybody a class needs is free, and a space for it. WHO is in what SPACE and WHEN,
@@ -52,7 +56,7 @@ public sealed record OpeningsFound(IReadOnlyList<Opening> Openings, int More, IR
 /// away for their part of it, no group it is for has a class then (an open session excepted, which nobody
 /// is required at), none of its students is on another class, nobody it names is at an event named for
 /// them (all of that is <see cref="Busy"/>, which the plan shades a chosen class's day by), and one of its
-/// spaces has no class and no event in it. Everything else the clash check would say
+/// spaces has no class and no event in it, and has what the class needs. Everything else the clash check would say
 /// (a limit, a long gap, outside somebody's hours) is a note beside the time, never a reason to leave it
 /// out: bounds advise, never refuse.
 /// </summary>
@@ -68,6 +72,18 @@ public static class Openings
 
     public const string NothingYet = "Nothing in this week yet, so nothing there can be checked: a week ahead is blank until it is filled";
 
+    /// <summary>
+    /// The spaces asked that the class may go in, in the order asked: each once, still the school's, and with
+    /// everything the class needs (<see cref="Spaces.Suits"/>), since a space without it is the wrong space
+    /// however free it is. The others are left out, and <see cref="Unsuited"/> says which.
+    /// </summary>
+    public static List<Guid> SpacesFor(Timetable t, OpeningAsk ask) =>
+        ask.Spaces.Distinct().Where(r => t.Rooms.Contains(r) && Spaces.Suits(t, ask.Class.ClassId, r)).ToList();
+
+    /// <summary>The spaces asked that are left out for lacking what the class needs, in the order asked.</summary>
+    public static IReadOnlyList<Guid> Unsuited(Timetable t, OpeningAsk ask) =>
+        ask.Spaces.Distinct().Where(r => t.Rooms.Contains(r) && !Spaces.Suits(t, ask.Class.ClassId, r)).ToList();
+
     /// <summary>The class at a date and time, in a space: every part of it moved by as much as the class.</summary>
     public static Session Placed(Session c, DateOnly date, TimeOnly start, Guid? space) =>
         TimeWindows.Shift(c, Week.Span(c.Start, start)) with { Date = date, Start = start, End = start.Add(c.Length), RoomId = space };
@@ -82,7 +98,7 @@ public static class Openings
         Guid? self = t.Sessions.Contains(c.Id) ? c.Id : null;
         var (groups, named) = GroupsOf(t, c);
         var people = c.FacilitatorIds.Where(t.Facilitators.Contains).ToList();
-        var spaces = ask.Spaces.Distinct().Where(t.Rooms.Contains).ToList();
+        var spaces = SpacesFor(t, ask);
         bool needsSpace = ask.Spaces.Count > 0;
         int dayStart = Up(Minutes(ask.DayStart)), dayEnd = Minutes(ask.DayEnd);
 
@@ -153,7 +169,7 @@ public static class Openings
             Close();
             if (!any && first + length <= dayEnd) Note(noTime, day, WhyNoTime(t, c, day, people, first, dayEnd, Fits));
         }
-        return new(found, more, notSearched, noTime);
+        return new(found, more, notSearched, noTime) { Unsuited = Unsuited(t, ask) };
     }
 
     /// <summary>Whether Find a time looks in a day at all for a class naming these groups: a real day, open, in a week with anything in it.</summary>

@@ -37,7 +37,7 @@ public static class MakeRoom
         if (length <= 0 || to < ask.From) return [];
         Guid? self = t.Sessions.Contains(c.Id) ? c.Id : null;
         var named = Openings.Named(t, c);
-        var spaces = ask.Spaces.Distinct().Where(t.Rooms.Contains).ToList();
+        var spaces = Openings.SpacesFor(t, ask);
         bool needsSpace = ask.Spaces.Count > 0;
         int dayStart = Openings.Up(Openings.Minutes(ask.DayStart)), dayEnd = Openings.Minutes(ask.DayEnd);
 
