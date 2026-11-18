@@ -16,6 +16,8 @@
         var s = o.Session;
         var roster = Roster.For(t, s);
         var notes = M.Clashes.Where(c => c.SessionIds.Contains(s.Id)).Select(c => c.Description).ToList();
+        // Ways out only for what moving it could put right: too few facilitators for its students go with it.
+        var movable = M.Clashes.Any(c => c.SessionIds.Contains(s.Id) && c.MovingCanFix);
         <header class="insp-head" style="--c:@(Looks.ColourOf(t, s) ?? "var(--rule)")">
             <div class="insp-when">@Cccc.Domain.Week.ShortDate(s.Date) · @Looks.When(s)</div>
             <h2 data-testid="inspector-title">@Looks.Title(t, s)</h2>
@@ -110,7 +112,7 @@
         </dl>
         @if (o.NeedsCover)
         {
-            <div class="insp-note warn">Everybody teaching it is away, so it needs cover.</div>
+            <div class="insp-note warn" data-testid="inspector-cover-why">@(Staffing.LeftShort(t, o) is { } left ? $"{Looks.Names(t, o.AwayIds)} away, leaving {Staffing.Left(left)}, so it needs cover." : "Everybody teaching it is away, so it needs cover.")</div>
             @if (Editable)
             {
                 <CoverPicks Gap="o" />
@@ -120,7 +122,7 @@
         {
             <div class="insp-note warn" data-testid="inspector-clash">@n</div>
         }
-        @if (notes.Count > 0 && Editable && !M.Scratch)
+        @if (movable && Editable && !M.Scratch)
         {
             var now = W.Clock.TimeOfDay;
             var ahead = WaysOut.StillAhead(s, W.Today, now);

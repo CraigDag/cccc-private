@@ -171,6 +171,15 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   once it is back. An administrator's Now says what is out of use today and how many of this week's
   classes still need it there; pressing it opens it, where *Back in use* says it is. Nothing is moved by itself, and
   Undo takes any of it back. There is no box for why: what happened, and to whom, is not the timetable's.
+- **One facilitator to every so many students.** A class can say, in People & places ▸ Classes, how many
+  students one facilitator may have in it (one to every six on the trampoline). A class with more students
+  than that, counting those on it less anybody recorded away, is ringed on the plan in the clash check's
+  words (*"Trampoline" has 14 students and 2 facilitators: one to every 6 wants 3*), with no ways out, since
+  moving it would not help; somebody there for only part of it counts for their part. When a facilitator on it
+  is away and those left are too few, it needs cover, and the absence form, the class's side panel and the
+  Cover page say why (*needs cover, leaving 1 facilitator for 8 students, one to every 4*). Somebody already
+  teaching all of it is not offered as its cover, since that would add nobody. A class that says no number is
+  never warned, and it warns rather than stops anything.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

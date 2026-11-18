@@ -138,7 +138,7 @@ public class ProjectFileTests
         using var ms = new MemoryStream();
         using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
         {
-            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 8");   // one past this build's
+            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write($"cccc2 {ProjectFiles.Format + 1}");   // one past this build's
             using (var w = new StreamWriter(zip.CreateEntry("project.json").Open())) w.Write("{}");
         }
         var e = Assert.Throws<InvalidDataException>(() => ProjectFiles.Read(ms.ToArray()));
@@ -184,7 +184,7 @@ public class ProjectFileTests
         Assert.Equal(broken, again.OutOfUse.Single());
         using var written = new System.IO.Compression.ZipArchive(new MemoryStream(ProjectFiles.Write(planned)));
         using var r = new StreamReader(written.GetEntry("format.txt")!.Open());
-        Assert.Equal("cccc2 7", r.ReadToEnd());
+        Assert.Equal("cccc2 8", r.ReadToEnd());
     }
 
     /// <summary>

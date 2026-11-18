@@ -75,7 +75,7 @@ public static class AskingWords
     /// </summary>
     public static string After(Timetable t, Guid who, Occurrence now, Occurrence after) =>
         now.Session.CoverIds.Contains(who) ? "covering it: change its cover"
-        : after.NeedsCover ? "needs cover"
+        : after.NeedsCover ? (Staffing.LeftShort(t, after) is { } left ? "needs cover, leaving " + Staffing.Left(left) : "needs cover")
         : Looks.Names(t, after.InTheRoom) is { Length: > 0 } names ? $"{names} still teaching it"
         : "runs";
 }

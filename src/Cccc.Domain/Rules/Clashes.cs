@@ -19,6 +19,8 @@ public enum ClashKind
     GroupHardInARow,
     /// <summary>A group has more hard training in a day than the school's limit.</summary>
     GroupHardInADay,
+    /// <summary>Too few facilitators for its students, one to every so many (<see cref="Staffing"/>): a ring.</summary>
+    ShortStaffed,
 }
 
 /// <summary>A warning about the week. Never a refusal.</summary>
@@ -29,6 +31,12 @@ public sealed record Clash(ClashKind Kind, string Description, ImmutableList<Gui
 
     /// <summary>About how hard a group's day is on the body: advice about the day's shape, never a ring on a class.</summary>
     public bool IsHardTraining => Kind is ClashKind.GroupHardInARow or ClashKind.GroupHardInADay;
+
+    /// <summary>
+    /// Whether moving the class to another space or time could put it right: anything but too few facilitators for its
+    /// students, who go with it wherever it goes. Ways out and Find a time look only at these.
+    /// </summary>
+    public bool MovingCanFix => Kind != ClashKind.ShortStaffed;
 }
 
 public static class Clashes
@@ -134,9 +142,17 @@ public static class Clashes
         foreach (var o in list.Where(o => o.NeedsCover))
         {
             var names = o.AwayIds.Select(id => t.Facilitators[id]?.Name).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+            // Somebody still there, but too few for its students: said, or the line reads as if nobody were.
+            var leaving = Staffing.LeftShort(t, o) is { } left ? ", leaving " + Staffing.Left(left) : "";
             found.Add(new Clash(ClashKind.NeedsCover,
-                $"\"{o.Session.DisplayTitle}\" needs cover — {(names.Count > 0 ? string.Join(", ", names) : "facilitator")} away ({When(o)})", [o.Session.Id]));
+                $"\"{o.Session.DisplayTitle}\" needs cover — {(names.Count > 0 ? string.Join(", ", names) : "facilitator")} away{leaving} ({When(o)})", [o.Session.Id]));
         }
+
+        // Too few facilitators for its students: a ring on the class. One needing cover says it there instead, cover
+        // being what puts it right.
+        foreach (var o in list.Where(o => !o.NeedsCover))
+            if (Staffing.Short(t, o) is { } few)
+                found.Add(new Clash(ClashKind.ShortStaffed, $"\"{o.Session.DisplayTitle}\" has {Staffing.Say(few)} ({When(o)})", [o.Session.Id]));
 
         var splits = Hours.ByFacilitator(t, list);
         foreach (var f in t.Facilitators.OrderBy(f => f.Name, NameOrder.Comparer))

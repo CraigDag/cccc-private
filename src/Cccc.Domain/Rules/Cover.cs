@@ -36,7 +36,7 @@ public static class Cover
         var offered = t.Offers.Where(o => o.SessionId == gap.Session.Id && o.Answer is null).Select(o => o.FacilitatorId).ToHashSet();
         return t.Facilitators.Current()
             .Where(f => !Occurrences.IsAway(t, f.Id, gap.Date, gap.Start, gap.End))
-            .Where(f => !assigned.Contains(f.Id) || !gap.AwayIds.Contains(f.Id))
+            .Where(f => !assigned.Contains(f.Id) || (!gap.AwayIds.Contains(f.Id) && !AddsNobody(gap, f.Id)))
             .Select(f => new CoverCandidate(f, teaching.GetValueOrDefault(f.Id), splits.GetValueOrDefault(f.Id) ?? HoursSplit.None, offered.Contains(f.Id)))
             .OrderBy(c => c.Person.IsGuest ? 1 : 0)
             .ThenBy(c => c.IsFree ? 0 : 1)
@@ -44,5 +44,16 @@ public static class Cover
             .ThenBy(c => c.Week.Total)
             .ThenBy(c => c.Person.Name, NameOrder.Comparer)
             .ToList();
+    }
+
+    /// <summary>
+    /// Whether somebody teaching it, and not away, is in the room already for all that those away would have
+    /// taught, so covering it would add nobody: a class short of facilitators for its students (<see cref="Staffing"/>)
+    /// wants another person, not one it has. Somebody there for part of it can stay on for the rest, and is offered.
+    /// </summary>
+    private static bool AddsNobody(Occurrence gap, Guid id)
+    {
+        var (from, until) = TimeWindows.Assigned(gap.Session, id);
+        return gap.AwayIds.Select(a => TimeWindows.Assigned(gap.Session, a)).All(w => from <= w.Start && w.End <= until);
     }
 }

@@ -30,7 +30,7 @@ Initials for a facilitator are the first letters of the first two words of their
 | Thing | Fields |
 |---|---|
 | **Area** | `Name`, `WeeklyTarget?` — a curriculum strand a class counts towards |
-| **Class** | `Name`, `Colour`, `AreaId?`, `Workload` (Counted, DropIn = "open session", NotCounted), `Effort` (NotSet, Light, Moderate, Hard) and `Needs` (equipment ids), both the rebuild's own |
+| **Class** | `Name`, `Colour`, `AreaId?`, `Workload` (Counted, DropIn = "open session", NotCounted), `Effort` (NotSet, Light, Moderate, Hard), `Needs` (equipment ids) and `StudentsEach?` (how many students one facilitator may have in it), all three the rebuild's own |
 | **TimeRule** | `Name`, `Kind` (Preparation, Break), `ClassIds`, `Percent` (prep), `Minutes` (break), `Days` (break; empty = every day), `Condition` (TeachesBeforeAndAfter, TeachesThatDay) |
 
 ## The timetable

@@ -18,7 +18,8 @@ old app has a class that carries the reasoning, it is named in brackets so the h
   1. a **closure** covering its date and applying to it → *closed* (not drawn by default, never counted);
   2. **cancelled** → *cancelled* (drawn struck through on request, never counted);
   3. **covered** (`CoverIds` not empty) → *runs*, with cover;
-  4. otherwise, if an **absence** leaves part of the session with nobody in it → *needs cover*;
+  4. otherwise, if an **absence** leaves part of the session with nobody in it, or leaves those still in
+     it too few for its students (`Staffing`, below) → *needs cover*;
   5. otherwise → *runs*.
 - **A closure applies to a session** when it is whole-building, or when it names groups and *every*
   group the session is for is among them. A whole-building session is closed only by a whole-building
@@ -26,6 +27,9 @@ old app has a class that carries the reasoning, it is named in brackets so the h
 - **A session needs cover only when every assigned facilitator is away for some stretch of it** — with
   per-person times, when an away person's window is not covered by somebody present
   (`FacilitatorParts.LeavesAGap`). No softer "someone away" marker for a co-taught class, deliberately.
+  **The one other way, the rebuild's own**: its class says how many students one facilitator may have, and
+  somebody away leaves too few for its students (`Staffing`). That is not a softer marker: it is the class
+  being unsafe to run as it stands, which is what cover is for.
 - **A reschedule moves the session and leaves the person still away.** A moved class is checked
   against absences at its new time.
 
@@ -37,7 +41,8 @@ old app has a class that carries the reasoning, it is named in brackets so the h
 - **A person's window** in a session is their own `From`/`Until`, clamped to the session. **A person
   covering takes on the windows of the people they replaced** (their union), widened by their own
   window if they were already assigned (audit finding C2).
-- **A session awaiting cover counts for no facilitator.**
+- **A session awaiting cover counts only for whoever is still in the room for it**: nobody, when everybody on it
+  is away; the one left for their part, when it needs cover for being short of facilitators (`Staffing`).
 
 ## Who is on a class (`SessionRoster`, schema 17)
 
@@ -134,8 +139,9 @@ the moment the roll is called, by the space it has them in, to be ticked off as 
 ## Hours
 
 - **Facilitator hours go to whoever is actually in the room**: cover counts for the substitute; a
-  co-taught session counts in full for both; a session awaiting cover counts for nobody; a person in
-  part of a session counts their part.
+  co-taught session counts in full for both; a session awaiting cover counts for nobody away (the one left,
+  when it is short of facilitators for its students, still counts); a person in part of a session counts
+  their part.
 - **Time rules** (`TimeRules`, schema 18) credit time beyond teaching, set in one place:
   - **Preparation**: each of the rule's classes earns `Percent` of its length (each person's own
     length) for each person in the room, per occurrence, **never divided between co-teachers**.
@@ -188,13 +194,38 @@ All warnings, computed over a week's running occurrences:
   every group) overlaps a narrower one — the same people in two rooms. Raised even for open training
   and lunch, deliberately, and never derived from the lanes.
 - **Needs cover**, **over hours**, **long gap**, as above.
+- **Too few facilitators for its students** (`ShortStaffed`, the rebuild's own, `Staffing`): a ring on the
+  class itself, never naming another, so **no way out is offered for it**, Find a time does not stand it
+  against every time it finds, and making room never counts it (`Clash.MovingCanFix`): wherever it goes,
+  its facilitators go with it.
 - Availability feeds only the clash check.
+
+## Enough facilitators for a class's students (`Staffing`, the rebuild's own)
+
+- **A class can say how many students one facilitator may have in it** (`Class.StudentsEach`, *one to every
+  6* on the trampoline), for the school's safety. Most say nothing, and nothing is said of them; nought is no
+  number, as an empty box is.
+- **Its students** are those on it (`Roster`) less those recorded away for any of it. A class for the whole
+  building has nobody on it, so wants nobody.
+- **It wants one facilitator for every so many, rounded up**: fourteen at one to every six want three.
+- **The facilitators counted are the fewest in the room at once**, each for their own part of it (per-person
+  times), so a co-teacher there only until ten leaves the class short from ten.
+- **Short as planned is a ring** (above), named in the clash check's words: *"Trampoline" has 14 students and
+  2 facilitators: one to every 6 wants 3 (Tue 09:00–11:00)*.
+- **Short because somebody is away, with nobody covering yet, needs cover** (the order above), and says why
+  wherever it says so: the absence form (*needs cover, leaving 1 facilitator for 8 students, one to every
+  4*), the class's side panel (*Bo Lindqvist away, leaving …, so it needs cover.*), the Cover page and the
+  clash check's needs-cover words. Covered, it runs, and is ringed again if it is still short as it stands.
+- **It warns; it never refuses**, like every bound here.
 
 ## Cover (`Cover.Ranked`)
 
 Offer **everybody not away**, ranked rather than filtered: non-guests before guests, free before
 teaching at that time (the week as it runs), then **whoever has offered to cover it** (below), lightest
-week first, then by name. Busy or over a limit is advice, never a refusal.
+week first, then by name. Busy or over a limit is advice, never a refusal. **Somebody teaching it already,
+and in the room for all that those away would have taught, is not offered** (the rebuild's own): covering
+it would add nobody, which is exactly what a class short of facilitators for its students cannot use. One
+there for only part of it can stay on for the rest, and is offered.
 
 **One person for a whole absence** (`CoverAll`, the rebuild's own). Somebody away for more than one class
 needing cover that has not started yet is a **stretch**: one card for all of it, beside each class's own.

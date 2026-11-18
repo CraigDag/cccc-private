@@ -79,12 +79,13 @@ public static class Occurrences
             return new Occurrence(s, OccurrenceState.Runs, null, away,
                 present.Concat(s.CoverIds).Distinct().Where(id => TimeWindows.Length(s, away, id) > TimeSpan.Zero).ToImmutableList());
 
-        if (TimeWindows.LeavesAGap(s, away))
-            return new Occurrence(s, OccurrenceState.NeedsCover, null, away,
-                present.Where(id => TimeWindows.Length(s, away, id) > TimeSpan.Zero).ToImmutableList());
+        var room = present.Where(id => TimeWindows.Length(s, away, id) > TimeSpan.Zero).ToImmutableList();
+        // Somebody away with nobody covering yet needs cover when it leaves a stretch with nobody in the room, or,
+        // where its class says how many students one facilitator may have, too few for its students (Staffing).
+        if (TimeWindows.LeavesAGap(s, away) || (!away.IsEmpty && Staffing.Short(t, s, away, room) is not null))
+            return new Occurrence(s, OccurrenceState.NeedsCover, null, away, room);
 
-        return new Occurrence(s, OccurrenceState.Runs, null, away,
-            present.Where(id => TimeWindows.Length(s, away, id) > TimeSpan.Zero).ToImmutableList());
+        return new Occurrence(s, OccurrenceState.Runs, null, away, room);
     }
 
     public static bool IsAway(Timetable t, Guid facilitatorId, DateOnly date, TimeOnly from, TimeOnly until) =>

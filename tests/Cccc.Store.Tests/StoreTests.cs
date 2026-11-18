@@ -425,10 +425,11 @@ public class ProjectStoreTests
             ("equipment", 5),            // with what a space has and a class needs, fields on rooms and classes
             ("spaceAsks", 6),
             ("outOfUse", 7),
+            ("studentsEach", 8),         // how many students one facilitator may have, a field on classes
         ];
         string[] first = ["settings", "semesters", "closures", "rooms", "programmes", "groups", "branches", "disciplines",
                           "students", "facilitators", "areas", "classes", "timeRules", "sessions", "registers", "absences", "events"];
-        Assert.Equal(first.Concat(brought.Where(b => b.What != "formerSince").Select(b => b.What)).Order(StringComparer.Ordinal),
+        Assert.Equal(first.Concat(brought.Where(b => b.What is not ("formerSince" or "studentsEach")).Select(b => b.What)).Order(StringComparer.Ordinal),
             Collections.All.Select(c => c.Name).Order(StringComparer.Ordinal));
         Assert.Equal(ProjectStore.FormatVersion, brought.Max(b => b.Format));
     }

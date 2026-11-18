@@ -82,7 +82,8 @@ command (`cccc backup <path>`), so the existing rclone off-site sync keeps worki
 ## Export and import
 
 - **Export** a project as `.cccc2` — a zip holding `project.json` (the state) and `format.txt`, whose
-  marker is `cccc2 7` since equipment out of use (`cccc2 6` added asking for a space, `cccc2 5` equipment, `cccc2 4` what facilitators
+  marker is `cccc2 8` since how many students one facilitator may have in a class (`cccc2 7` added equipment out
+  of use, `cccc2 6` asking for a space, `cccc2 5` equipment, `cccc2 4` what facilitators
   ask, `cccc2 3` former classes, spaces and facilitators, `cccc2 2` the Scratch Week). Older files still
   read, with nothing asked, nothing former and, from `cccc2 1`, an empty Scratch Week. **The marker is
   the store's own format** (a test holds `ProjectFiles.Format` to `ProjectStore.FormatVersion`), so a

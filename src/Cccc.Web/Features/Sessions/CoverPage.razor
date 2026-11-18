@@ -25,7 +25,7 @@
 }
 <WeekNav Monday="V.Monday" Today="W.Today" Title="Cover" Go="d => V.GoTo(d)" />
 <FollowingNotice />
-<p class="hint">A class needs cover when every facilitator on it is away. Cover stands in for whoever is away and leaves a co-teacher on it. Press a name to give them the class; Undo takes it back.</p>
+<p class="hint">A class needs cover when every facilitator on it is away, or when those left are too few for its students (a class can say how many students one facilitator may have, in People &amp; places ▸ Classes). Cover stands in for whoever is away and leaves a co-teacher on it. Press a name to give them the class; Undo takes it back.</p>
 
 <h2 class="now-section">Needs cover · @needed.Count</h2>
 @if (needed.Count == 0)
@@ -47,7 +47,7 @@
         <article class="cover-card" style="--c:@(Looks.ColourOf(t, o.Session) ?? "var(--rule)")" data-testid="cover-gap" @key="o.Session.Id">
             <div class="cc-when">@Looks.DayHeading(o.Date) · @Looks.When(o.Session)</div>
             <button type="button" class="cc-title" @onclick="() => Open(o.Session.Id)" disabled="@(!W.Access.MayEdit)">@Looks.Title(t, o.Session)</button>
-            <div class="cc-facts">@Looks.Audience(t, o.Session)@(Looks.Room(t, o.Session) is { Length: > 0 } r ? " · " + r : "") · away: <b>@Looks.Names(t, o.AwayIds)</b></div>
+            <div class="cc-facts">@Looks.Audience(t, o.Session)@(Looks.Room(t, o.Session) is { Length: > 0 } r ? " · " + r : "") · away: <b>@Looks.Names(t, o.AwayIds)</b>@if (Staffing.LeftShort(t, o) is { } left) {<span data-testid="cover-left">@(", leaving " + Staffing.Left(left))</span>}</div>
             @if (ended)
             {
                 <div class="cc-past">This week has ended, so the class does not change.</div>

@@ -233,6 +233,13 @@ public sealed record Class : IRetirable
 
     /// <summary>The equipment it cannot be taught without (<see cref="Equipment"/>), by id: a space without it is the wrong space.</summary>
     public ImmutableList<Guid> Needs { get; init; } = [];
+
+    /// <summary>
+    /// How many students one facilitator may have in it, for the school's safety (one to every six on the trampoline):
+    /// a class with more students than its facilitators may have is warned of (<see cref="Rules.Staffing"/>). None, as
+    /// for most classes, says nothing.
+    /// </summary>
+    public int? StudentsEach { get; init; }
 }
 
 public enum TimeRuleKind { Preparation, Break }

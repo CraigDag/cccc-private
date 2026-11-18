@@ -69,7 +69,7 @@ public static class WaysOut
     {
         var near = day.Where(o => o.Session.Id != s.Id && o.Date == s.Date && o.Start < s.End && s.Start < o.End)
             .Append(Occurrences.Resolve(t, s)).ToList();
-        return Clashes.Find(t, near).Where(c => c.IsRing && c.SessionIds.Contains(s.Id)).ToList();
+        return Clashes.Find(t, near).Where(c => c.IsRing && c.MovingCanFix && c.SessionIds.Contains(s.Id)).ToList();
     }
 
     /// <summary>

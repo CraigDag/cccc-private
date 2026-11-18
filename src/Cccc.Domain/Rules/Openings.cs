@@ -224,7 +224,8 @@ public static class Openings
     private static List<OpeningNote> NotesFor(Timetable t, Session placed, Guid? self, IReadOnlyList<Guid> people,
         IReadOnlyList<Guid> groups, bool forStudents, IReadOnlyList<Occurrence> day, IReadOnlyList<EventOnDay> seen)
     {
-        var against = Clashes.CausedBy(t, TimeWindows.Normalise(placed)).Select(x => new OpeningNote(x.Description, false)).ToList();
+        // Too few facilitators for its students would be said at every time alike, so it is said by the class, not here.
+        var against = Clashes.CausedBy(t, TimeWindows.Normalise(placed)).Where(x => x.MovingCanFix).Select(x => new OpeningNote(x.Description, false)).ToList();
         foreach (var e in seen.Where(e => e.Overlaps(placed.Start, placed.End)))
         {
             var who = e.Event.Audience;

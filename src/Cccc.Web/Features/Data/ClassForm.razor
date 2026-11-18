@@ -28,10 +28,14 @@
                 }
             </select>
         </label>
+        <label class="field"><span>Students to each facilitator, at most</span>
+            <input type="number" min="1" step="1" inputmode="numeric" placeholder="Any number" @bind="_each" data-testid="class-each" />
+        </label>
         <EquipmentTicks Chosen="_needs" Label="What it cannot be taught without" TestId="class-needs" />
         <p class="hint">Counted: required, part of a student's hours. Open session: optional (open training), can be hidden from the week. Not counted: on the timetable, never a student's hours (lunch).
             A Hard class is part of a group's hard training: the plan shows each group's, and warns past the school's limits in Settings.
             In a space without what it cannot be taught without, it is in the wrong space, and the plan says so.
+            With a number of students to each facilitator, a class with more students than its facilitators may have is warned of, and one where somebody is away and too few are left needs cover.
         @if (_old is not null)
         {
             <span>Renaming a class renames the classes on the timetable still carrying its old name, in weeks that have not ended.</span>
@@ -68,19 +72,20 @@
     private Workload _workload;
     private Effort _effort;
     private HashSet<Guid> _needs = [];
+    private int? _each;
 
     protected override void OnInitialized()
     {
         _old = Id is { } id ? W.T.Classes[id] : null;
         if (_old is null) return;
-        _name = _old.Name; _colour = _old.Colour; _area = _old.AreaId?.ToString() ?? ""; _workload = _old.Workload; _effort = _old.Effort; _needs = [.. _old.Needs];
+        _name = _old.Name; _colour = _old.Colour; _area = _old.AreaId?.ToString() ?? ""; _workload = _old.Workload; _effort = _old.Effort; _needs = [.. _old.Needs]; _each = _old.StudentsEach;
     }
 
     private void Save()
     {
         // In the school's order, and only what it still lists: a piece taken off the list since is nobody's.
         var needs = W.T.Equipment.Where(e => _needs.Contains(e.Id)).OrderBy(e => e.Name, NameOrder.Comparer).Select(e => e.Id);
-        var c = (_old ?? new Class()) with { Name = _name.Trim(), Colour = _colour, AreaId = Guid.TryParse(_area, out var a) ? a : null, Workload = _workload, Effort = _effort, Needs = [.. needs] };
+        var c = (_old ?? new Class()) with { Name = _name.Trim(), Colour = _colour, AreaId = Guid.TryParse(_area, out var a) ? a : null, Workload = _workload, Effort = _effort, Needs = [.. needs], StudentsEach = _each is > 0 ? _each : null };
         if (W.Commit(t => Edits.PutClass(t, c, W.Today))) D.Close();
     }
 

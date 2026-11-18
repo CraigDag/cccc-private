@@ -244,6 +244,12 @@ More has it.
   classes it is about, with no ring and no ways out. On a phone the figure sits under the group's name.
   People & places ▸ Classes says how hard each class is; ▸ Settings holds the limits and the rest (*2*,
   *1:30*, *90m*; empty is no limit), and Reports counts the week's warnings beside the hours target.
+- **One facilitator to every so many students** (`Staffing`): People & places ▸ Classes has *Students to each
+  facilitator, at most* (empty for most), said in the list (*· one facilitator to every 4 students*). A class
+  short of facilitators for its students is ringed like any clash, its side panel saying so in the clash
+  check's words, and offers **no ways out**, since moving it would not help. One short because somebody is
+  away needs cover, and its side panel says why (*Bo Lindqvist away, leaving 1 facilitator for 8 students,
+  one to every 4, so it needs cover.*), as does the absence form beside each class it takes them off.
 - **Equipment**, on the Spaces lens: choosing a class that needs any marks each space without it, a faint
   wash along its day and the lack under its name (*without Rigging points*), dragging it onto one says so
   over the class (*Studio A without Crash mats and Rigging points*), and the side panel says what the class
@@ -290,7 +296,9 @@ A card a class that needs cover, and under each, **who could take it**: the firs
 state then and their hours that week. Pressing one gives them the class at once, one change that Undo
 takes back, because choosing cover is a decision made fifty times a term and a form for each was the
 slow part. *All 6…* opens the full list with a note. The same buttons sit in the plan's side panel for a
-class that needs cover, so it is settled where it was noticed. Below: what is covered (*Change…*,
+class that needs cover, so it is settled where it was noticed. A class needing cover because those left
+are too few for its students says so on its card (*away: Bo Lindqvist, leaving 1 facilitator for 8
+students, one to every 4*), and the one left is not among who could take it. Below: what is covered (*Change…*,
 *Take it off*), and **away this week** as a grid of days, a name a row, a whole day filled and part of
 a day hatched with its times. Busy people are still offered: busy is advice, never a refusal.
 Whoever has offered to cover it says *Offered*, and ranks first among the free; pressing them is the

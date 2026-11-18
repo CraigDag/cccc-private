@@ -32,10 +32,11 @@ public sealed class ProjectStore
     /// replay one as a collection it has never heard of. 5 added equipment (what a space has, what a class
     /// needs): a build of format 4 would replay a piece as a collection it has never heard of, and save a space
     /// or a class back without what it has or needs. 6 added asking for a space: a build of format 5 would
-    /// replay one as a collection it has never heard of. 7 added equipment out of use, the same. An older store has
-    /// none of these and opens as it is.
+    /// replay one as a collection it has never heard of. 7 added equipment out of use, the same. 8 added how many
+    /// students one facilitator may have in a class: a build of format 7 would save a class back without it. An older
+    /// store has none of these and opens as it is.
     /// </summary>
-    public const int FormatVersion = 7;
+    public const int FormatVersion = 8;
     public const int SnapshotEvery = 200;
     public static readonly TimeSpan Retention = TimeSpan.FromDays(30);
 

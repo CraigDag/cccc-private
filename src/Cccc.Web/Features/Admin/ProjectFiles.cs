@@ -19,12 +19,12 @@ public static class ProjectFiles
     /// empty one. 3 added former classes, spaces and facilitators, which a build of format 2 would read as in
     /// use; a file of format 2 has nothing former. 4 added what facilitators ask (asking to be away, offering
     /// to cover), which a build of format 3 would drop without a word; a file of format 3 has none. 5 added
-    /// equipment (what a space has, what a class needs), 6 asking for a space and 7 equipment out of use,
-    /// which a build before each would drop the same way. Builds from equipment until 6 wrote 4 while saving equipment: such a file opens
+    /// equipment (what a space has, what a class needs), 6 asking for a space, 7 equipment out of use and 8 how many
+    /// students one facilitator may have in a class, which a build before each would drop the same way. Builds from equipment until 6 wrote 4 while saving equipment: such a file opens
     /// here as it is. This moves with the store's format (<see cref="Cccc.Store.ProjectStore.FormatVersion"/>),
     /// since both are the timetable written down.
     /// </summary>
-    public const int Format = 7;
+    public const int Format = 8;
     private const string Marker = "cccc2 ";
 
     public static byte[] Write(Timetable t)
