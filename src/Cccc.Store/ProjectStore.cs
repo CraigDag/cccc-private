@@ -501,7 +501,14 @@ public sealed class ProjectStore
             }
         }
         tx.Commit();
-        using (var v = Connect()) Exec(v, "VACUUM;");
+        using (var v = Connect())
+        {
+            Exec(v, "VACUUM;");
+            // The store keeps a write-ahead log: until a checkpoint, the vacuumed pages are only in the -wal file,
+            // and the database file and the log both still hold what was rewritten. Move them into the database
+            // and empty the log, so what was erased is in neither file.
+            Exec(v, "PRAGMA wal_checkpoint(TRUNCATE);");
+        }
         return changed;
     }
 

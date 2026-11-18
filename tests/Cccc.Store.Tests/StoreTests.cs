@@ -256,7 +256,9 @@ public class ProjectStoreTests
         live.Settle();
         store.Rewrite(id, json => json.Replace("Zebedee Unique", "[erased]"), label => label.Replace("Zebedee Unique", "[erased]"));
         Assert.Equal("Changed [erased]", store.ChangesSince(id, 0).Single().Batch.Label);
-        Assert.DoesNotContain("Zebedee", File.ReadAllBytes(store.DatabasePath).Select(b => (char)b).Aggregate(new System.Text.StringBuilder(), (sb, c) => sb.Append(c)).ToString());
+        // Nowhere on disk: not in the database file, and not in its write-ahead log either.
+        foreach (var file in new[] { store.DatabasePath, store.DatabasePath + "-wal" }.Where(File.Exists))
+            Assert.DoesNotContain("Zebedee", File.ReadAllBytes(file).Select(b => (char)b).Aggregate(new System.Text.StringBuilder(), (sb, c) => sb.Append(c)).ToString());
     }
 
     /// <summary>
