@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace Cccc.Domain.Model;
 
 /// <summary>What an administrator said to something a facilitator asked or offered.</summary>
@@ -50,3 +52,48 @@ public sealed record CoverOffer : IEntity
     public Answer? Answer { get; init; }
     public DateTimeOffset? AnsweredAt { get; init; }
 }
+
+/// <summary>
+/// A facilitator asking for a space at a time: extra practice with a group, a rehearsal, an act to work on. A
+/// list of its own, never a class, so nothing that counts classes (hours, clashes, registers, the screens in
+/// the corridor) can read one by accident: it is on the timetable only once an administrator says yes, which
+/// adds the class it asks for (<see cref="SessionId"/>), taught by whoever asked. What it is called is the
+/// class's name as everybody will read it, so the form says so, and there is no box for why.
+/// </summary>
+public sealed record SpaceAsk : IEntity
+{
+    public Guid Id { get; init; } = Guid.NewGuid();
+    public Guid FacilitatorId { get; init; }
+    public DateOnly Date { get; init; }
+    public TimeOnly Start { get; init; }
+    public TimeOnly End { get; init; }
+    public Guid RoomId { get; init; }
+
+    /// <summary>Who it is for, as a class says it: a group, several, or the whole building.</summary>
+    public Audience Audience { get; init; } = Audience.Everyone;
+
+    /// <summary>A class from the catalogue, when it is one: its name, and whether it counts, come with it.</summary>
+    public Guid? ClassId { get; init; }
+
+    /// <summary>What it is called; empty when a class gives it its name.</summary>
+    public string Title { get; init; } = "";
+
+    public DateTimeOffset AskedAt { get; init; }
+    public Answer? Answer { get; init; }
+    public DateTimeOffset? AnsweredAt { get; init; }
+
+    /// <summary>The class a yes added.</summary>
+    public Guid? SessionId { get; init; }
+
+    /// <summary>
+    /// The class it asks for, as a yes adds it and the add form would: whoever asked teaching it, in that space,
+    /// then, called what they called it or else by its class's name as it is now.
+    /// </summary>
+    public Session AsSession(Timetable t, Guid id) => new()
+    {
+        Id = id, Date = Date, Start = Start, End = End, RoomId = RoomId, Audience = Audience, ClassId = ClassId,
+        Title = Title.Trim() is { Length: > 0 } own ? own : t.Classes.Find(ClassId)?.Name ?? "",
+        Facilitators = ImmutableList.Create(new Assignment(FacilitatorId)),
+    };
+}
+

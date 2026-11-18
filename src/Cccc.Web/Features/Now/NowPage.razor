@@ -43,6 +43,7 @@
     // What facilitators have asked an administrator: can't come, and can cover. Only an administrator answers.
     var requests = W.Access.MayAnswerAsking ? Asking.RequestsWaiting(t, today) : [];
     var offers = W.Access.MayAnswerAsking ? Asking.OffersWaiting(t, today) : [];
+    var spaceAsks = W.Access.MayAnswerAsking ? Asking.SpaceAsksWaiting(t, today, W.Clock.TimeOfDay) : [];
 }
 
 <div class="now" data-testid="now-page" data-minute="@Cccc.Domain.Week.Hm(new TimeOnly(local.Hour, local.Minute))">
@@ -235,7 +236,7 @@
         </section>
 
         <aside class="now-needs" aria-label="Today needs" data-testid="today-needs">
-            @if (requests.Count + offers.Count > 0)
+            @if (requests.Count + offers.Count + spaceAsks.Count > 0)
             {
                 <h2 class="now-section">Waiting for your answer</h2>
                 <div class="now-asked" data-testid="waiting-answer">
@@ -252,6 +253,13 @@
                         <button type="button" class="need" @onclick="() => Answer(null, o.Id)" data-testid="ask" data-kind="offer">
                             <span class="need-kind">Can cover</span><b>@(t.Facilitators[o.FacilitatorId]?.Name)</b>
                             <small>@Looks.Title(t, s), @Looks.WhenWithDay(s)</small></button>
+                    }
+                    @foreach (var a in spaceAsks)
+                    {
+                        int runsInto = Asking.WhatAYesClashesWith(t, a).Count;
+                        <button type="button" class="need @(runsInto > 0 ? "warn" : "")" @onclick="() => AnswerSpace(a.Id)" data-testid="ask" data-kind="space">
+                            <span class="need-kind">Space</span><b>@(t.Facilitators[a.FacilitatorId]?.Name)</b>
+                            <small>@AskingWords.Title(t, a) · @(t.Rooms.Find(a.RoomId)?.Name ?? "a space that has gone") · @AskingWords.When(a)@(runsInto > 0 ? " · " + Looks.Count(runsInto, "clash", "clashes") : "")</small></button>
                     }
                 </div>
             }
@@ -354,6 +362,8 @@
     {
         if (W.Project is { } p) Seen.GotIt(p.Id, me, items.ToList(), read);
     }
+
+    private void AnswerSpace(Guid id) => D.Show<AnswerForm>(new Dictionary<string, object?> { [nameof(AnswerForm.SpaceAskId)] = id });
 
     private void Answer(Guid? request, Guid? offer) => D.Show<AnswerForm>(new Dictionary<string, object?>
     {

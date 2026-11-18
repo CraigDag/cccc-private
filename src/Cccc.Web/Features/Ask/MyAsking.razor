@@ -1,6 +1,7 @@
-@* My week's part of asking: what this facilitator has asked and offered, with where each stands, and the
-   classes needing cover in the next two weeks while they are free, each with one press to offer. Nothing
-   is offered while the timetable follows the current app, where nothing here could be answered. *@
+@* My week's part of asking: what this facilitator has asked and offered, with where each stands (a space
+   asked for, after a yes, as its class is now), and the classes needing cover in the next two weeks while
+   they are free, each with one press to offer. Nothing is offered while the timetable follows the current
+   app, where nothing here could be answered. *@
 @using Cccc.Web.Features.Week
 @{
     var t = W.T;
@@ -9,13 +10,14 @@
     var asked = t.Requests.Where(r => r.FacilitatorId == Me && r.To >= today).OrderBy(r => r.From).ThenBy(r => r.AskedAt).ToList();
     var offers = t.Offers.Where(o => o.FacilitatorId == Me && t.Sessions[o.SessionId] is { } s && s.Date >= today)
         .OrderBy(o => t.Sessions[o.SessionId]!.Date).ThenBy(o => t.Sessions[o.SessionId]!.Start).ToList();
+    var spaces = t.SpaceAsks.Where(a => a.FacilitatorId == Me && a.Date >= today).OrderBy(a => a.Date).ThenBy(a => a.Start).ThenBy(a => a.AskedAt).ToList();
     // A class offered for once, answered or not, is said beside the offer rather than offered again.
     var offered = offers.Select(o => o.SessionId).ToHashSet();
     var could = W.Access.MayEditSomething
         ? Asking.CouldCover(t, Me, today, now).Where(o => !offered.Contains(o.Session.Id)).ToList()
         : [];
 }
-@if (asked.Count + offers.Count > 0)
+@if (asked.Count + offers.Count + spaces.Count > 0)
 {
     <div class="section" data-testid="my-asking">
         <h2>Asked</h2>
@@ -42,6 +44,18 @@
                     @if (state == OfferState.Waiting && o.Answer is null && W.Access.MayEditSomething)
                     {
                         <button type="button" class="btn quiet" @onclick="() => TakeBackOffer(o.Id)" data-testid="take-back">Take back</button>
+                    }
+                </li>
+            }
+            @foreach (var a in spaces)
+            {
+                var state = Asking.StateOf(a, today, now);
+                <li class="asked @(state == SpaceAskState.NotThisTime ? "no" : "")" data-testid="my-space-ask" data-state="@state">
+                    <span class="grow"><b>Space</b> @(t.Rooms.Find(a.RoomId)?.Name ?? "A space that has gone"): @AskingWords.Title(t, a), @AskingWords.When(a)</span>
+                    <small data-testid="asked-state">@AskingWords.State(t, a, today, now)</small>
+                    @if (state == SpaceAskState.Waiting && W.Access.MayEditSomething)
+                    {
+                        <button type="button" class="btn quiet" @onclick="() => TakeBackSpace(a.Id)" data-testid="take-back">Take back</button>
                     }
                 </li>
             }
@@ -72,6 +86,8 @@
     private void TakeBackRequest(Guid id) => W.Commit(t => Edits.TakeBackRequest(t, id, W.Access.Asking));
 
     private void TakeBackOffer(Guid id) => W.Commit(t => Edits.TakeBackOffer(t, id, W.Access.Asking));
+
+    private void TakeBackSpace(Guid id) => W.Commit(t => Edits.TakeBackSpaceAsk(t, id, W.Access.Asking));
 
     private void Offer(Guid sessionId) => W.Commit(t => Edits.OfferCover(t, sessionId, W.Access.Asking, W.Today, W.Clock.Now));
 }

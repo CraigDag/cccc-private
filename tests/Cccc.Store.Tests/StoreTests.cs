@@ -412,6 +412,7 @@ public class ProjectStoreTests
             ("formerSince", 3),          // a field on classes, spaces and facilitators, not a collection
             ("requests", 4), ("offers", 4),
             ("equipment", 5),            // with what a space has and a class needs, fields on rooms and classes
+            ("spaceAsks", 6),
         ];
         string[] first = ["settings", "semesters", "closures", "rooms", "programmes", "groups", "branches", "disciplines",
                           "students", "facilitators", "areas", "classes", "timeRules", "sessions", "registers", "absences", "events"];

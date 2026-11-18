@@ -218,9 +218,24 @@ A facilitator asks for themselves, through the account linked to them, and an ad
   the same yes); a no records nothing on the timetable. **Whether an offer still waits is worked out from
   the class** (`Asking.StateOf`): covered by anybody, however, it waits for nobody; a class gone or passed,
   passed.
+- **Can I have a space?** (`SpaceAsk`) — a time still to come (snapped to 15 minutes, as the add form
+  snaps it), a space, who it is for (groups, or the whole building) and what it is (a class, or a name of
+  its own). Before sending, the coach is shown what a yes would run into (`Asking.WhatAYesClashesWith`:
+  the clash check asked about the class it would add, so only what that class causes): the space in use
+  or booked, them teaching or away, a group with a class then. **Advice, never a reason not to ask.** The
+  administrator sees the same, and the other spaces free then (`Asking.OtherSpacesFree`: not in use and
+  not booked, those with what the class needs first), and may put it in one of those instead. A yes adds
+  the class as the add form would (`SpaceAsk.AsSession`): taught by whoever asked, for whoever it was asked
+  for, called by its own name or else its class's. From then on it is a class like any other, changed on
+  the plan, and what they asked says where it is now. A no adds nothing. An ask waits until its start;
+  taken back only by whoever asked, while nobody has answered. Its name is what everybody reads once it
+  is a yes, on the screens in the building too, so the form says never to name a student or say anything
+  about anybody's health. Deleting a class leaves the asks waiting for it with its name and no class; a
+  merge points them at the class it merged into; deleting a group takes it off them, and a yes is refused
+  once nobody it was for is left.
 - **Nothing waits for somebody no longer on the timetable** (gone, or kept as former): an answer to them
   is refused, so asking for one would be a dead end. Removing a facilitator removes everything they asked
-  and offered; a yes's absence stays as absences do.
+  and offered; a yes's absence or class stays as absences and classes do.
 
 ## When what a class needs is elsewhere (`Busy`)
 
@@ -522,7 +537,8 @@ Copy week copies, so nothing that happened that week travels, because a week ahe
 somebody fills it; registers and every other week stay with this year. **Events and absences are dated
 to the calendar and never move**: one with a date in the new year is kept (an audition already booked,
 a leave across the summer), the rest stay with this year, and **asking to be away** follows its days the
-same way; an offer to cover was for one of this year's classes, so none carries over. **Closures are a
+same way; an offer to cover was for one of this year's classes, so none carries over. **Asking for a
+space** follows its day while it waits for an answer; answered, it was this year's. **Closures are a
 tick, off by default**: kept,
 each moves with its semester, so week-numbered ones land right and Christmas and Easter do not.
 `NextYear.For` is the plan the form shows and `Make` carries it out, so the two cannot describe

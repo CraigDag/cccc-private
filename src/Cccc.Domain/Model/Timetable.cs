@@ -77,6 +77,12 @@ public sealed record Timetable
     /// <summary>Facilitators offering to cover a class that needs it. See <see cref="Rules.Asking"/>.</summary>
     public EntitySet<CoverOffer> Offers { get; init; } = EntitySet<CoverOffer>.Empty;
 
+    /// <summary>
+    /// Facilitators asking for a space at a time: a list of its own, so nothing that counts classes can read one
+    /// before a yes adds the class it asks for. See <see cref="Rules.Asking"/>.
+    /// </summary>
+    public EntitySet<SpaceAsk> SpaceAsks { get; init; } = EntitySet<SpaceAsk>.Empty;
+
     public static Timetable Empty { get; } = new();
 
     /// <summary>The sessions dated Monday to Sunday of this week. A week nobody filled is blank.</summary>

@@ -115,11 +115,14 @@ public static class Collections
     /// <summary>Facilitators saying they cannot come (<see cref="Rules.Asking"/>), never absences until a yes records one.</summary>
     public static readonly Collection<TimeOffRequest> Requests = new("requests", t => t.Requests, (t, s) => t with { Requests = s });
     public static readonly Collection<CoverOffer> Offers = new("offers", t => t.Offers, (t, s) => t with { Offers = s });
+    /// <summary>Facilitators asking for a space (<see cref="Rules.Asking"/>), never classes until a yes adds one.</summary>
+    public static readonly Collection<SpaceAsk> SpaceAsks = new("spaceAsks", t => t.SpaceAsks, (t, s) => t with { SpaceAsks = s });
 
     public static IReadOnlyList<Collection> All { get; } =
     [
         Settings, Semesters, Closures, Rooms, Equipment, Programmes, Groups, Branches, Disciplines, Students,
         Facilitators, Areas, Classes, TimeRules, Sessions, Registers, Absences, Events, Scratch, Requests, Offers,
+        SpaceAsks,
     ];
 
     private static readonly Dictionary<string, Collection> ByName = All.ToDictionary(c => c.Name);

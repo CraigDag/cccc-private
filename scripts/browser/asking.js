@@ -36,8 +36,10 @@ const lines = (page, sel) => page.$$eval(sel, ls => ls.map(l => l.textContent.re
 // with a space between, as a screen reader says it, not run together as one textContent is.
 const parts = (page, sel) => page.$$eval(sel,
   ls => ls.map(l => [...l.children].map(c => c.textContent.replace(/\s+/g, ' ').trim()).join(' ')));
-// Waiting for an answer on Now, as an administrator reads it.
+// Waiting for an answer on Now, as an administrator reads it. Finn's ask for a space (space-ask.js) waits
+// throughout, so "nothing waits" here means no request and no offer.
 const waiting = page => parts(page, '[data-testid=waiting-answer] [data-testid=ask]');
+const SAID = "[data-testid=waiting-answer] [data-testid=ask]:not([data-kind=space])";
 async function myWeek(page) {
   await page.goto(B + '/my-week');
   await page.waitForSelector('[data-testid=cant-come]');
@@ -59,7 +61,7 @@ async function nowPage(page) {
   await coach.waitForSelector('[data-testid=timeline]');
   const today = new Date(await coach.getAttribute('[data-testid=timeline]', 'data-day') + 'T00:00:00Z');
   const monday = addDays(today, -((today.getUTCDay() + 6) % 7));
-  const nextMonday = addDays(monday, 7), nextTuesday = addDays(monday, 8), thursday = addDays(monday, 3);
+  const nextMonday = addDays(monday, 7), nextTuesday = addDays(monday, 8), thursday = addDays(monday, 3), nextThursday = addDays(monday, 10);
   const beforeThursday = today <= thursday;
   log('     today ' + iso(today) + '; asking to be away on ' + short(nextMonday));
 
@@ -105,6 +107,7 @@ async function nowPage(page) {
       `Can't come Cleo Marchetti ${short(nextTuesday)}, all day · 1 class`,
     ];
     if (beforeThursday) expect.push(`Can cover Dag Øverlie Acrobatics, ${short(thursday)}, 09:00–11:00`);
+    expect.push(`Space Finn Aalborg-Reyes Duo act rehearsal · Studio B · ${short(nextThursday)}, 14:00–15:30`);
     if (JSON.stringify(asks) !== JSON.stringify(expect)) throw new Error('Now lists ' + JSON.stringify(asks));
     await admin.screenshot({ path: OUT + 'asking-now.png' });
   });
@@ -164,7 +167,7 @@ async function nowPage(page) {
     if (!away.includes('Away: Ada Brightwater')) throw new Error('the form says ' + JSON.stringify(away));
     await admin.click('[data-testid=dialog-ok]');
     await admin.waitForSelector('[data-testid=dialog]', { state: 'detached' });
-    await admin.waitForSelector('[data-testid=waiting-answer]', { state: 'detached' });
+    await admin.waitForSelector(SAID, { state: 'detached' });
     const said = await toasts(admin);
     if (!said.some(t => t.startsWith('Said yes to an offer to cover Acrobatics'))) throw new Error('the messages say ' + JSON.stringify(said));
   });
@@ -210,7 +213,8 @@ async function nowPage(page) {
     const said = await toasts(admin);
     if (!said.some(t => t.startsWith('Said yes to an offer to cover Aerial'))) throw new Error('the messages say ' + JSON.stringify(said));
     await nowPage(admin);
-    if (await admin.locator('[data-testid=waiting-answer]').count()) throw new Error('Now still waits for ' + JSON.stringify(await waiting(admin)));
+    await admin.waitForSelector('[data-testid=waiting-answer] [data-kind=space]');
+    if (await admin.locator(SAID).count()) throw new Error('Now still waits for ' + JSON.stringify(await waiting(admin)));
     await myWeek(coach);
     await coach.waitForFunction(() => document.querySelector('[data-testid=my-offer] [data-testid=asked-state]')?.textContent.trim() === 'Yes: you are covering it');
     // And the week she is covering in says so: next week's Aerial is on her week now.

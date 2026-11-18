@@ -36,6 +36,42 @@ public class AskingWordsTests
     }
 
     [Fact]
+    public void AnAskForASpaceSaysWhenAndWhatItIsCalledAndAfterAYesWhereTheClassIsNow()
+    {
+        var t = SampleSchool.Create(Monday, Monday);
+        var a = t.SpaceAsks.Single();
+        var eight = new TimeOnly(8, 0);
+        Assert.Equal(("Thu 14 Mar, 14:00–15:30", "Duo act rehearsal"), (AskingWords.When(a), AskingWords.Title(t, a)));
+        // A class from the catalogue with no name of its own is called by the class.
+        var acro = t.Classes.Single(c => c.Name == "Acrobatics");
+        Assert.Equal("Acrobatics", AskingWords.Title(t, a with { Title = " ", ClassId = acro.Id }));
+
+        Assert.Equal("Waiting for an answer", AskingWords.State(t, a, Monday, eight));
+        Assert.Equal("Passed without an answer", AskingWords.State(t, a, a.Date, new(14, 0)));
+        var no = Apply.Batch(t, Edits.AnswerSpaceAsk(t, a.Id, Answer.No, AskingReader.Administrator, Monday, eight, DateTimeOffset.UnixEpoch));
+        Assert.Equal("Not this time", AskingWords.State(no, no.SpaceAsks[a.Id]!, Monday, eight));
+        var yes = Apply.Batch(t, Edits.AnswerSpaceAsk(t, a.Id, Answer.Yes, AskingReader.Administrator, Monday, eight, DateTimeOffset.UnixEpoch));
+        var booked = yes.SpaceAsks[a.Id]!;
+        Assert.Equal("Yes: it is on the timetable", AskingWords.State(yes, booked, Monday, eight));
+        // Moved since, it says where it is now; taken off since, it says so.
+        var s = yes.Sessions[booked.SessionId!.Value]!;
+        var gym = t.Rooms.Single(r => r.Name == "Gym");
+        var moved = Apply.Batch(yes, Edits.PutSession(yes, s with { Start = new(15, 0), End = new(16, 30), RoomId = gym.Id }));
+        Assert.Equal("Yes: on the timetable Thu 14 Mar, 15:00–16:30 in Gym", AskingWords.State(moved, booked, Monday, eight));
+        // Any one of them is a move: the day, the start, the end, or the space (put in another as the answer).
+        string After(Session changed) => AskingWords.State(Apply.Batch(yes, Edits.PutSession(yes, changed)), booked, Monday, eight);
+        Assert.Equal("Yes: on the timetable Fri 15 Mar, 14:00–15:30 in Studio B", After(s with { Date = s.Date.AddDays(1) }));
+        Assert.Equal("Yes: on the timetable Thu 14 Mar, 14:30–15:30 in Studio B", After(s with { Start = new(14, 30) }));
+        Assert.Equal("Yes: on the timetable Thu 14 Mar, 14:00–16:00 in Studio B", After(s with { End = new(16, 0) }));
+        var inGym = Apply.Batch(t, Edits.AnswerSpaceAsk(t, a.Id, Answer.Yes, AskingReader.Administrator, Monday, eight, DateTimeOffset.UnixEpoch, gym.Id));
+        Assert.Equal("Yes: on the timetable Thu 14 Mar, 14:00–15:30 in Gym", AskingWords.State(inGym, inGym.SpaceAsks[a.Id]!, Monday, eight));
+        var gone = Apply.Batch(yes, Edits.RemoveSessions(yes, [s.Id]));
+        Assert.Equal("Yes, since taken off the timetable", AskingWords.State(gone, booked, Monday, eight));
+        // A yes stays a yes after its day.
+        Assert.Equal("Yes: it is on the timetable", AskingWords.State(yes, booked, a.Date.AddDays(1), eight));
+    }
+
+    [Fact]
     public void WhatAYesLeavesEachClassIsSaidFromTheResolverItself()
     {
         var t = SampleSchool.Create(Monday, Monday);

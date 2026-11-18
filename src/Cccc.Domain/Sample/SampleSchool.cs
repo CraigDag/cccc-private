@@ -231,11 +231,20 @@ public static class SampleSchool
             new CoverOffer { Id = g.Next(), SessionId = adasThursday.Id, FacilitatorId = dag.Id,
                              OfferedAt = yesterday.ToDateTime(new TimeOnly(17, 5), DateTimeKind.Utc) },
         };
+        // And Finn asked for Studio B next Thursday afternoon, to rehearse a duo act with BA 1: all free then, so
+        // a yes runs into nothing.
+        var spaceAsks = new[]
+        {
+            new SpaceAsk { Id = g.Next(), FacilitatorId = finn.Id, Date = anchor.AddDays(10), Start = new TimeOnly(14, 0), End = new TimeOnly(15, 30),
+                           RoomId = studioB.Id, Audience = oneBa1, Title = "Duo act rehearsal",
+                           AskedAt = yesterday.ToDateTime(new TimeOnly(17, 20), DateTimeKind.Utc) },
+        };
         return t with
         {
             Registers = EntitySet<Register>.Of(registers),
             Requests = EntitySet<TimeOffRequest>.Of(requests),
             Offers = EntitySet<CoverOffer>.Of(offers),
+            SpaceAsks = EntitySet<SpaceAsk>.Of(spaceAsks),
         };
     }
 

@@ -16,6 +16,7 @@ public class AccessTests
     [InlineData("registers", true, true, true)]
     [InlineData("requests", true, true, true)]
     [InlineData("offers", true, true, true)]
+    [InlineData("spaceAsks", true, true, true)]
     [InlineData("absences", false, false, true)]
     [InlineData("sessions", false, true, true)]
     [InlineData("events", false, true, true)]
@@ -34,6 +35,7 @@ public class AccessTests
     [InlineData("registers")]
     [InlineData("requests")]
     [InlineData("offers")]
+    [InlineData("spaceAsks")]
     [InlineData("sessions")]
     [InlineData("scratch")]
     [InlineData("rooms")]
@@ -65,6 +67,7 @@ public class AccessTests
         var following = Linked(Role.Viewer) with { Following = true };
         Assert.False(following.MayChange("requests"));
         Assert.False(following.MayChange("offers"));
+        Assert.False(following.MayChange("spaceAsks"));
     }
 
     /// <summary>
@@ -105,7 +108,7 @@ public class ProjectFileTests
         using var ms = new MemoryStream();
         using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
         {
-            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 5");
+            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 7");   // one past this build's
             using (var w = new StreamWriter(zip.CreateEntry("project.json").Open())) w.Write("{}");
         }
         var e = Assert.Throws<InvalidDataException>(() => ProjectFiles.Read(ms.ToArray()));
@@ -123,7 +126,7 @@ public class ProjectFileTests
         {
             using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 1");
             var json = System.Text.Json.Nodes.JsonNode.Parse(ModelJson.Serialise(t))!.AsObject();
-            foreach (var later in new[] { "scratch", "requests", "offers" }) Assert.True(json.Remove(later), later);
+            foreach (var later in new[] { "scratch", "requests", "offers", "spaceAsks" }) Assert.True(json.Remove(later), later);
             using (var w = new StreamWriter(zip.CreateEntry("project.json").Open())) w.Write(json.ToJsonString());
         }
         var back = ProjectFiles.Read(ms.ToArray());
@@ -131,21 +134,32 @@ public class ProjectFileTests
         Assert.Empty(back.Scratch);
         Assert.Empty(back.Requests);
         Assert.Empty(back.Offers);
+        Assert.Empty(back.SpaceAsks);
         Assert.DoesNotContain(back.Classes, c => c.FormerSince is not null);
         // And what this build writes says the format it is, so an older build refuses it rather than drop
         // the plan or what was asked, or offer a former class ahead again.
         var gone = t.Classes.First();
+        var asked = new SpaceAsk { FacilitatorId = t.Facilitators.First().Id, Date = Day, Start = new(16, 0), End = new(17, 0), RoomId = t.Rooms.First().Id, Title = "Extra practice" };
         var planned = t with { Scratch = EntitySet<Session>.Of([new Session { Date = ScratchWeek.Monday }]),
-                               Classes = t.Classes.Put(gone with { FormerSince = Day }) };
+                               Classes = t.Classes.Put(gone with { FormerSince = Day }), SpaceAsks = EntitySet<SpaceAsk>.Of([asked]) };
         var again = ProjectFiles.Read(ProjectFiles.Write(planned));
         Assert.Single(again.Scratch);
         Assert.Equal(Day, again.Classes[gone.Id]!.FormerSince);
         Assert.Equal(t.Requests.Single(), again.Requests.Single());
         Assert.Equal(t.Offers.Single(), again.Offers.Single());
+        Assert.Equal(asked, again.SpaceAsks.Single());
         using var written = new System.IO.Compression.ZipArchive(new MemoryStream(ProjectFiles.Write(planned)));
         using var r = new StreamReader(written.GetEntry("format.txt")!.Open());
-        Assert.Equal("cccc2 4", r.ReadToEnd());
+        Assert.Equal("cccc2 6", r.ReadToEnd());
     }
+
+    /// <summary>
+    /// The file and the store are the same timetable written down, so what one format brings the other does: equipment
+    /// moved the store to 5 and left files at 4, where a build before equipment would have dropped it without a word.
+    /// </summary>
+    [Fact]
+    public void TheFileFormatMovesWithTheStoresFormat() =>
+        Assert.Equal(Cccc.Store.ProjectStore.FormatVersion, ProjectFiles.Format);
 
     [Fact]
     public void ErasingAStudentBlanksTheirNameEverywhereAndLeavesEverybodyElse()

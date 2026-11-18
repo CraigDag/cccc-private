@@ -3,8 +3,9 @@
 // that day with everything filled in, OK adds it, and Undo takes it away. A day name counts from the week
 // the plan shows, and from today anywhere else. A line naming everything takes nothing from before, and a
 // clash it would make is warned of in the form, not refused. With no class named, the words are the title,
-// and the form says what it still needs. Words not understood are said; a coach is never offered it; a phone
-// fits it. Every date is in the sample's next two weeks, so the walk runs on any day.
+// and the form says what it still needs. Words not understood are said; a coach is never offered to add it,
+// and the same line asks for its space instead (space-ask.js); a phone fits it. Every date is in the sample's
+// next two weeks, so the walk runs on any day.
 const { chromium } = require('playwright');
 const B = process.env.CCCC_PREVIEW || 'http://127.0.0.1:5299';
 const OUT = (process.env.OUT || '/tmp') + '/';
@@ -185,7 +186,7 @@ const form = page => page.evaluate(() => {
     await closeFind(admin);
   });
 
-  await step('a coach is never offered it', async () => {
+  await step('a coach is never offered to add it: the same line asks for its space instead', async () => {
     const coach = await signIn(browser, 'coach', { width: 1300, height: 900 });
     await coach.goto(B + '/plan');
     await coach.waitForSelector('[data-testid=timeline]');
@@ -193,9 +194,13 @@ const form = page => page.evaluate(() => {
     await coach.waitForSelector('[data-testid=find]');
     await coach.waitForFunction(() => document.activeElement?.getAttribute('data-testid') === 'find-input');
     await coach.keyboard.type(`aerial ${typed(blankFriday)} 13`);
-    await coach.waitForSelector('[data-testid=find] .find-none');
-    if ((await hits(coach)).some(h => h.startsWith('Add '))) throw new Error('a coach is offered to add');
-    if ((await coach.textContent('.find-foot')).includes('to add a class')) throw new Error('the foot tells a coach to type a class');
+    // The ask is drawn only for the line typed, so waiting for it also waits for the answer to that line.
+    await coach.waitForFunction(() => document.querySelector('[data-testid=find-hit] .find-label')?.textContent.trim().startsWith('Ask for '))
+      .catch(async () => { throw new Error('the first hit is not an ask; Find shows ' + JSON.stringify(await hits(coach))); });
+    if ((await hits(coach)).some(h => h.startsWith('Add '))) throw new Error('a coach is offered to add: ' + JSON.stringify(await hits(coach)));
+    const foot = await coach.textContent('.find-foot');
+    if (foot.includes('to add a class')) throw new Error('the foot tells a coach to type a class');
+    if (!foot.includes('to ask for a space')) throw new Error('the foot does not say a line asks for a space: ' + JSON.stringify(foot));
     await coach.context().close();
   });
 

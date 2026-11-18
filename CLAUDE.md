@@ -44,9 +44,10 @@ it. `README.md` says what this is; `docs/spec/` says why each part is shaped the
   with its project in `ProjectStore.Purge`, and with its person in the erasure (`EraseTab`).
 - **The Scratch Week is a collection of its own** (`Timetable.Scratch`, `ScratchWeek`), never part of
   `Sessions`, so nothing that counts can read it by accident; `Edits.CheckLocks` keeps the two apart.
-- **What a facilitator asks is a list of its own too** (`Timetable.Requests`, `Offers`), never an absence
-  or a cover: only an administrator's yes records one, through the edits the forms use (`Edits.AnswerRequest`,
-  `AnswerOffer`). There is no box for why, and none should be added: a coach asked why writes the illness.
+- **What a facilitator asks is a list of its own too** (`Timetable.Requests`, `Offers`, `SpaceAsks`), never
+  an absence, a cover or a class: only an administrator's yes records one, through the edits the forms use
+  (`Edits.AnswerRequest`, `AnswerOffer`, `AnswerSpaceAsk`). There is no box for why, and none should be
+  added: a coach asked why writes the illness.
 
 ## The loop
 

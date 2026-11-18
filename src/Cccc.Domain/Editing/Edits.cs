@@ -502,6 +502,70 @@ public static class Edits
         return d.ToBatch($"Said yes to an offer to cover {s.DisplayTitle}");
     }
 
+    /// <summary>
+    /// A facilitator asking for a space at a time, for themselves only and for a time still to come, snapped as
+    /// the add form snaps it. It changes nothing on the timetable: an administrator's yes adds the class
+    /// (<see cref="AnswerSpaceAsk"/>). The space in use then, or them teaching, is for the administrator to weigh
+    /// (<see cref="Asking.WhatAYesClashesWith"/>): advice, never a refusal.
+    /// </summary>
+    public static Batch AskForSpace(Timetable t, SpaceAsk ask, AskingReader reader, DateOnly today, TimeOnly now, DateTimeOffset at)
+    {
+        if (reader.FacilitatorId is not { } me || t.Facilitators[me] is not { } f || f.IsFormer())
+            throw new EditRefused("Your account is not linked to a facilitator on this timetable, so there is nobody to ask for.");
+        var (start, end) = (Snap(ask.Start), Snap(ask.End));
+        if (end <= start) throw new EditRefused("It has to finish after it starts.");
+        if (ask.Date < today || ask.Date == today && start <= now || Week.IsScratch(ask.Date))
+            throw new EditRefused("That time has gone. Ask for a time still to come.");
+        if (t.Rooms[ask.RoomId] is not { } room || room.IsFormer()) throw new EditRefused("Choose a space.");
+        // Who it is for as a class says it, of the groups there are: the whole building, one group or several.
+        List<Guid> groups = [.. ask.Audience.Cohorts.Where(t.Groups.Contains)];
+        if (!ask.Audience.IsEveryone && groups.Count == 0) throw new EditRefused("Say who it is for: a group, or the whole building.");
+        var who = ask.Audience.IsEveryone ? Audience.Everyone : groups.Count == 1 ? Audience.ForGroup(groups[0]) : Audience.ForGroups(groups);
+        if (ask.ClassId is { } c && (t.Classes[c] is not { } k || k.IsFormer())) throw new EditRefused("That class is no longer the school's.");
+        if (ask.ClassId is null && string.IsNullOrWhiteSpace(ask.Title)) throw new EditRefused("Say what it is: choose a class, or give it a name.");
+        var a = ask with
+        {
+            FacilitatorId = me, Start = start, End = end, Audience = who, Title = ask.Title.Trim(),
+            AskedAt = at, Answer = null, AnsweredAt = null, SessionId = null,
+        };
+        return new Draft(t).Put(Collections.SpaceAsks, a).ToBatch($"Asked for {room.Name} on {Week.ShortDate(a.Date)}");
+    }
+
+    /// <summary>Whoever asked takes it back, while nobody has answered it.</summary>
+    public static Batch TakeBackSpaceAsk(Timetable t, Guid id, AskingReader reader)
+    {
+        var a = t.SpaceAsks[id] ?? throw new EditRefused("That has been taken back already.");
+        if (reader.FacilitatorId != a.FacilitatorId) throw new EditRefused("Only whoever asked can take it back.");
+        if (a.Answer is not null) throw new EditRefused("An administrator has answered it already, so ask them to change it.");
+        return new Draft(t).Remove(Collections.SpaceAsks, id).ToBatch("Took back asking for a space");
+    }
+
+    /// <summary>
+    /// An administrator's answer. Yes adds the class it asks for, taught by whoever asked, as the add form would,
+    /// in the space asked for or the one <paramref name="inRoom"/> names, whatever else is there then (said beside
+    /// the answer, never a refusal); no changes nothing on the timetable. A yes needs its time still to come.
+    /// </summary>
+    public static Batch AnswerSpaceAsk(Timetable t, Guid id, Answer answer, AskingReader reader, DateOnly today, TimeOnly now,
+        DateTimeOffset at, Guid? inRoom = null)
+    {
+        if (!reader.Answers) throw new EditRefused("Only an administrator can answer that.");
+        var a = t.SpaceAsks[id] ?? throw new EditRefused("That has been taken back.");
+        if (a.Answer is not null) throw new EditRefused("That has been answered already.");
+        var d = new Draft(t);
+        if (answer == Answer.No)
+            return d.Put(Collections.SpaceAsks, a with { Answer = Answer.No, AnsweredAt = at }).ToBatch("Said no to a space asked for");
+        if (Asking.StateOf(a, today, now) == SpaceAskState.Passed) throw new EditRefused("Its time has passed.");
+        if (t.Facilitators[a.FacilitatorId] is not { } f || f.IsFormer()) throw new EditRefused("Whoever asked is no longer on this timetable.");
+        if (t.Rooms[inRoom ?? a.RoomId] is not { } room || room.IsFormer()) throw new EditRefused("That space is no longer the school's.");
+        if (a.ClassId is { } c && (t.Classes[c] is not { } k || k.IsFormer()))
+            throw new EditRefused("That class is no longer the school's. Say no, and they can ask again.");
+        if (!a.Audience.IsEveryone && !a.Audience.Cohorts.Any(t.Groups.Contains))
+            throw new EditRefused("The group it was for has gone. Say no, and they can ask again.");
+        var s = a.AsSession(t, Guid.NewGuid()) with { RoomId = room.Id };
+        d.Put(Collections.Sessions, s).Put(Collections.SpaceAsks, a with { Answer = Answer.Yes, AnsweredAt = at, SessionId = s.Id });
+        return d.ToBatch($"Put {s.DisplayTitle} in {room.Name} on {Week.ShortDate(a.Date)}, as asked");
+    }
+
     /// <summary>Copy day APPENDS to the destination day.</summary>
     public static Batch CopyDay(Timetable t, DateOnly from, DateOnly to)
     {
@@ -588,6 +652,9 @@ public static class Edits
         var d = new Draft(t);
         foreach (var (into, s) in FromToday(t, today).Where(x => x.S.ClassId == id))
             d.Put(into, s with { ClassId = null, Title = string.IsNullOrWhiteSpace(s.Title) ? c.Name : s.Title });
+        // A space asked for it and still waiting is asked for as those classes now run: by its name, no class.
+        foreach (var a in t.SpaceAsks.Where(a => a.ClassId == id && a.Answer is null))
+            d.Put(Collections.SpaceAsks, a with { ClassId = null, Title = string.IsNullOrWhiteSpace(a.Title) ? c.Name : a.Title });
         if (Former.Of(t, c, today).Before > 0)
         {
             if (!c.IsFormer()) d.Put(Collections.Classes, c with { FormerSince = today });
@@ -663,6 +730,7 @@ public static class Edits
         // What they asked and offered is theirs and is nobody's business once they have gone: it goes, all of it.
         foreach (var r in t.Requests.Where(r => r.FacilitatorId == id)) d.Remove(Collections.Requests, r.Id);
         foreach (var o in t.Offers.Where(o => o.FacilitatorId == id)) d.Remove(Collections.Offers, o.Id);
+        foreach (var a in t.SpaceAsks.Where(a => a.FacilitatorId == id)) d.Remove(Collections.SpaceAsks, a.Id);
         if (keep)
         {
             if (!f.IsFormer()) d.Put(Collections.Facilitators, f with { FormerSince = today });
@@ -706,6 +774,8 @@ public static class Edits
             d.Put(Collections.Sessions, s with { ClassId = survivorId, Title = !Week.HasEnded(s.Date, today) && Named(s) ? survivor.Name : s.Title });
         foreach (var s in t.Scratch.Where(s => s.ClassId == mergedId))
             d.Put(Collections.Scratch, s with { ClassId = survivorId, Title = Named(s) ? survivor.Name : s.Title });
+        foreach (var a in t.SpaceAsks.Where(a => a.ClassId == mergedId))
+            d.Put(Collections.SpaceAsks, a with { ClassId = survivorId, Title = a.Title.Trim() == merged.Name.Trim() ? survivor.Name : a.Title });
         foreach (var r in t.TimeRules.Where(r => r.ClassIds.Contains(mergedId)))
             d.Put(Collections.TimeRules, r with { ClassIds = r.ClassIds.Remove(mergedId) });
         d.Remove(Collections.Classes, mergedId);
@@ -774,19 +844,25 @@ public static class Edits
     {
         var d = new Draft(t);
         foreach (var (into, s) in Reachable(t, today).Where(x => x.S.Audience.GroupIds.Contains(id)))
-        {
-            var left = s.Audience.GroupIds.Remove(id);
-            var audience = left.IsEmpty
-                ? s.Audience with { GroupIds = [], Kind = AudienceKind.Group, ProgrammeId = null }
-                : s.Audience with { GroupIds = left, Kind = left.Count == 1 && s.Audience.Kind == AudienceKind.Groups ? AudienceKind.Group : s.Audience.Kind };
-            d.Put(into, s with { Audience = audience });
-        }
+            d.Put(into, s with { Audience = WithoutGroup(s.Audience, id) });
+        // A space asked for it, still waiting, is asked for whoever is left; answered, it was what it was.
+        foreach (var a in t.SpaceAsks.Where(a => a.Answer is null && a.Audience.GroupIds.Contains(id)))
+            d.Put(Collections.SpaceAsks, a with { Audience = WithoutGroup(a.Audience, id) });
         foreach (var c in t.Closures.Where(c => c.GroupIds.Contains(id)))
             d.Put(Collections.Closures, c with { GroupIds = c.GroupIds.Remove(id) });
         foreach (var st in t.Students.Where(st => st.GroupId == id))
             d.Put(Collections.Students, st with { GroupId = null });
         d.Remove(Collections.Groups, id);
         return d.ToBatch("Deleted a group");
+    }
+
+    /// <summary>Who a class is for, a group gone: one group left of several is that group, none left is a group not chosen.</summary>
+    private static Audience WithoutGroup(Audience a, Guid id)
+    {
+        var left = a.GroupIds.Remove(id);
+        return left.IsEmpty
+            ? a with { GroupIds = [], Kind = AudienceKind.Group, ProgrammeId = null }
+            : a with { GroupIds = left, Kind = left.Count == 1 && a.Kind == AudienceKind.Groups ? AudienceKind.Group : a.Kind };
     }
 
     public static Batch RemoveProgramme(Timetable t, Guid id, DateOnly today)

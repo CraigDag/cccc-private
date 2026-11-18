@@ -140,6 +140,15 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   have not seen gets one email saying what, in the same words as New for you, so somebody who never
   opens the app still knows before the morning. An administrator can have the count of who was emailed,
   for the phone calls. Administration ▸ System shows its state. No student is ever named.
+- **A coach can ask for a space.** *Ask for a space…* on My week (or typing *studio b thu 14* into
+  Ctrl+K) takes the day and times, the space, who it is for and what it is, and says first what a yes
+  would run into: the space in use or booked, them teaching then, a group with a class then, or that
+  nothing is in the way. The spaces free then are offered to press. An administrator sees it on Now under
+  *Waiting for your answer*, with what it would run into, and can say yes as asked, put it in another
+  space free then, or say *Not this time*. A yes adds it as one of their classes like any other, and Undo
+  takes it back; the coach then sees where it is on the timetable, even once it has been moved. The form
+  reminds them that its name is on the timetable and the screens for everybody, so never a student's name
+  or anything about anybody's health.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

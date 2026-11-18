@@ -96,12 +96,12 @@ public sealed record Access(Account? Account)
     private static readonly HashSet<string> EditorsCollections = ["sessions", "registers", "events", "scratch"];
 
     /// <summary>What anybody signed in may change, narrowed to their own by the edit itself.</summary>
-    private static readonly HashSet<string> EverybodysCollections = ["registers", "requests", "offers"];
+    private static readonly HashSet<string> EverybodysCollections = ["registers", "requests", "offers", "spaceAsks"];
 
     /// <summary>
     /// The server's own check of who may change which collection, whatever the screen offered: a viewer
-    /// files registers, asks to be away and offers to cover, and the edit narrows each to their own
-    /// (<c>Edits.FileRegister</c>, <c>Edits.AskToBeAway</c>, <c>Edits.OfferCover</c>); an editor changes the
+    /// files registers, asks to be away, offers to cover and asks for a space, and the edit narrows each to their
+    /// own (<c>Edits.FileRegister</c>, <c>Edits.AskToBeAway</c>, <c>Edits.OfferCover</c>, <c>Edits.AskForSpace</c>); an editor changes the
     /// week and its events; everything else is an administrator's; nobody signed in, nothing.
     /// </summary>
     public bool MayChange(string collection) =>

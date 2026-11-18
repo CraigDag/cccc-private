@@ -33,13 +33,15 @@ Capabilities are **named**, never `role >= Editor`:
 | `MayTakeEveryRegister` | Administrator |
 | `MaySeeSystem` (backups, the nightly update) | Administrator |
 | `MayManageScreens` (pair, change and unpair the screens in the building) | Administrator |
-| `MayAnswerAsking` (yes or no to a facilitator asking to be away, which records an absence, or offering to cover) | Administrator |
+| `MayAnswerAsking` (yes or no to a facilitator asking to be away, which records an absence, offering to cover, or asking for a space, which adds a class) | Administrator |
 
-**Asking is for oneself.** Any account linked to a facilitator, a Viewer included, asks to be away and
-offers to cover for that facilitator and nobody else (`Access.Asking`), as a register is filed: the
-server's door lets anybody signed in change those two lists, and the edit narrows each to the asker's
-own. A yes is an administrator's because it records an absence, which is theirs to keep; an editor can
-still give a class its cover from the Cover form, and an offer the class's cover then reads as covering.
+**Asking is for oneself.** Any account linked to a facilitator, a Viewer included, asks to be away,
+offers to cover and asks for a space for that facilitator and nobody else (`Access.Asking`), as a
+register is filed: the server's door lets anybody signed in change those three lists, and the edit
+narrows each to the asker's own. A yes is an administrator's because it records an absence or adds a
+class, which are theirs to keep; an editor can still give a class its cover from the Cover form, and an
+offer the class's cover then reads as covering. An editor adds a class themselves, so is offered no ask
+for a space.
 
 **A timetable that follows the current app is changed by nobody here** (`Access.Following`;
 [`04`](04-storage-and-editing.md)). It narrows what anybody may *change* — every collection, registers

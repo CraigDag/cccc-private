@@ -1,12 +1,14 @@
-@* An administrator's answer to a facilitator who can't come or can cover, from Now. A yes records exactly
-   what the forms would (an absence, or the class's cover); a no changes nothing on the timetable. Either
-   way the facilitator sees the answer on My week. *@
+@* An administrator's answer to a facilitator who can't come, can cover or asks for a space, from Now. A yes
+   records exactly what the forms would (an absence, the class's cover, or the class asked for, in the space
+   asked for or one free then); a no changes nothing on the timetable. Either way the facilitator sees the
+   answer on My week. *@
 @using Cccc.Web.Features.Week
 @inject Dialogs D
 @{
     var t = W.T;
     var request = RequestId is { } rid ? t.Requests[rid] : null;
     var offer = OfferId is { } oid ? t.Offers[oid] : null;
+    var space = SpaceAskId is { } sid ? t.SpaceAsks[sid] : null;
 }
 @if (request is not null && Asking.StateOf(request, W.Today) == RequestState.Waiting)
 {
@@ -58,20 +60,80 @@ else if (offer is not null && Asking.StateOf(t, offer, W.Today) == OfferState.Wa
         </Extra>
     </DialogFrame>
 }
+else if (space is not null && Asking.StateOf(space, W.Today, W.Clock.TimeOfDay) == SpaceAskState.Waiting)
+{
+    var who = t.Facilitators[space.FacilitatorId];
+    var asked = t.Rooms.Find(space.RoomId);
+    var room = _room ?? space.RoomId;
+    var others = Asking.OtherSpacesFree(t, space);
+    var runsInto = Asking.WhatAYesClashesWith(t, space, room);
+    var booked = Spaces.Booked(t, space.Date, space.Start, space.End).TryGetValue(room, out var e) ? e : null;
+    var as1 = space.AsSession(t, space.Id);
+    <DialogFrame Title="@($"{who?.Name ?? "Somebody"} asks for a space")" OnOk="() => AnswerSpace(Answer.Yes)" OkLabel="Yes, put it on" OkEnabled="@W.Access.MayAnswerAsking">
+        <ChildContent>
+            <p data-testid="answer-space"><b>@AskingWords.Title(t, space)</b>, @AskingWords.When(space), @(asked is { FormerSince: null } ? asked.Name : "a space no longer the school's") · @Looks.Audience(t, as1) · asked @W.Clock.Describe(space.AskedAt)</p>
+            @if (others.Count > 0 || room != space.RoomId)
+            {
+                <label class="field"><span>Put it in</span>
+                    <select @bind="RoomText" data-testid="answer-room">
+                        <option value="@space.RoomId">@(asked?.Name ?? "The space asked for"), as asked</option>
+                        @foreach (var r in others)
+                        {
+                            <option value="@r.Id">@r.Name, free then@(Spaces.Lacking(t, space.ClassId, r.Id) is { Count: > 0 } lacking ? " — " + Cccc.Web.Features.Data.EquipmentWords.Without(lacking) : "")</option>
+                        }
+                    </select>
+                </label>
+            }
+            <h3 class="form-sub">A yes runs into</h3>
+            @if (runsInto.Count == 0 && booked is null)
+            {
+                <p class="muted" data-testid="answer-clear">Nothing: @(t.Rooms.Find(room)?.Name ?? "the space") is free then, and so is @(who?.Name ?? "whoever asked").</p>
+            }
+            else
+            {
+                <ul class="plain-list" data-testid="answer-clashes">
+                    @if (booked is not null)
+                    {
+                        <li data-testid="answer-clash">@(t.Rooms.Find(room)?.Name) is booked then: @(booked.Event.Title.Trim() is { Length: > 0 } title ? title : "an event")@(booked.AllDay ? " all day" : $" {Looks.When(booked.From, booked.Until)}").</li>
+                    }
+                    @foreach (var c in runsInto)
+                    {
+                        <li data-testid="answer-clash">@c.Description</li>
+                    }
+                </ul>
+            }
+            <p class="hint">Yes adds it as a class of theirs, as Add a class would, to change on the plan like any other. What it runs into is advice, never a refusal.</p>
+        </ChildContent>
+        <Extra>
+            <button type="button" class="btn" @onclick="() => AnswerSpace(Answer.No)" disabled="@(!W.Access.MayAnswerAsking)" data-testid="answer-no">Not this time</button>
+        </Extra>
+    </DialogFrame>
+}
 else
 {
     <DialogFrame Title="Answered">
-        <p data-testid="answer-gone">This has been answered or taken back since, or its day has passed.</p>
+        <p data-testid="answer-gone">This has been answered or taken back since, or its time has passed.</p>
     </DialogFrame>
 }
 @code {
     [CascadingParameter] public Workspace W { get; set; } = default!;
     [Parameter] public Guid? RequestId { get; set; }
     [Parameter] public Guid? OfferId { get; set; }
+    [Parameter] public Guid? SpaceAskId { get; set; }
+    private Guid? _room;
+
+    private string RoomText { get => _room?.ToString() ?? ""; set => _room = Guid.TryParse(value, out var g) ? g : null; }
 
     private void AnswerRequest(Answer answer)
     {
         if (W.Commit(t => Edits.AnswerRequest(t, RequestId!.Value, answer, W.Access.Asking, W.Clock.Now))) D.Close();
+    }
+
+    private void AnswerSpace(Answer answer)
+    {
+        var a = W.T.SpaceAsks[SpaceAskId!.Value];
+        Guid? inRoom = _room is { } r && r != a?.RoomId ? r : null;
+        if (W.Commit(t => Edits.AnswerSpaceAsk(t, SpaceAskId!.Value, answer, W.Access.Asking, W.Today, W.Clock.TimeOfDay, W.Clock.Now, inRoom))) D.Close();
     }
 
     private void AnswerOffer(Answer answer)

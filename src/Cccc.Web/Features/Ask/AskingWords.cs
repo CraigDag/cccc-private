@@ -43,6 +43,32 @@ public static class AskingWords
         _ => "Passed",
     };
 
+    /// <summary>"Thu 26 Nov, 14:00–15:30": when a space is asked for.</summary>
+    public static string When(SpaceAsk a) => $"{Week.ShortDate(a.Date)}, {Looks.When(a.Start, a.End)}";
+
+    /// <summary>What an ask for a space is called: what the class a yes adds will be called.</summary>
+    public static string Title(Timetable t, SpaceAsk a) => Looks.Title(t, a.AsSession(t, a.Id));
+
+    /// <summary>
+    /// Where an ask for a space stands, as the person who asked reads it. After a yes, the class as it is now: an
+    /// administrator may have moved it since, or taken it off.
+    /// </summary>
+    public static string State(Timetable t, SpaceAsk a, DateOnly today, TimeOnly now)
+    {
+        var state = Asking.StateOf(a, today, now);
+        if (state != SpaceAskState.Booked)
+            return state switch
+            {
+                SpaceAskState.Waiting => "Waiting for an answer",
+                SpaceAskState.NotThisTime => "Not this time",
+                _ => "Passed without an answer",
+            };
+        if (t.Sessions.Find(a.SessionId) is not { } s) return "Yes, since taken off the timetable";
+        return s.Date != a.Date || s.Start != a.Start || s.End != a.End || s.RoomId != a.RoomId
+            ? $"Yes: on the timetable {Looks.WhenWithDay(s)}{(Looks.Room(t, s) is { Length: > 0 } r ? " in " + r : "")}"
+            : "Yes: it is on the timetable";
+    }
+
     /// <summary>
     /// What a yes would leave a class it takes somebody off: "needs cover", "Bo Lindqvist still teaching it", or,
     /// for a class they are covering, that its cover would then need changing.

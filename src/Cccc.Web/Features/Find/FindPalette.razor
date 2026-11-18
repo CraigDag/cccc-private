@@ -31,7 +31,7 @@
                 var h = hits[i];
                 int at = i;
                 <li role="option" aria-selected="@(i == _at ? "true" : "false")">
-                    <button type="button" class="find-hit @(i == _at ? "on" : "") @(h.Kind is "quick-add" or "quick-away" or "quick-ask" or "free" or "free-people" or "free-groups" ? "quick" : "")" @onclick="() => Go(h)" @onmouseenter="() => _at = at" data-testid="find-hit">
+                    <button type="button" class="find-hit @(i == _at ? "on" : "") @(h.Kind is "quick-add" or "quick-away" or "quick-ask" or "quick-space" or "free" or "free-people" or "free-groups" ? "quick" : "")" @onclick="() => Go(h)" @onmouseenter="() => _at = at" data-testid="find-hit">
                         <span class="find-kind k-@h.Kind" style="@(h.Colour is null ? "" : $"--c:{h.Colour}")">@Badge(h)</span>
                         <span class="find-label">@h.Label</span>
                         <small>@h.Detail</small>
@@ -93,6 +93,7 @@
         if (W.Access.MayEdit) said.Add("“aerial fri 13” to add a class");
         if (W.Access.MayChange("absences")) said.Add("“bo sick fri” to record who is away");
         else if (W.Access.MayChange("requests") && W.Access.FacilitatorId is not null) said.Add("“sick tomorrow” to say you can’t come");
+        if (!W.Access.MayEdit && W.Access.MayChange("spaceAsks") && W.Access.FacilitatorId is not null) said.Add("“studio b thu 14” to ask for a space");
         said.Add("“free fri 13” to ask who is free");
         return " · type " + (said.Count == 1 ? said[0] : string.Join(", ", said[..^1]) + " or " + said[^1]);
     }
@@ -111,7 +112,7 @@
 
     private static string Badge(FindHit h) => h.Kind switch
     {
-        "facilitator" => "F", "student" => "S", "room" => "◻", "group" => "G", "programme" => "P", "quick-add" => "+",
+        "facilitator" => "F", "student" => "S", "room" => "◻", "group" => "G", "programme" => "P", "quick-add" or "quick-space" => "+",
         "quick-away" => "−", "quick-ask" => "?", "free" or "free-people" or "free-groups" => "○", _ => "→",
     };
 
@@ -164,6 +165,17 @@
             case "quick-away" when h.Away is { } away:
                 // Over whatever is on screen: the form says what it takes them off, and nothing is recorded until OK.
                 D.Show<AbsenceForm>(new Dictionary<string, object?> { [nameof(AbsenceForm.Draft)] = away });
+                break;
+            case "quick-space" when h.Draft is { } wanted:
+                // Over whatever is on screen: the form says what a yes would run into, and nothing is sent until Send.
+                D.Show<SpaceAskForm>(new Dictionary<string, object?>
+                {
+                    [nameof(SpaceAskForm.Draft)] = new SpaceAsk
+                    {
+                        Date = wanted.Date, Start = wanted.Start, End = wanted.End, RoomId = wanted.RoomId ?? Guid.Empty,
+                        Audience = wanted.Audience, ClassId = wanted.ClassId, Title = wanted.ClassId is null ? wanted.Title : "",
+                    },
+                });
                 break;
             case "quick-ask" when h.Away is { } asked:
                 D.Show<CantComeForm>(new Dictionary<string, object?>

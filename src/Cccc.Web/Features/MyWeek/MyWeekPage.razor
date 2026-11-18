@@ -29,6 +29,11 @@ else
         {
             <button type="button" class="btn" @onclick="CantCome" data-testid="cant-come">Can't come…</button>
         }
+        @* Somebody who adds classes adds one; a coach asks for the space, and an administrator says yes. *@
+        @if (W.Access.MayEditSomething && !W.Access.MayEdit)
+        {
+            <button type="button" class="btn" @onclick="AskForSpace" data-testid="ask-space">Ask for a space…</button>
+        }
     </WeekNav>
     <FollowingNotice OnlyWhenBehind="true" />
     <div class="cards">
@@ -84,4 +89,6 @@ else
     private void Take(Guid id) => D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = id });
 
     private void CantCome() => D.Show<CantComeForm>();
+
+    private void AskForSpace() => D.Show<SpaceAskForm>();
 }

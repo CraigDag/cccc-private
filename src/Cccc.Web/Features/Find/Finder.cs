@@ -40,7 +40,8 @@ public static class FindIndex
     /// For somebody who may edit, a line that reads as a class to add (<see cref="QuickAdd"/>) comes first:
     /// <paramref name="today"/> and the day the plan shows say which Friday "fri" is. A line that says somebody
     /// is away (<see cref="QuickAway"/>) comes before it: an administrator (<paramref name="recordsAway"/>)
-    /// records anybody, and the facilitator signed in (<paramref name="me"/>) asks for themselves. Such a line
+    /// records anybody, and the facilitator signed in (<paramref name="me"/>) asks for themselves, and asks for the
+    /// space a line reads as a class to add when they add no classes themselves (<see cref="QuickAdd.AskHit"/>). Such a line
     /// is never a class with its words for a title ("Off", "Sick"), whoever reads it. Nor is a question about who or
     /// what is free (<see cref="QuickFree"/>), which anybody may ask, unless it is one only by naming something with a
     /// time and has words left over for a title (<see cref="QuickFree.Reading.MayBeAnAdd"/>): its answer comes next,
@@ -57,6 +58,10 @@ public static class FindIndex
         var quick = mayEdit && today is { } addOn && q.Length > 0 && QuickAdd.Read(t, q, addOn, shown ?? addOn) is { } reading
                     && (away is null && asked is not { MayBeAnAdd: false } || reading.Draft.ClassId is not null)
             ? QuickAdd.Hit(t, reading) : null;
+        // A coach who adds no classes asks for the space instead: the same reading, sent as an ask (SpaceAskForm).
+        var space = !mayEdit && me is not null && today is { } askOn && q.Length > 0 && QuickAdd.Read(t, q, askOn, shown ?? askOn) is { } wanted
+                    && (away is null && asked is not { MayBeAnAdd: false } || wanted.Draft.ClassId is not null)
+            ? QuickAdd.AskHit(t, wanted) : null;
         var said = away is null || today is not { } on ? null
             : recordsAway ? QuickAway.Hit(t, away, records: true, on)
             : me is { } mine && away.Draft.Person == Cccc.Domain.Model.AbsentPerson.Facilitator && away.Draft.PersonId == mine
@@ -120,7 +125,7 @@ public static class FindIndex
             if (s >= 0) hits.Add((s * 10 + 5, a));
         }
         var found = hits.OrderBy(h => h.Rank).ThenBy(h => h.Hit.Label, Cccc.Domain.NameOrder.Comparer).Select(h => h.Hit);
-        FindHit[] first = [.. new[] { said, quick }.OfType<FindHit>()];
+        FindHit[] first = [.. new[] { said, quick, space }.OfType<FindHit>()];
         var answer = asked is null ? [] : QuickFree.Hits(t, asked, viewer ?? Cccc.Domain.Rules.EventViewer.Nobody, max - first.Length);
         return [.. first, .. answer, .. found.Take(max - first.Length - answer.Count)];
     }

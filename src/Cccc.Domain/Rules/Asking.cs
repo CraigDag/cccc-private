@@ -17,10 +17,13 @@ public enum RequestState { Waiting, Recorded, NotThisTime, Passed }
 
 public enum OfferState { Waiting, Covering, NotThisTime, NotNeeded, Passed }
 
+public enum SpaceAskState { Waiting, Booked, NotThisTime, Passed }
+
 /// <summary>
-/// What facilitators ask: that they cannot come (<see cref="TimeOffRequest"/>), and to cover a class that
-/// needs it (<see cref="CoverOffer"/>). Neither changes the timetable until an administrator says yes, which
-/// records the absence or the cover just as the forms do; a no changes nothing on it at all.
+/// What facilitators ask: that they cannot come (<see cref="TimeOffRequest"/>), to cover a class that needs it
+/// (<see cref="CoverOffer"/>), and for a space at a time (<see cref="SpaceAsk"/>). None changes the timetable
+/// until an administrator says yes, which records the absence, the cover or the class just as the forms do; a
+/// no changes nothing on it at all.
 /// </summary>
 public static class Asking
 {
@@ -75,6 +78,46 @@ public static class Asking
             .Select(x => x.Offer).ToList();
 
     private static bool StillHere(Timetable t, Guid facilitatorId) => t.Facilitators[facilitatorId] is { } f && !f.IsFormer();
+
+    /// <summary>
+    /// Where an ask for a space stands: answered, or passed once its time has started with no answer (a class
+    /// half over is no use to anybody), or waiting.
+    /// </summary>
+    public static SpaceAskState StateOf(SpaceAsk a, DateOnly today, TimeOnly now) => a.Answer switch
+    {
+        Answer.Yes => SpaceAskState.Booked,
+        Answer.No => SpaceAskState.NotThisTime,
+        _ => a.Date < today || a.Date == today && a.Start <= now ? SpaceAskState.Passed : SpaceAskState.Waiting,
+    };
+
+    /// <summary>
+    /// Asks for a space waiting for an administrator's answer: for a time still to come, from somebody still on
+    /// the timetable, the soonest first.
+    /// </summary>
+    public static IReadOnlyList<SpaceAsk> SpaceAsksWaiting(Timetable t, DateOnly today, TimeOnly now) =>
+        t.SpaceAsks.Where(a => StateOf(a, today, now) == SpaceAskState.Waiting && StillHere(t, a.FacilitatorId))
+            .OrderBy(a => a.Date).ThenBy(a => a.Start).ThenBy(a => a.AskedAt).ThenBy(a => a.Id).ToList();
+
+    /// <summary>
+    /// What the class a yes adds would clash with, as the clash check says it of any class added then
+    /// (<see cref="Clashes.CausedBy"/>): the space in use, whoever asked teaching or away, a group with a class.
+    /// In <paramref name="roomId"/> when an administrator would put it somewhere else. Said beside the ask and the
+    /// answer, never a reason to refuse either: bounds advise, never refuse.
+    /// </summary>
+    public static IReadOnlyList<Clash> WhatAYesClashesWith(Timetable t, SpaceAsk a, Guid? roomId = null) =>
+        Clashes.CausedBy(t, a.AsSession(t, a.Id) with { RoomId = roomId ?? a.RoomId });
+
+    /// <summary>
+    /// The other spaces free for the whole time asked, for an administrator who would say yes somewhere else:
+    /// no class in them then and no event booking them, the ones with what the class needs first.
+    /// </summary>
+    public static IReadOnlyList<Room> OtherSpacesFree(Timetable t, SpaceAsk a)
+    {
+        var inUse = Spaces.InUse(t, a.Date, a.Start, a.End);
+        var booked = Spaces.Booked(t, a.Date, a.Start, a.End);
+        return t.Rooms.Current().Where(r => r.Id != a.RoomId && !inUse.ContainsKey(r.Id) && !booked.ContainsKey(r.Id))
+            .OrderBy(r => !Spaces.Suits(t, a.ClassId, r.Id)).ThenBy(r => r.Name, NameOrder.Comparer).ThenBy(r => r.Id).ToList();
+    }
 
     /// <summary>
     /// Classes needing cover from now until <see cref="CoverDaysAhead"/> days on that a facilitator could

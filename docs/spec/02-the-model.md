@@ -66,6 +66,11 @@ Absence, so nothing that counts absences can read one by accident. **There is no
 **An offer to cover** (`Offers`, the rebuild's own) — `SessionId`, `FacilitatorId`, `OfferedAt`, and once
 answered `Answer` and `AnsweredAt`. Whether one is still waiting is worked out from the class, never stored.
 
+**Asking for a space** (`SpaceAsks`, the rebuild's own) — `FacilitatorId`, `Date`, `Start`, `End`,
+`RoomId`, `Audience` (the whole building, or groups), `ClassId?`, `Title` (its own name, or blank for the
+class's), `AskedAt`, and once answered `Answer`, `AnsweredAt` and, for a yes, the `SessionId` it added. A
+class that is not one yet, in a list of its own, so nothing that counts classes can read one by accident.
+
 **The Scratch Week** (`Scratch`, schema 24 in the current app) — a plan: sessions exactly like the
 ones above, in a collection of their own, all dated in one week no semester reaches (the Monday
 2200-01-06, `Week.ScratchMonday`, the current app's own). One per timetable, shared by everybody who

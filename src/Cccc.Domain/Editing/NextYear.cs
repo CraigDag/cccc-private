@@ -124,9 +124,11 @@ public static class NextYear
             Absences = EntitySet<Absence>.Of(t.Absences.Where(a => Carried(t, a, starts))),
             Events = EntitySet<SchoolEvent>.Of(t.Events.Where(e => EventSchedule.LastDay(e) >= starts)),
             // Asking to be away goes with its days, as an absence does, so one asked for September is not lost;
-            // an offer was for one of this year's classes, and next year's are new ones.
+            // an offer was for one of this year's classes, and next year's are new ones. Asking for a space goes
+            // with its day while it waits for an answer; answered, it was this year's, a yes one of this year's classes.
             Requests = EntitySet<TimeOffRequest>.Of(t.Requests.Where(r => r.To >= starts && t.Facilitators[r.FacilitatorId] is { FormerSince: null })),
             Offers = EntitySet<CoverOffer>.Empty,
+            SpaceAsks = EntitySet<SpaceAsk>.Of(t.SpaceAsks.Where(a => a.Answer is null && a.Date >= starts && t.Facilitators[a.FacilitatorId] is { FormerSince: null })),
         };
         return t.Classes.Any(c => c.IsFormer()) || t.Rooms.Any(r => r.IsFormer()) || t.Facilitators.Any(f => f.IsFormer())
             ? LeaveFormerBehind(t, next) : next;

@@ -170,4 +170,22 @@ public static class QuickAdd
         if (r.NotUnderstood.Count > 0) parts.Add("not understood: " + string.Join(", ", r.NotUnderstood));
         return new FindHit("quick-add", $"Add {Looks.Title(t, s)} · {when} {Looks.When(s)}", string.Join(" · ", parts), null, Looks.ColourOf(t, s), s);
     }
+
+    /// <summary>
+    /// The same line read for a coach who adds no classes: asking for its space then, for what it names. Enter opens
+    /// the ask on it (<c>SpaceAskForm</c>), to be looked over and sent; whoever it names to teach, the ask is theirs.
+    /// </summary>
+    public static FindHit AskHit(Timetable t, Reading r)
+    {
+        var s = r.Draft;
+        var parts = new List<string>
+        {
+            Looks.Title(t, s),
+            s.Audience.Kind == AudienceKind.Group && s.Audience.GroupIds.Count == 0 ? "no group yet" : Looks.Audience(t, s),
+        };
+        if (r.Like is { } like) parts.Add("the rest as on " + Cccc.Domain.Week.ShortDate(like.Date));
+        if (r.NotUnderstood.Count > 0) parts.Add("not understood: " + string.Join(", ", r.NotUnderstood));
+        return new FindHit("quick-space", $"Ask for {t.Rooms.Find(s.RoomId)?.Name ?? "a space"} · {Cccc.Domain.Week.ShortDate(s.Date)} {Looks.When(s)}",
+            string.Join(" · ", parts), null, Looks.ColourOf(t, s), s);
+    }
 }

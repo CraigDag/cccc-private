@@ -1,0 +1,210 @@
+@* A facilitator asking for a space at a time, from My week or typed into Find: the day and times, the space, who
+   it is for and what it is. It changes nothing on the timetable until an administrator says yes on Now, so the
+   form says first what a yes would run into: the space in use or booked, them teaching or away, a group with a
+   class then. Advice, never a reason not to ask. What it is called is the class's name as everybody reads it,
+   on the screens in the building too, so the form says never to name a student or say anything about health. *@
+@using Cccc.Web.Features.Week
+@using Cccc.Web.Features.Shell
+@inject Dialogs D
+@{
+    var t = W.T;
+    var me = W.Access.FacilitatorId ?? Guid.Empty;
+    var asked = Asked(me);
+    var (start, end) = (asked.Start, asked.End);
+    var busy = end > start ? Spaces.InUse(t, _date, start, end) : new Dictionary<Guid, Occurrence>();
+    var booked = end > start ? Spaces.Booked(t, _date, start, end) : new Dictionary<Guid, EventOnDay>();
+    var runsInto = _why is null ? Asking.WhatAYesClashesWith(t, asked) : [];
+    var bookedThen = _why is null && _roomId is { } chosen && booked.TryGetValue(chosen, out var e) ? e : null;
+}
+<DialogFrame Title="Ask for a space" OnOk="Send" OkLabel="Send" OkEnabled="@(_why is null)" Class="wide">
+    <ChildContent>
+        <p class="hint">An administrator sees it on Now. Nothing on the timetable changes until they say yes, and then it is a class of yours like any other.</p>
+        <div class="form-grid">
+            <label class="field"><span>Day</span><input type="date" min="@W.Today.ToString("yyyy-MM-dd")" @bind="_date" @bind:after="Check" data-testid="ask-date" /></label>
+            <div class="field two">
+                <label><span>From</span><input type="time" step="900" @bind="_start" @bind:after="Check" data-testid="ask-start" /></label>
+                <label><span>Until</span><input type="time" step="900" @bind="_end" @bind:after="Check" data-testid="ask-end" /></label>
+            </div>
+            <label class="field"><span>Space</span>
+                <select @bind="RoomText" @bind:after="Check" data-testid="ask-room">
+                    <option value="">Choose a space…</option>
+                    @{ var parts = Rooms(t).GroupBy(Sections.Of).ToList(); }
+                    @foreach (var part in parts)
+                    {
+                        @if (parts.Count > 1)
+                        {
+                            <optgroup label="@part.Key">
+                                @foreach (var r in part)
+                                {
+                                    <option value="@r.Id">@r.Name@Mark(t, r, busy, booked)</option>
+                                }
+                            </optgroup>
+                        }
+                        else
+                        {
+                            @foreach (var r in part)
+                            {
+                                <option value="@r.Id">@r.Name@Mark(t, r, busy, booked)</option>
+                            }
+                        }
+                    }
+                </select>
+            </label>
+            @if (end > start && Rooms(t).Where(r => !busy.ContainsKey(r.Id) && !booked.ContainsKey(r.Id) && r.Id != _roomId).ToList() is var free)
+            {
+                <div class="free-spaces span2" data-testid="ask-free-spaces">
+                    @if (free.Count == 0)
+                    {
+                        <span class="muted">Every other space is in use then.</span>
+                    }
+                    else
+                    {
+                        <span class="muted">Free then:</span>
+                        @foreach (var (r, lacking) in free.Select(r => (r, Spaces.Lacking(t, _classId, r.Id))).OrderBy(x => x.Item2.Count > 0).ToList())
+                        {
+                            <button type="button" class="@(lacking.Count > 0 ? "space-pick lacks" : "space-pick")" style="--c:@r.Colour" @onclick="() => { _roomId = r.Id; Check(); }"
+                                    data-testid="ask-free-space" data-lacks="@(lacking.Count > 0 ? "1" : "0")">
+                                <span>@r.Name</span>
+                                @if (lacking.Count > 0)
+                                {
+                                    <small>@Cccc.Web.Features.Data.EquipmentWords.Without(lacking)</small>
+                                }
+                            </button>
+                        }
+                    }
+                </div>
+            }
+            <label class="field"><span>Who it is for</span>
+                <select @bind="WhoText" @bind:after="Check" data-testid="ask-for">
+                    <option value="groups">Groups</option>
+                    <option value="everyone">The whole building</option>
+                </select>
+            </label>
+            @if (!_everyone)
+            {
+                <fieldset class="field checks span2"><legend>Groups</legend>
+                    @foreach (var g in t.Groups.OrderBy(g => g.Name, NameOrder.Comparer))
+                    {
+                        <label><input type="checkbox" checked="@_groups.Contains(g.Id)" @onchange="ev => Toggle(g.Id, (bool)ev.Value!)" data-testid="ask-group" data-name="@g.Name" /> @g.Name</label>
+                    }
+                </fieldset>
+            }
+            <label class="field"><span>Class</span>
+                <select @bind="ClassText" @bind:after="Check" data-testid="ask-class">
+                    <option value="">No class: give it a name</option>
+                    @foreach (var c in t.Classes.Current().OrderBy(c => c.Name, NameOrder.Comparer))
+                    {
+                        <option value="@c.Id">@c.Name</option>
+                    }
+                </select>
+            </label>
+            <label class="field"><span>Name</span>
+                <input @bind="_title" @bind:after="Check" placeholder="@(t.Classes.Find(_classId)?.Name ?? "Duo act rehearsal")" data-testid="ask-title" />
+            </label>
+        </div>
+        <p class="hint" data-testid="ask-public">Once it is a yes, its name is on the timetable for everybody, and on the screens in the building: never name a student, or say anything about anybody's health.</p>
+        @if (_why is null)
+        {
+            <h3 class="form-sub">A yes would run into</h3>
+            @if (runsInto.Count == 0 && bookedThen is null)
+            {
+                <p class="muted" data-testid="ask-clear">Nothing: the space is free then, and so are you.</p>
+            }
+            else
+            {
+                <ul class="plain-list" data-testid="ask-clashes">
+                    @if (bookedThen is not null)
+                    {
+                        <li data-testid="ask-clash">@(t.Rooms.Find(_roomId)?.Name) is @Booking(bookedThen) then.</li>
+                    }
+                    @foreach (var c in runsInto)
+                    {
+                        <li data-testid="ask-clash">@c.Description</li>
+                    }
+                </ul>
+                <p class="hint">You can still ask: an administrator may say yes all the same, or put it in another space.</p>
+            }
+        }
+        else
+        {
+            <p class="form-error" data-testid="ask-why">@_why</p>
+        }
+    </ChildContent>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    /// <summary>What to start from, read from a line typed into Find; nothing is sent until Send.</summary>
+    [Parameter] public SpaceAsk? Draft { get; set; }
+    private DateOnly _date;
+    private TimeOnly _start = new(10, 0), _end = new(11, 0);
+    private Guid? _roomId, _classId;
+    private bool _everyone;
+    private readonly HashSet<Guid> _groups = [];
+    private string _title = "";
+    private string? _why;
+
+    private string RoomText { get => _roomId?.ToString() ?? ""; set => _roomId = Guid.TryParse(value, out var g) ? g : null; }
+    private string ClassText { get => _classId?.ToString() ?? ""; set => _classId = Guid.TryParse(value, out var g) ? g : null; }
+    private string WhoText { get => _everyone ? "everyone" : "groups"; set => _everyone = value == "everyone"; }
+
+    protected override void OnInitialized()
+    {
+        _date = W.Today.AddDays(1);
+        if (Draft is { } d)
+        {
+            _date = d.Date; _start = d.Start; _end = d.End;
+            _roomId = W.T.Rooms.Find(d.RoomId) is { FormerSince: null } ? d.RoomId : null;
+            _classId = W.T.Classes.Find(d.ClassId) is { FormerSince: null } ? d.ClassId : null;
+            _everyone = d.Audience.IsEveryone;
+            _groups.UnionWith(d.Audience.Cohorts.Where(W.T.Groups.Contains));
+            _title = d.Title;
+        }
+        Check();
+    }
+
+    private static IEnumerable<Room> Rooms(Timetable t) => t.Rooms.Current()
+        .OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer);
+
+    /// <summary>What is in a space then, beside its name, as the add form says it.</summary>
+    private string Mark(Timetable t, Room r, IReadOnlyDictionary<Guid, Occurrence> busy, IReadOnlyDictionary<Guid, EventOnDay> booked) =>
+        busy.TryGetValue(r.Id, out var b) ? $" — busy: {Looks.Title(t, b.Session)} {Looks.When(b.Start, b.End)}"
+        : booked.TryGetValue(r.Id, out var e) ? " — " + Booking(e)
+        : Spaces.Lacking(t, _classId, r.Id) is { Count: > 0 } lacking ? " — " + Cccc.Web.Features.Data.EquipmentWords.Without(lacking) : "";
+
+    /// <summary>An event in a space, as the reader may see it: its name and hours, or only that the space is taken.</summary>
+    private string Booking(EventOnDay e) => !W.Access.Events.Sees(e.Event) ? "booked"
+        : $"booked: {(e.Event.Title.Trim() is { Length: > 0 } title ? title : "an event")}{(e.AllDay ? " all day" : $" {Looks.When(e.From, e.Until)}")}";
+
+    private void Toggle(Guid id, bool on)
+    {
+        if (on) _groups.Add(id); else _groups.Remove(id);
+        Check();
+    }
+
+    /// <summary>The ask as it would be sent, its times snapped as the add form snaps them, to say what a yes would run into first.</summary>
+    private SpaceAsk Asked(Guid me) => new()
+    {
+        FacilitatorId = me, Date = _date, Start = Edits.Snap(_start), End = Edits.Snap(_end), RoomId = _roomId ?? Guid.Empty,
+        Audience = _everyone ? Audience.Everyone : Audience.ForGroups(_groups.Where(W.T.Groups.Contains)), ClassId = _classId, Title = _title.Trim(),
+    };
+
+    /// <summary>The edit's own refusals, said before Send rather than after it.</summary>
+    private void Check()
+    {
+        var a = Asked(W.Access.FacilitatorId ?? Guid.Empty);
+        _why = W.Access.FacilitatorId is null ? "Your account is not linked to a facilitator."
+            : a.End <= a.Start ? "It has to finish after it starts."
+            : a.Date < W.Today || a.Date == W.Today && a.Start <= W.Clock.TimeOfDay ? "That time has gone. Ask for a time still to come."
+            : _roomId is null ? "Choose a space."
+            : !_everyone && !a.Audience.Cohorts.Any() ? "Say who it is for: tick a group, or choose the whole building."
+            : _classId is null && a.Title.Length == 0 ? "Say what it is: choose a class, or give it a name."
+            : null;
+    }
+
+    private void Send()
+    {
+        Check();
+        if (_why is not null) return;
+        if (W.Commit(t => Edits.AskForSpace(t, Asked(W.Access.FacilitatorId ?? Guid.Empty), W.Access.Asking, W.Today, W.Clock.TimeOfDay, W.Clock.Now))) D.Close();
+    }
+}

@@ -53,7 +53,9 @@ Nothing depends on a web font: the laptop may be offline.
   class named, the words left are the title. Whatever it does not say comes from the class's most like
   session (`Habits.Like`). It comes first in Find, saying what it would add, where the rest came from and
   any word it did not understand (*stu (Studio A or Studio B?)*); Enter opens the add form on it, over
-  the plan on its day, and nothing is added until OK there. A coach is never offered it.
+  the plan on its day, and nothing is added until OK there. A coach is never offered it: a coach linked
+  to a facilitator is offered the same reading as an ask for its space instead (*Ask for Studio B · Thu
+  26 Nov 14:00–15:00*), and Enter opens *Ask for a space* filled in, sending nothing until *Send*.
 - **Who is away can be typed into Find the same way** (`QuickAway`): *ada sick*, *bo off fri 9-12*, *dag
   away 1/12 to 4/12*, *alba absent mon-wed*, *cleo out tomorrow afternoon*. A line is about somebody away
   only when it says so (*away*, *off*, *out*, *absent*, *sick*, *ill*, *leave*, *holiday*, *can't come*,
@@ -137,8 +139,9 @@ classes in their colours, a tick at now), what is in it now (class, group, initi
 or *Free*, until when, and what is next. A board rather than tiles, so ten spaces or forty read without
 gaps. Choosing a row opens that space's week. Beside them, **Today
 needs**, after **Waiting for your answer** for an administrator (what facilitators have asked: *Can't
-come* with the days and how many of their classes it reaches, amber once its first day has come, and
-*Can cover* with the class, each opening the answer form): cover still needed, registers waiting for the reader (more than three are one line opening
+come* with the days and how many of their classes it reaches, amber once its first day has come,
+*Can cover* with the class, and *Space* with its name, space and time and how many clashes a yes would
+make, each opening the answer form): cover still needed, registers waiting for the reader (more than three are one line opening
 Registers, so a whole day of them does not push cover and clashes out of sight), clashes today, then **Changed since
 yesterday** (since Friday on a Monday): today's classes that were moved, cancelled, given another space
 or teacher or cover, added or deleted, each saying what is different (*Was 09:00–11:00*, *Dag Øverlie
@@ -313,14 +316,22 @@ cancellation here would undo that file if this one were opened after it.
 [`03`](03-the-rules.md#asking-asking-the-rebuilds-own)). *Can't come…* takes the days, all day or between
 two times, and lists what it would take them off before *Send*: each class with what a yes would leave it,
 *needs cover* or *Bo Lindqvist still teaching it*. There is no box for why, and the form says so.
-*Asked* lists what they asked and offered with where each stands (*Waiting for an answer*, *Yes: recorded
-as away*, *Not this time*), each with *Take back* while nobody has answered; *Could you cover?* lists the
-classes in the next two weeks needing cover while they are free, each with *I can cover it*. The
-administrator's answer form says first what a yes does: for being away, the classes it takes them off and
-what each is left as; for an offer, the class, who is away, and the offerer then (*Free*, or teaching),
-with their hours that week and anybody else who offered. *Yes, record it* or *Yes, they cover it* beside
-*Not this time* or *No thanks*. Nothing else on the timetable moves until a yes, and a yes is one change
-that Undo takes back.
+*Ask for a space…* takes a day and times, a space (each marked when it is busy, booked or without what the
+class needs, and the free ones offered as chips to press), who it is for, and a class or a name, and says
+before *Send* what a yes would run into, in the clash check's own words (*Space "Studio A": "Handstands,
+extra" overlaps "Juggling"*) and any booking of the space, or *Nothing: the space is free then, and so are
+you*; the form says that the name will be on the
+timetable and the screens for everybody, so never a student's name or anything about health. An editor,
+who adds classes, is not offered it. *Asked* lists what they asked and offered with where each stands
+(*Waiting for an answer*, *Yes: recorded as away*, *Yes: on the timetable Wed 25 Nov, 11:00–12:00 in
+Studio B* when it was put somewhere else or has moved since, *Not this time*), each with *Take back* while
+nobody has answered; *Could you cover?* lists the classes in the next two weeks needing cover while they
+are free, each with *I can cover it*. The administrator's answer form says first what a yes does: for
+being away, the classes it takes them off and what each is left as; for an offer, the class, who is away,
+and the offerer then (*Free*, or teaching), with their hours that week and anybody else who offered; for a
+space, what a yes runs into, with *Put it in* offering the other spaces free then. *Yes, record it*, *Yes,
+they cover it* or *Yes, put it on* beside *Not this time* or *No thanks*. Nothing else on the timetable
+moves until a yes, and a yes is one change that Undo takes back.
 
 **People & places folds what is former under each list** (`Data/FormerList`): *3 former classes*,
 closed unless a search is on, each row saying since when and how many classes it has before then. A

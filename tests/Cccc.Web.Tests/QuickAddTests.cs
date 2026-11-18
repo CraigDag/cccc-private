@@ -262,5 +262,24 @@ public class QuickAddTests
         Assert.Equal("Aerial Hall", FindIndex.Search(T, "aerial", mayEdit: true, admin: true, today: Today, shown: Today)[0].Label);
     }
 
+    [Fact]
+    public void ACoachWhoAddsNoClassesIsOfferedTheSameLineAsAnAskForItsSpace()
+    {
+        var ada = Person("Ada Brightwater");
+        IReadOnlyList<FindHit> Coach(string q, Guid? me) =>
+            FindIndex.Search(T, q, mayEdit: false, admin: false, today: Today, shown: Today, me: me, now: new TimeOnly(10, 0));
+        var asked = Coach("studio b thu 14-15:30 duo act ba 1", ada);
+        Assert.Equal(("quick-space", "Ask for Studio B · Thu 19 Nov 14:00–15:30", "Duo act · BA 1"), (asked[0].Kind, asked[0].Label, asked[0].Detail));
+        Assert.Equal(((Guid?)Space("Studio B"), (Guid?)null, "Duo act"), (asked[0].Draft!.RoomId, asked[0].Draft!.ClassId, asked[0].Draft!.Title));
+        // A class named takes the rest from its most like session, as an add would.
+        var aerial = Coach("aerial 4/12 13", ada)[0];
+        Assert.Equal(("quick-space", "Ask for Aerial Hall · Fri 4 Dec 13:00–14:30", "Aerial · BA 1 · the rest as on Fri 27 Nov"), (aerial.Kind, aerial.Label, aerial.Detail));
+        // Nobody to ask for, somebody who adds it themselves, and a question about who is free: no ask.
+        Assert.DoesNotContain(Coach("aerial 4/12 13", null), h => h.Kind == "quick-space");
+        Assert.DoesNotContain(FindIndex.Search(T, "aerial 4/12 13", mayEdit: true, admin: false, today: Today, shown: Today, me: ada, now: new TimeOnly(10, 0)), h => h.Kind == "quick-space");
+        Assert.DoesNotContain(Coach("free thu 14", ada), h => h.Kind == "quick-space");
+        Assert.DoesNotContain(Coach("studio b", ada), h => h.Kind == "quick-space");
+    }
+
     private static readonly IEqualityComparer<Audience> AudienceIs = EqualityComparer<Audience>.Create((a, b) => a!.Equivalent(b!), a => a.Kind.GetHashCode());
 }
