@@ -1,0 +1,255 @@
+@page "/roll-call"
+@implements IDisposable
+@inject RollCalls Calls
+@inject ProjectChoice Choice
+@inject Dialogs D
+@using System.Collections.Immutable
+
+<PageTitle>Roll call · CCCC Scheduler</PageTitle>
+@* A fire drill or an evacuation: everybody the timetable has in the building at the moment the roll is called,
+   by the space they are in, ticked off as they are found, by several people at once on their own phones. It is
+   the school's, not the tab's, so it lists the timetable open for everybody (ProjectChoice.Open), whichever one
+   this tab is looking at. Nothing about it is kept (RollCalls). *@
+@if (!W.Access.MayCallTheRoll)
+{
+    <div class="notice" data-testid="roll-not-yours">
+        <b>The roll call is for staff.</b> It lists everybody the timetable has in the building by name, so it is for facilitators, editors, administrators and anybody tagged Staff.
+    </div>
+}
+else if (Choice.Open() is not { } live)
+{
+    <div class="notice" data-testid="roll-no-timetable">No timetable is open for everybody, so the roll call has nobody to list.</div>
+}
+else
+{
+    var t = live.State;
+    var run = Calls.For(live.Id);
+    bool running = run is not null;
+    var local = W.Clock.Local(W.Clock.Now);
+    var date = run?.Date ?? W.Today;
+    var at = run?.At ?? new TimeOnly(local.Hour, local.Minute);
+    var list = Cccc.Domain.Rules.RollCall.At(t, date, at, W.Access.Events);
+    var found = run?.Found ?? ImmutableHashSet<Guid>.Empty;
+    var expected = list.Expected.ToList();
+    int foundExpected = expected.Count(p => found.Contains(p.Id));
+    int left = expected.Count - foundExpected;
+    var eyes = list.Spaces.SelectMany(s => s.ByEye).ToList();
+    int eyesLeft = eyes.Count(x => !found.Contains(x.Id));
+    int foundAnyway = list.NotExpected.Count(p => found.Contains(p.Id));
+    var q = _find.Trim();
+    // Still to find hides who has been found, so the list shrinks to who is missing; a name typed finds them anywhere.
+    bool Hides(Guid id) => _toFind && running && found.Contains(id);
+    bool Shows(RollPerson p) => (q.Length == 0 || Matches(p.Name, q)) && !Hides(p.Id);
+    bool othersShown = _others || q.Length > 0;
+    <div class="roll" data-testid="roll-call" data-running="@(running ? "yes" : "no")">
+        <header class="roll-head">
+            <h1 class="display">Roll call <span class="now-clock">@Cccc.Domain.Week.Hm(at)</span></h1>
+            @if (run is not null)
+            {
+                <button type="button" class="btn danger" @onclick="() => End(live.Id, left)" data-testid="roll-end">End the roll call</button>
+                <p class="roll-lede" data-testid="roll-called">Called at @Cccc.Domain.Week.Hm(run.At)@(date != W.Today ? ", " + Cccc.Domain.Week.ShortDate(date) + "," : "") by @run.StartedBy.</p>
+            }
+            else
+            {
+                <p class="roll-lede">For a fire drill or an evacuation: everybody the timetable has in the building at @Cccc.Domain.Week.Hm(at), by the space they are in, to tick off as they are found.</p>
+            }
+            @if (W.LookingAway)
+            {
+                <p class="roll-lede hint" data-testid="roll-open-one">For the timetable open for everybody, not the one this tab is looking at.</p>
+            }
+        </header>
+        @if (run is null)
+        {
+            <div class="roll-start">
+                <button type="button" class="btn primary roll-go" @onclick="() => Start(live.Id)" data-testid="roll-start">Call the roll at @Cccc.Domain.Week.Hm(at)</button>
+                <span data-testid="roll-summary">@RollCallWords.Expected(list)</span>
+            </div>
+            <p class="hint roll-about">Everybody who may call the roll sees the same list and can tick on their own phone. Nothing is kept: ending it forgets every tick, and one left running ends by itself after three hours. It knows only the timetable, so a visitor, or somebody with nothing on today, is on no list.</p>
+        }
+        @* The count and the box to find a name stay in sight while the list scrolls under them. *@
+        <div class="roll-sticky">
+            @if (run is not null)
+            {
+                <div class="roll-tally" data-testid="roll-tally" data-left="@left">
+                    <b data-testid="roll-found">@foundExpected of @expected.Count found</b>
+                    @if (left > 0)
+                    {
+                        <span class="warn-text" data-testid="roll-left">@left still to find</span>
+                    }
+                    else
+                    {
+                        <span data-testid="roll-left">Everybody the timetable expected is found.</span>
+                    }
+                    @if (eyesLeft > 0)
+                    {
+                        <span data-testid="roll-eyes-left">@Looks.Count(eyesLeft, "class or event", "classes or events") still to count by eye</span>
+                    }
+                    @if (foundAnyway > 0)
+                    {
+                        <span data-testid="roll-anyway">and @foundAnyway found who @(foundAnyway == 1 ? "was" : "were") not expected</span>
+                    }
+                </div>
+                <span class="roll-bar" aria-hidden="true"><span style="width:@(expected.Count == 0 ? 100 : foundExpected * 100 / expected.Count)%"></span></span>
+            }
+            <div class="roll-tools">
+                <TypedText Value="@_find" ValueChanged="s => _find = s" Type="search" Placeholder="Find a name…" Label="Find a name" Class="find" data-testid="roll-find" />
+                @if (running)
+                {
+                    <div class="seg" role="group" aria-label="Who to show">
+                        <button type="button" class="@(_toFind ? "" : "on")" @onclick="() => _toFind = false" data-testid="roll-show-all">Everybody</button>
+                        <button type="button" class="@(_toFind ? "on" : "")" @onclick="() => _toFind = true" data-testid="roll-show-left">Still to find</button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (list.Spaces.Count == 0 && list.Between.Count == 0)
+        {
+            <p class="calm" data-testid="roll-nobody">The timetable has nobody in the building at @Cccc.Domain.Week.Hm(at).</p>
+        }
+        <div class="roll-spaces">
+            @foreach (var s in list.Spaces)
+            {
+                var people = s.People.Where(Shows).ToList();
+                var eyesHere = q.Length > 0 ? [] : s.ByEye.Where(x => !Hides(x.Id)).ToList();
+                if (people.Count == 0 && eyesHere.Count == 0) continue;
+                int foundHere = s.People.Count(p => found.Contains(p.Id));
+                var roomId = s.RoomId;
+                <section class="roll-space" style="--c:@(t.Rooms.Find(roomId)?.Colour ?? "var(--rule)")" data-testid="roll-space" @key="roomId">
+                    <header class="roll-space-head">
+                        <h2 data-testid="roll-space-name">@RollCallWords.Space(t, roomId)</h2>
+                        @if (s.People.Count > 0)
+                        {
+                            <span class="roll-count" data-testid="roll-space-count">@foundHere of @s.People.Count</span>
+                        }
+                        @if (running && foundHere < s.People.Count)
+                        {
+                            <button type="button" class="btn quiet roll-all" @onclick="() => Mark(live.Id, s.People.Select(p => p.Id).ToList(), true)" data-testid="roll-space-all">All found</button>
+                        }
+                    </header>
+                    @if (RollCallWords.InIt(t, s) is { Length: > 0 } inIt)
+                    {
+                        <p class="roll-in" data-testid="roll-space-in">@inIt</p>
+                    }
+                    @if (people.Count > 0)
+                    {
+                        <div class="roll-people">
+                            @foreach (var p in people)
+                            {
+                                @Tick(live.Id, running, found.Contains(p.Id), p, null)
+                            }
+                        </div>
+                    }
+                    @foreach (var x in eyesHere)
+                    {
+                        bool counted = found.Contains(x.Id);
+                        <button type="button" class="roll-eye @(counted ? "found" : "")" aria-pressed="@(counted ? "true" : "false")" disabled="@(!running)"
+                                @onclick="() => Mark(live.Id, [x.Id], !counted)" data-testid="roll-eye" data-found="@(counted ? "yes" : "no")" @key="x.Id">
+                            <span class="roll-tick" aria-hidden="true"></span>
+                            <span><b>Count by eye</b> <span data-testid="roll-eye-what">@RollCallWords.ByEye(t, x)</span></span>
+                        </button>
+                    }
+                </section>
+            }
+            @if (list.Between.Where(Shows).ToList() is { Count: > 0 } between)
+            {
+                <section class="roll-space roll-between" data-testid="roll-between">
+                    <header class="roll-space-head">
+                        <h2>@RollCallWords.Heading(RollWhere.Between)</h2>
+                        <span class="roll-count">@list.Between.Count(p => found.Contains(p.Id)) of @list.Between.Count</span>
+                    </header>
+                    <p class="roll-in">In the building, in none of the spaces at @Cccc.Domain.Week.Hm(at).</p>
+                    <div class="roll-people">
+                        @foreach (var p in between)
+                        {
+                            @Tick(live.Id, running, found.Contains(p.Id), p, RollCallWords.Detail(t, p))
+                        }
+                    </div>
+                </section>
+            }
+        </div>
+
+        @if (list.NotExpected.Count > 0)
+        {
+            <section class="roll-others" data-testid="roll-others">
+                <div class="roll-others-head">
+                    <h2 class="now-section">Not expected in a space now · @list.NotExpected.Count</h2>
+                    @if (q.Length == 0)
+                    {
+                        <button type="button" class="link" @onclick="() => _others = !_others" data-testid="roll-others-toggle">@(_others ? "Hide them" : "Show them")</button>
+                    }
+                </div>
+                <p class="hint">A class later today, classes over, recorded away, or not there by the register: they may be in the building or not. Tick anybody who turns up.</p>
+                @if (othersShown)
+                {
+                    @foreach (var g in list.NotExpected.Where(Shows).GroupBy(p => p.Where))
+                    {
+                        <h3 class="roll-kind" data-testid="roll-kind">@RollCallWords.Heading(g.Key)</h3>
+                        <div class="roll-people">
+                            @foreach (var p in g)
+                            {
+                                @Tick(live.Id, running, found.Contains(p.Id), p, RollCallWords.Detail(t, p))
+                            }
+                        </div>
+                    }
+                }
+            </section>
+        }
+    </div>
+}
+
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+
+    private string _find = "";
+    private bool _toFind;
+    private bool _others;
+
+    protected override void OnInitialized() => Calls.Changed += OnCalled;
+
+    private void OnCalled(Guid projectId) => _ = InvokeAsync(StateHasChanged);
+
+    private static bool Matches(string name, string q) =>
+        Cccc.Domain.NameOrder.Culture.CompareInfo.IndexOf(name, q,
+            System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreNonSpace) >= 0;
+
+    private static string Tag(RollPerson p) => p.IsStudent ? p.IsGuest ? "Guest" : "" : p.IsGuest ? "Guest facilitator" : "Facilitator";
+
+    private RenderFragment Tick(Guid projectId, bool running, bool isFound, RollPerson p, string? detail) =>
+        @<button type="button" class="roll-person @(isFound ? "found" : "")" aria-pressed="@(isFound ? "true" : "false")" disabled="@(!running)"
+                 @onclick="() => Mark(projectId, [p.Id], !isFound)" data-testid="roll-person" data-found="@(isFound ? "yes" : "no")" @key="p.Id">
+            <span class="roll-tick" aria-hidden="true"></span>
+            <span class="roll-who">
+                <span class="roll-name" data-testid="roll-name">@p.Name</span>
+                @if (Tag(p) is { Length: > 0 } tag)
+                {
+                    <small class="roll-tag">@tag</small>
+                }
+                @if (detail is { Length: > 0 })
+                {
+                    <small class="roll-detail" data-testid="roll-detail">@detail</small>
+                }
+            </span>
+        </button>;
+
+    private void Start(Guid projectId)
+    {
+        if (!W.Access.MayCallTheRoll) return;
+        var local = W.Clock.Local(W.Clock.Now);
+        Calls.Start(projectId, W.Today, new TimeOnly(local.Hour, local.Minute), W.Access.Display);
+        _toFind = false;
+    }
+
+    private void Mark(Guid projectId, IReadOnlyCollection<Guid> ids, bool found)
+    {
+        if (W.Access.MayCallTheRoll) Calls.Mark(projectId, ids, found);
+    }
+
+    private void End(Guid projectId, int left) => D.Show<RollCallEndForm>(new Dictionary<string, object?>
+    {
+        [nameof(RollCallEndForm.ProjectId)] = projectId,
+        [nameof(RollCallEndForm.Left)] = left,
+    });
+
+    public void Dispose() => Calls.Changed -= OnCalled;
+}

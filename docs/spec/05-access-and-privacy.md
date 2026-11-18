@@ -34,6 +34,7 @@ Capabilities are **named**, never `role >= Editor`:
 | `MaySeeSystem` (backups, the nightly update) | Administrator |
 | `MayManageScreens` (pair, change and unpair the screens in the building) | Administrator |
 | `MayAnswerAsking` (yes or no to a facilitator asking to be away, which records an absence, offering to cover, or asking for a space, which adds a class) | Administrator |
+| `MayCallTheRoll` (call the roll for a fire drill or an evacuation, and tick who is found) | Editor, Administrator, anybody linked to a facilitator, anybody tagged Staff; never by following narrowed |
 
 **Asking is for oneself.** Any account linked to a facilitator, a Viewer included, asks to be away,
 offers to cover and asks for a space for that facilitator and nobody else (`Access.Asking`), as a
@@ -42,6 +43,12 @@ narrows each to the asker's own. A yes is an administrator's because it records 
 class, which are theirs to keep; an editor can still give a class its cover from the Cover form, and an
 offer the class's cover then reads as covering. An editor adds a class themselves, so is offered no ask
 for a space.
+
+**The roll call is staff's**, because it lists every student in the building by name: editors and
+administrators, anybody linked to a facilitator and anybody tagged Staff (reception, the people who
+would stand at the assembly point), never an account that is only a Viewer or only a Student. It
+changes no timetable, so following does not narrow it, and it lists the timetable open for everybody
+(`ProjectChoice.Open`), since it is the building's and not the tab's.
 
 **A timetable that follows the current app is changed by nobody here** (`Access.Following`;
 [`04`](04-storage-and-editing.md)). It narrows what anybody may *change* — every collection, registers
@@ -136,6 +143,10 @@ The live file has held real students since 2026-10-29, so all of this applies to
 - **The evening email of what changed** (`NewsMail`, `EveningNotes`) goes only to the facilitator's own
   address (or, in Preview, to the one preview address, saying who it was for), names classes, spaces and
   whoever changed them and never a student, and is off until switched on; the log records how many went.
+- **A roll call is held in memory only** (`RollCalls`): who called it, when, and who has been ticked as
+  found, by id. Nothing of it is stored, logged or put in a URL; ending it forgets every tick, so does the
+  app restarting, and one left running ends by itself after three hours. It never says why somebody is
+  away, only that they are, and it shows only events the reader may see.
 - **Absence reasons** are free text an administrator may fill; the form warns not to write health
   details there. **A line typed into Find never fills it** (`QuickAway`): words it does not understand
   (*ada sick flu*) are said in Find and kept nowhere. **Asking to be away has no box for why**, deliberately: a coach asked why would write

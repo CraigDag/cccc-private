@@ -64,6 +64,7 @@
         <div class="dock-sheet">
             @if (W.Access.FacilitatorId is not null) { <NavLink class="me-link" href="my-week">My week</NavLink> }
             @if (W.Access.MayEdit) { <NavLink class="me-link" href="cover">Cover</NavLink> }
+            @if (W.Access.MayCallTheRoll) { <NavLink class="me-link" href="roll-call" data-testid="dock-roll-call">Roll call</NavLink> }
             @if (W.Access.MayUseAdminTools)
             {
                 <NavLink class="me-link" href="data">People &amp; places</NavLink>

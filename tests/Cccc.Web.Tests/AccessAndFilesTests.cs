@@ -88,6 +88,35 @@ public class AccessTests
     }
 }
 
+public class RollCallAccessTests
+{
+    private static Access With(Role role, AccountTags tags, Guid? linked = null, bool suspended = false) =>
+        new(new Account(Guid.NewGuid(), "x", "X", role, tags, linked, suspended, false, "s", DateTimeOffset.UnixEpoch, true));
+
+    /// <summary>
+    /// The roll call lists every student in the building by name, so it is staff's: editors and administrators,
+    /// anybody linked to a facilitator and anybody tagged Staff; never a student, nor a viewer who is none of
+    /// those. It changes no timetable, so following the current app does not narrow it.
+    /// </summary>
+    [Fact]
+    public void StaffCallTheRollAndAStudentNever()
+    {
+        Assert.False(Access.Nobody.MayCallTheRoll);
+        Assert.False(With(Role.Viewer, AccountTags.None).MayCallTheRoll);
+        Assert.False(With(Role.Viewer, AccountTags.Student).MayCallTheRoll);
+        Assert.True(With(Role.Viewer, AccountTags.Staff).MayCallTheRoll);
+        Assert.True(With(Role.Viewer, AccountTags.Student | AccountTags.Staff).MayCallTheRoll);
+        Assert.True(With(Role.Viewer, AccountTags.None, Guid.NewGuid()).MayCallTheRoll);
+        Assert.True(With(Role.Editor, AccountTags.None).MayCallTheRoll);
+        Assert.True(With(Role.Administrator, AccountTags.None).MayCallTheRoll);
+        // A suspended account calls nothing, whatever it is linked to or tagged.
+        Assert.False(With(Role.Administrator, AccountTags.Staff, Guid.NewGuid(), suspended: true).MayCallTheRoll);
+        Assert.False(With(Role.Viewer, AccountTags.Staff, Guid.NewGuid(), suspended: true).MayCallTheRoll);
+        Assert.True((With(Role.Viewer, AccountTags.None, Guid.NewGuid()) with { Following = true }).MayCallTheRoll);
+        Assert.True((With(Role.Editor, AccountTags.None) with { Following = true }).MayCallTheRoll);
+    }
+}
+
 public class ProjectFileTests
 {
     private static readonly DateOnly Day = new(2030, 3, 6);

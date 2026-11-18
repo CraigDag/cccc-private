@@ -149,6 +149,18 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   takes it back; the coach then sees where it is on the timetable, even once it has been moved. The form
   reminds them that its name is on the timetable and the screens for everybody, so never a student's name
   or anything about anybody's health.
+- **A roll call for a fire drill or an evacuation.** *Roll call* on Now (or typing *fire* into Ctrl+K, or
+  More on a phone) lists everybody the timetable has in the building at that minute, by the space they
+  are in: a class's students and whoever is teaching it, people at an event in a space, people between
+  two of their classes. Press *Call the roll*, and everybody who may call it can tick names off on their
+  own phone at the same time, each seeing the others' ticks as they happen, a whole space in one press.
+  The count stays at the top (*10 of 18 found · 8 still to find*), and *Still to find* leaves only who is
+  missing. Who it does not expect in a space (a class later today, classes over, recorded away, marked
+  absent on the register) is listed apart and can still be ticked if they turn up; a class for the whole
+  building and an event are there to count by eye. Every page shows a band while one runs. It is for
+  staff only (editors, administrators, facilitators and anybody tagged Staff), never says why anybody is
+  away, and keeps nothing: ending it forgets every tick, and one left running ends by itself after three
+  hours.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

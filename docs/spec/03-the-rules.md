@@ -59,6 +59,31 @@ old app has a class that carries the reasoning, it is named in brackets so the h
 - Only classes that happen count, and a class ending as the moment starts is over. A student who is
   away but on a class's roster is *away from* it, not simply absent from the answer.
 
+## A roll call (`RollCall`, the rebuild's own)
+
+A fire drill or an evacuation asks `Where` of everybody at once: who the timetable has in the building at
+the moment the roll is called, by the space it has them in, to be ticked off as they are found.
+
+- **Each person is `Where`'s answer**, so the roll call cannot disagree with the plan: a student by the
+  class's roster, a facilitator by being in the room for their own part (cover included, a guest too).
+  Somebody with nothing on that day is on no list, and nor is a visitor: it knows only the timetable.
+- **Expected, and in a space**: in a class now, in its space (a class given no space is listed under *No
+  space given*, last); at an event now that names them and that the reader may see, in the event's space.
+  **Expected, in no space**: between two of their classes that day.
+- **Not expected, listed apart, in this order**: at an event that names them in none of the spaces (a
+  trip); their first class still to come; their classes over for the day; in a class whose register, taken,
+  marks them excused or absent (a register not taken yet expects the whole roster); recorded away, said
+  without its reason, ever. Any of them can still be ticked as found: they may be in the building or not.
+- **Away beats everything, then the class they are in, then an event naming them**, then between, still to
+  come and over, in that order. A facilitator away is listed only on a day one of their classes is.
+- **Counted by eye**: a class now that names nobody (a whole-building class, a group with nobody in it),
+  and every event now in a space the reader may see, whether or not it names anybody, since nobody can say
+  who came. Each is a line of its own in its space, to tick when it is counted.
+- Spaces are in name order with *No space given* last; in each, facilitators first and then students, by
+  name in Danish order; between classes the same; those apart by kind, facilitators before students.
+- **The moment is fixed when the roll is called**, and the list is worked out again from the timetable
+  whenever it is drawn, so somebody recorded away during the drill moves at once.
+
 ## What changed lately (`Recent`)
 
 - **Read from the timetable's own history**, never a second record: a class is a day's if it was on

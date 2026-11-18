@@ -70,6 +70,14 @@ public sealed record Access(Account? Account)
     /// <summary>Pairs, renames and unpairs the screens in the building that show the timetable.</summary>
     public bool MayManageScreens => Role is Role.Administrator;
 
+    /// <summary>
+    /// Calls the roll for a fire drill or an evacuation (<see cref="Cccc.Domain.Rules.RollCall"/>), and ticks who
+    /// is found: staff, never a student, since it lists every student in the building by name. Editors and
+    /// administrators, anybody linked to a facilitator, and anybody tagged Staff. It changes nothing on the
+    /// timetable, so a timetable that follows the current app does not narrow it.
+    /// </summary>
+    public bool MayCallTheRoll => IsEditor || SignedIn && (FacilitatorId is not null || Account!.Tags.HasFlag(AccountTags.Staff));
+
     /// <summary>The name changes are recorded under: the login, which is unique.</summary>
     public string By => Account?.Login ?? "";
 

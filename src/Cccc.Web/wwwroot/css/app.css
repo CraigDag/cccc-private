@@ -127,12 +127,14 @@ input[type=time] { min-width: 6.5rem; }
 body:has(.shell, .loading:not(.boot)) .boot { display: none; }
 
 .shell { display: grid; grid-template-rows: var(--top) minmax(0, 1fr); height: 100vh; height: 100dvh; }
-.shell-main { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
-/* Rows are placed by name, so the page keeps the middle row whether or not the band is drawn. */
+.shell-main { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
+/* Rows are placed by number, so the page keeps its row whether or not either band is drawn. */
 .shell-main > .looking { grid-row: 1; }
-.shell-main > .shell-page { grid-row: 2; }
-.shell-main > .status { grid-row: 3; }
-.shell-page { overflow: auto; padding: 22px 28px 40px; min-width: 0; }
+.shell-main > .roll-band { grid-row: 2; }
+.shell-main > .shell-page { grid-row: 3; }
+.shell-main > .status { grid-row: 4; }
+/* --page-top is the page's top padding, which something kept in sight (.roll-sticky) rises over as it sticks. */
+.shell-page { --page-top: 22px; overflow: auto; padding: var(--page-top) 28px 40px; min-width: 0; }
 /* The tab is looking at a timetable that is not open for everybody (LookingBand). */
 .looking {
     display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 28px;
@@ -140,6 +142,13 @@ body:has(.shell, .loading:not(.boot)) .boot { display: none; }
 }
 .looking-text { flex: 1 1 320px; min-width: 0; overflow-wrap: anywhere; }
 .looking .btn { flex: none; max-width: 100%; white-space: normal; text-align: left; }
+/* A roll call is running (RollCallBand): on every page, for everybody who may tick, until it ends. */
+.roll-band {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 28px;
+    background: var(--warning-soft); border-bottom: 1px solid var(--warning); color: var(--text);
+}
+.roll-band-text { flex: 1 1 320px; min-width: 0; overflow-wrap: anywhere; }
+.roll-band .btn { flex: none; }
 
 .top {
     display: flex; align-items: center; gap: 18px; padding: 0 16px 0 18px; min-width: 0;
@@ -236,7 +245,10 @@ body:has(.shell, .loading:not(.boot)) .boot { display: none; }
 
 /* ---- Now: the building this minute ------------------------------------------------------------ */
 
-.now-head { margin-bottom: 22px; }
+.now-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; margin-bottom: 22px; }
+.now-head > * { grid-column: 1; }
+/* The roll call, for a fire drill: in the corner, for whoever may call it (RollCallPage). */
+.now-head > .now-roll { grid-column: 2; grid-row: 1; align-self: center; }
 .now-head .display { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; font-size: 34px; }
 .now-clock { color: var(--accent); font-variant-numeric: tabular-nums; }
 .now-body { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
@@ -1047,8 +1059,8 @@ ul.said li + li { margin-top: 4px; }
     :root { --label: 120px; --top: 52px; }
     body { font-size: 15px; }
     .shell { grid-template-rows: var(--top) minmax(0, 1fr); }
-    .shell-page { padding: 14px 16px 92px; }
-    .looking { padding: 8px 16px; font-size: 14px; }
+    .shell-page { --page-top: 14px; padding: var(--page-top) 16px 92px; }
+    .looking, .roll-band { padding: 8px 16px; font-size: 14px; }
     .places, .top-right .undo span { display: none; }
     .top { gap: 10px; padding: 0 12px; }
     .find-open { margin-left: auto; }
@@ -1198,6 +1210,75 @@ ul.said li + li { margin-top: 4px; }
 .ny-check { align-items: flex-start; margin-top: 14px; }
 .ny-check input { margin-top: 3px; }
 .ny-check small { display: block; margin-top: 2px; }
+
+/* ---- The roll call (/roll-call) ----------------------------------------------------------------
+   A fire drill or an evacuation, ticked on a phone at the assembly point: a name a big target, the space
+   each is in, and the count and the box to find a name kept in sight while the list scrolls under them.
+   A found name is filled in ink, so who is still to find is what stands out. */
+.roll { max-width: 1100px; }
+.roll-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-bottom: 12px; }
+.roll-head h1 { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; font-size: 34px; }
+.roll-head .btn { flex: none; }
+.roll-lede { flex: 1 1 100%; margin: 0; color: var(--text-muted); }
+.roll-start { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 4px 0 10px; }
+.btn.roll-go { min-height: 52px; padding: 8px 26px; font-size: 18px; white-space: normal; }
+.roll-about { max-width: 70ch; }
+.roll-sticky {
+    position: sticky; top: calc(-1 * var(--page-top, 0px)); z-index: 5; display: flex; flex-direction: column; gap: 8px;
+    margin: 0 -28px 14px; padding: 10px 28px; background: var(--window); border-bottom: 1px solid var(--divider);
+}
+.roll-tally { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
+.roll-tally b { font-size: 18px; font-variant-numeric: tabular-nums; }
+.roll-bar { display: block; height: 6px; border-radius: 3px; background: var(--well); overflow: hidden; }
+.roll-bar > span { display: block; height: 100%; background: var(--accent); }
+.roll-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.roll-tools input.find { flex: 1 1 200px; max-width: 320px; border-radius: 999px; }
+.roll-spaces { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+.roll-space { min-width: 0; padding: 12px 14px; background: var(--panel); border: 1px solid var(--divider); border-left: 4px solid var(--c, var(--rule)); border-radius: var(--radius); }
+.roll-space-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.roll-space-head h2 { flex: 1 1 auto; min-width: 0; margin: 0; font-family: var(--serif); font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+.roll-count { font-variant-numeric: tabular-nums; color: var(--text-muted); white-space: nowrap; }
+.roll-in { margin: 2px 0 10px; color: var(--text-muted); font-size: 13px; overflow-wrap: anywhere; }
+.roll-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+.roll-person, .roll-eye {
+    display: flex; align-items: flex-start; gap: 8px; min-width: 0; min-height: 44px; padding: 8px 10px; text-align: left;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--board); color: var(--text); font: inherit; cursor: pointer;
+}
+.roll-person:hover:not(:disabled), .roll-eye:hover:not(:disabled) { background: var(--hover); }
+.roll-person:disabled, .roll-eye:disabled { cursor: default; }
+.roll-tick { position: relative; flex: none; width: 20px; height: 20px; margin-top: 1px; border: 2px solid var(--border); border-radius: 50%; }
+.roll-person.found, .roll-eye.found { background: var(--selection); border-color: var(--selection); color: var(--selection-text); }
+.roll-person.found:hover:not(:disabled), .roll-eye.found:hover:not(:disabled) { background: var(--selection); filter: brightness(1.08); }
+.roll-person.found .roll-tick, .roll-eye.found .roll-tick { border-color: var(--selection-text); background: var(--selection-text); }
+.roll-person.found .roll-tick::after, .roll-eye.found .roll-tick::after {
+    content: "✓"; position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: grid; place-items: center;
+    color: var(--selection); font-size: 13px; font-weight: 800; line-height: 1;
+}
+.roll-who { display: flex; flex-direction: column; min-width: 0; }
+.roll-name { font-weight: 600; overflow-wrap: anywhere; }
+.roll-tag, .roll-detail { font-size: 12px; color: var(--text-muted); overflow-wrap: anywhere; }
+.roll-person.found small { color: inherit; opacity: .75; }
+.roll-eye { width: 100%; margin-top: 8px; border-style: dashed; }
+.roll-between { grid-column: 1 / -1; }
+.roll-between .roll-people, .roll-others .roll-people { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.roll-others { margin-top: 22px; }
+.roll-others-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.roll-others-head .now-section { margin: 0; }
+.roll-kind { margin: 14px 0 6px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+@media (max-width: 760px) {
+    .roll-head h1 { font-size: 26px; }
+    .roll-sticky { margin: 0 -16px 12px; padding: 8px 16px; }
+    .roll-spaces { grid-template-columns: minmax(0, 1fr); }
+    .roll-people { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+    .roll-between .roll-people, .roll-others .roll-people { grid-template-columns: minmax(0, 1fr); }
+    /* Pressed on a phone in a hurry, often with cold hands: everything here is a whole finger tall. */
+    .roll .btn, .roll .seg button, .roll-tools input.find { min-height: 44px; }
+    /* The box and Everybody / Still to find share a line, so the bar kept in sight leaves room for names. */
+    .roll-tools { flex-wrap: nowrap; gap: 8px; }
+    .roll-tools input.find { flex: 1 1 0; min-width: 0; }
+    .roll-tools .seg { flex: none; }
+    .roll-tools .seg button { padding: 4px 8px; }
+}
 
 /* ---- Screens in the building (/screen) ----------------------------------------------------------
    A TV in a corridor or a tablet by a door, read from across a room by people walking past. Everything

@@ -80,6 +80,7 @@ builder.Services.AddSingleton<PdfGate>();
 builder.Services.AddSingleton<PrintRequests>();
 builder.Services.AddSingleton<PhoneCalendarFiles>();
 builder.Services.AddSingleton<Cccc.Web.Features.Now.SeenNews>();
+builder.Services.AddSingleton(sp => new Cccc.Web.Features.RollCall.RollCalls(() => sp.GetRequiredService<SchoolClock>().Now));
 builder.Services.AddSingleton<ScreenDirectory>();
 builder.Services.AddSingleton<Cccc.Web.Features.Screens.ScreenPairing>();
 builder.Services.AddSingleton<Cccc.Web.Features.Screens.ScreenLimiter>();

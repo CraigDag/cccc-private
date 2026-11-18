@@ -46,11 +46,11 @@ public static class FindIndex
     /// what is free (<see cref="QuickFree"/>), which anybody may ask, unless it is one only by naming something with a
     /// time and has words left over for a title (<see cref="QuickFree.Reading.MayBeAnAdd"/>): its answer comes next,
     /// the time it is <paramref name="now"/> being when "now" is, and an event named only to a reader who may see it
-    /// (<paramref name="viewer"/>).
+    /// (<paramref name="viewer"/>). Whoever may call the roll (<paramref name="rollCall"/>) finds the roll call.
     /// </summary>
     public static IReadOnlyList<FindHit> Search(Cccc.Domain.Model.Timetable t, string query, bool mayEdit, bool admin, int max = 12,
         DateOnly? today = null, DateOnly? shown = null, bool recordsAway = false, Guid? me = null, TimeOnly? now = null,
-        Cccc.Domain.Rules.EventViewer? viewer = null)
+        Cccc.Domain.Rules.EventViewer? viewer = null, bool rollCall = false)
     {
         var q = query.Trim();
         var away = today is { } day && q.Length > 0 ? QuickAway.Read(t, q, day, shown ?? day, me) : null;
@@ -111,6 +111,8 @@ public static class FindIndex
             actions.Insert(1, new FindHit("add-event", "Add an event", "Plan", null, null));
             actions.Insert(2, new FindHit("find-time", "Find a time", "When everybody a class needs, and a space, are free", null, null));
         }
+        // The roll call is found by what it is for, too: "fire" and "evacuation" find it.
+        if (rollCall) actions.Add(new FindHit("roll-call", "Roll call", "Fire drill or evacuation · everybody in the building now, by space", null, null));
         if (admin)
         {
             actions.Add(new FindHit("go-data", "People & places", "Add or change students, facilitators, spaces, classes", null, null));

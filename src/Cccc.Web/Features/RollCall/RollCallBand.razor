@@ -1,0 +1,36 @@
+@implements IDisposable
+@inject RollCalls Calls
+@inject ProjectChoice Choice
+@inject NavigationManager Nav
+@* Across the top of every page while a roll call runs, for everybody who may call one, so nobody who could
+   be ticking misses it; not on the roll call itself. It counts the list the way the roll call does. *@
+@if (W is { Access.MayCallTheRoll: true } && !OnTheRollCall && Choice.Open() is { } live && Calls.For(live.Id) is { } run)
+{
+    var expected = Cccc.Domain.Rules.RollCall.At(live.State, run.Date, run.At, W.Access.Events).Expected.ToList();
+    int found = expected.Count(p => run.Found.Contains(p.Id));
+    <div class="roll-band" role="status" data-testid="roll-band">
+        <span class="roll-band-text"><b>A roll call is running</b>, called at @Cccc.Domain.Week.Hm(run.At) by @run.StartedBy: <span data-testid="roll-band-count">@found of @expected.Count found</span>.</span>
+        <a class="btn primary" href="roll-call" data-testid="roll-band-open">Open the roll call</a>
+    </div>
+}
+@code {
+    [CascadingParameter] public Workspace? W { get; set; }
+
+    private bool OnTheRollCall => Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0] == "roll-call";
+
+    protected override void OnInitialized()
+    {
+        Calls.Changed += OnCalled;
+        Nav.LocationChanged += OnMoved;
+    }
+
+    private void OnCalled(Guid projectId) => _ = InvokeAsync(StateHasChanged);
+
+    private void OnMoved(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Calls.Changed -= OnCalled;
+        Nav.LocationChanged -= OnMoved;
+    }
+}

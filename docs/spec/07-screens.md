@@ -146,6 +146,28 @@ Registers, so a whole day of them does not push cover and clashes out of sight),
 yesterday** (since Friday on a Monday): today's classes that were moved, cancelled, given another space
 or teacher or cover, added or deleted, each saying what is different (*Was 09:00–11:00*, *Dag Øverlie
 covering*), who changed it and when, from `Recent`; then today's events and what is still to come.
+**Roll call** in the corner of the clock line, for whoever may call one.
+
+## Roll call (`/roll-call`)
+
+For a fire drill or an evacuation, on a phone at the assembly point. Before it is called, the page lists
+who the timetable has where at this minute (`RollCall`), with nothing to tick, and one big button: *Call
+the roll at 11:00*, beside who it would list (*3 facilitators and 15 students expected, and 1 class or
+event to count by eye*). Called, the moment is fixed and the page is a card a space, each saying what is
+in it until when (*Juggling until 12:00*) and how many of its people are found (*1 of 8*), a big button a
+name (facilitators first, marked; a guest marked), *All found* for a whole space at once, and *Count by
+eye* for what names nobody (*Open training, for the whole building*; *Fire safety talk, an event*). Then
+**Between classes**, saying what came last and what comes next, and, behind *Show them*, **Not expected
+in a space now** under a heading for each kind (*First class still to come*, *Classes over for today*,
+*Not there, says the register*, *Recorded away*, never why), each still tickable.
+The count stays in sight at the top as the list scrolls: *10 of 18 found · 8 still to find*, how many
+are still to count by eye, *and 1 found who was not expected*, a bar, a box to find a name in, and
+**Everybody / Still to find**, which leaves only who is missing. Several people tick at once on their own
+phones and each sees the others' ticks as they happen. While it runs, every page carries a band to
+everybody who may call the roll (*A roll call is running, called at 11:00 by …: 10 of 18 found*, **Open
+the roll call**). **End the roll call** asks once, saying how many expected are not found, then forgets
+every tick for everybody. Ctrl+K finds it by *roll*, *fire*, *drill* or *evacuation*, and the phone's
+More has it.
 
 ## Plan (`/plan`)
 

@@ -75,7 +75,7 @@
     // The keys act on what has been typed, never on the list last drawn: typing quickly can run ahead of
     // the screen, and Enter straight after "Studio B" opened Studio A, which led the list for "Studio".
     private IReadOnlyList<FindHit> Hits() => FindIndex.Search(W.T, _q, W.Access.MayEdit, W.Access.MayUseAdminTools, today: W.Today, shown: Shown(),
-        recordsAway: W.Access.MayChange("absences"), me: W.Access.MayChange("requests") ? W.Access.FacilitatorId : null, now: Now(), viewer: W.Access.Events);
+        recordsAway: W.Access.MayChange("absences"), me: W.Access.MayChange("requests") ? W.Access.FacilitatorId : null, now: Now(), viewer: W.Access.Events, rollCall: W.Access.MayCallTheRoll);
 
     private TimeOnly Now()
     {
@@ -148,6 +148,7 @@
             case "go-registers": Nav.NavigateTo("registers"); break;
             case "go-data": Nav.NavigateTo("data"); break;
             case "go-reports": Nav.NavigateTo("reports"); break;
+            case "roll-call": Nav.NavigateTo("roll-call"); break;
             case "add-class":
                 D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.Date)] = V.Day }); break;
             case "add-event":

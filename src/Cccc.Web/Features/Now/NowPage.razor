@@ -56,6 +56,10 @@
             }
             <FollowingNotice Badge="true" />
         </div>
+        @if (W.Access.MayCallTheRoll)
+        {
+            <a class="btn quiet now-roll" href="roll-call" data-testid="now-roll-call">Roll call</a>
+        }
     </header>
 
     <div class="now-body">

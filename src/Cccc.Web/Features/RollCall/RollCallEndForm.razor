@@ -1,0 +1,20 @@
+@* End the roll call: for everybody looking at it, forgetting every tick. Asked once, since it cannot be undone. *@
+@inject Dialogs D
+@inject RollCalls Calls
+<DialogFrame Title="End the roll call" OnOk="End" OkLabel="End it" ChangesTheTimetable="false">
+    <p data-testid="roll-end-left">@(Left == 0 ? "Everybody the timetable expected has been found." : $"{Looks.Count(Left, "person", "people")} the timetable expected {(Left == 1 ? "has" : "have")} not been found.")</p>
+    <p>Ending it ends it for everybody looking at it, and forgets every tick.</p>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid ProjectId { get; set; }
+    [Parameter] public int Left { get; set; }
+
+    private void End()
+    {
+        if (!W.Access.MayCallTheRoll) return;
+        Calls.End(ProjectId);
+        D.Close();
+        W.Say("The roll call has ended. Its ticks are forgotten.");
+    }
+}

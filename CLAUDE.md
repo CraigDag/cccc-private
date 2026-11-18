@@ -44,6 +44,9 @@ it. `README.md` says what this is; `docs/spec/` says why each part is shaped the
   with its project in `ProjectStore.Purge`, and with its person in the erasure (`EraseTab`).
 - **The Scratch Week is a collection of its own** (`Timetable.Scratch`, `ScratchWeek`), never part of
   `Sessions`, so nothing that counts can read it by accident; `Edits.CheckLocks` keeps the two apart.
+- **A roll call is held in memory only** (`RollCalls`): nothing of who was found is stored, logged or put in
+  a URL, and ending it, a restart or three hours forget it. It is staff's (`Access.MayCallTheRoll`), lists
+  the timetable open for everybody, and each person on it is `Where`'s answer (`RollCall`), never a second one.
 - **What a facilitator asks is a list of its own too** (`Timetable.Requests`, `Offers`, `SpaceAsks`), never
   an absence, a cover or a class: only an administrator's yes records one, through the edits the forms use
   (`Edits.AnswerRequest`, `AnswerOffer`, `AnswerSpaceAsk`). There is no box for why, and none should be

@@ -6,7 +6,11 @@ namespace Cccc.Domain.Rules;
 public sealed record Stint(Occurrence O, TimeOnly From, TimeOnly Until);
 
 /// <summary>What is happening for one person, group or space at a moment, what comes next that day, and whether they are recorded away.</summary>
-public sealed record Whereabouts(Stint? Now, Stint? Next, bool Away);
+public sealed record Whereabouts(Stint? Now, Stint? Next, bool Away)
+{
+    /// <summary>What of theirs ended last before the moment, that day: where they were, when nothing is now.</summary>
+    public Stint? Last { get; init; }
+}
 
 /// <summary>
 /// WHO is in what SPACE and WHEN, asked for one of them at one moment: the question the app exists to
@@ -41,6 +45,9 @@ public static class Where
     private static Whereabouts Pick(IEnumerable<Stint> theirs, TimeOnly at, bool away)
     {
         var ordered = theirs.Where(s => s.Until > s.From).OrderBy(s => s.From).ThenBy(s => s.Until).ToList();
-        return new(ordered.FirstOrDefault(s => s.From <= at && at < s.Until), ordered.FirstOrDefault(s => s.From > at), away);
+        return new(ordered.FirstOrDefault(s => s.From <= at && at < s.Until), ordered.FirstOrDefault(s => s.From > at), away)
+        {
+            Last = ordered.Where(s => s.Until <= at).MaxBy(s => s.Until),
+        };
     }
 }
