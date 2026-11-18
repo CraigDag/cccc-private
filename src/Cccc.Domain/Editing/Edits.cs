@@ -685,14 +685,15 @@ public static class Edits
             if (!r.IsFormer()) d.Put(Collections.Rooms, r with { FormerSince = today });
             return d.ToBatch($"Deleted the space {r.Name}, kept for the days it was used");
         }
+        foreach (var o in t.OutOfUse.Where(o => o.RoomId == id)) d.Remove(Collections.OutOfUse, o.Id);
         d.Remove(Collections.Rooms, id);
         return d.ToBatch($"Deleted the space {r.Name}");
     }
 
     /// <summary>
     /// Taking a piece of equipment off the school's list takes it off every space that has it and every class that
-    /// needs it in the same step, so nothing is left naming what the school no longer lists, and one Undo puts
-    /// all of it back.
+    /// needs it in the same step, with every time it was out of use, so nothing is left naming what the school no
+    /// longer lists, and one Undo puts all of it back.
     /// </summary>
     public static Batch RemoveEquipment(Timetable t, Guid id)
     {
@@ -702,8 +703,40 @@ public static class Edits
             d.Put(Collections.Rooms, r with { Has = r.Has.RemoveAll(x => x == id) });
         foreach (var c in t.Classes.Where(c => c.Needs.Contains(id)))
             d.Put(Collections.Classes, c with { Needs = c.Needs.RemoveAll(x => x == id) });
+        foreach (var o in t.OutOfUse.Where(o => o.EquipmentId == id)) d.Remove(Collections.OutOfUse, o.Id);
         d.Remove(Collections.Equipment, id);
         return d.ToBatch($"Deleted the equipment {e.Name}");
+    }
+
+    /// <summary>
+    /// Puts a piece in a space out of use from a day, until a day or until somebody says it is back, or changes when:
+    /// the space must still be the school's and have it. From then the plan rings each class that needs it there
+    /// (<see cref="Spaces.Lacking(Timetable, Session)"/>), with its ways out; nothing is moved.
+    /// </summary>
+    public static Batch PutOutOfUse(Timetable t, OutOfUse o)
+    {
+        var room = t.Rooms[o.RoomId] is { FormerSince: null } r ? r : throw new EditRefused("That space has gone.");
+        var piece = t.Equipment[o.EquipmentId] ?? throw new EditRefused("That equipment has gone.");
+        if (!room.Has.Contains(piece.Id)) throw new EditRefused($"{room.Name} has no {piece.Name} to be out of use: tick it on the space first.");
+        if (o.Until is { } last && last < o.From) throw new EditRefused("It comes back in use after the day it goes out of use, not before.");
+        if (Week.IsScratch(o.From)) throw new EditRefused("The Scratch Week has no days for anything to be out of use on.");
+        return new Draft(t).Put(Collections.OutOfUse, o)
+            .ToBatch(t.OutOfUse.Contains(o.Id) ? $"Changed the days out of use for the {piece.Name} in {room.Name}" : $"Put the {piece.Name} in {room.Name} out of use");
+    }
+
+    /// <summary>
+    /// A piece out of use is back in use from today: out of use until yesterday, when it went out before today, and
+    /// otherwise as if it never was, since none of the days it was out of use have passed. Undo puts it back.
+    /// </summary>
+    public static Batch BackInUse(Timetable t, Guid id, DateOnly today)
+    {
+        var o = t.OutOfUse[id] ?? throw new EditRefused("That has gone already.");
+        if (o.Until is { } last && last < today) throw new EditRefused("It is back in use already.");
+        var what = $"the {t.Equipment[o.EquipmentId]?.Name ?? "equipment"} in {t.Rooms[o.RoomId]?.Name ?? "the space"}";
+        var d = new Draft(t);
+        if (o.From < today) d.Put(Collections.OutOfUse, o with { Until = today.AddDays(-1) });
+        else d.Remove(Collections.OutOfUse, id);
+        return d.ToBatch(o.From > today ? $"No longer putting {what} out of use from {Week.ShortDate(o.From)}" : $"Back in use: {what}");
     }
 
     /// <summary>

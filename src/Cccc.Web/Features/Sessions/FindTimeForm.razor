@@ -101,7 +101,7 @@ else
                     <optgroup label="One space">
                         @foreach (var r in SpacesInOrder(t))
                         {
-                            <option value="@("room:" + r.Id)">@r.Name@(Spaces.Lacking(t, c.ClassId, r.Id) is { Count: > 0 } lacking ? " — " + Cccc.Web.Features.Data.EquipmentWords.Without(lacking) : "")</option>
+                            <option value="@("room:" + r.Id)">@r.Name@(Spaces.Missing(t, c.ClassId, r.Id) is { Count: > 0 } lacking ? " — " + Cccc.Web.Features.Data.EquipmentWords.Without(lacking) : "")</option>
                         }
                     </optgroup>
                 </select>

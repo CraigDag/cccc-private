@@ -146,7 +146,7 @@ public class NextYearTests
         // hand-written list of what carries over is how a rollover silently drops something.
         string[] decided = ["Settings", "Semesters", "Closures", "Rooms", "Equipment", "Programmes", "Groups", "Branches", "Disciplines", "Students",
                             "Facilitators", "Areas", "Classes", "TimeRules", "Sessions", "Registers", "Absences", "Events", "Scratch", "Requests", "Offers",
-                            "SpaceAsks"];
+                            "SpaceAsks", "OutOfUse"];
         Assert.Equal(decided.Order(StringComparer.Ordinal),
             typeof(Timetable).GetProperties().Where(p => p.CanWrite).Select(p => p.Name).Order(StringComparer.Ordinal));
     }

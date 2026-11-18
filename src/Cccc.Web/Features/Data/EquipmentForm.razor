@@ -12,6 +12,22 @@
         @if (_old is not null)
         {
             <p class="hint" data-testid="equipment-uses">@EquipmentWords.Uses(W.T, _old.Id)@(Used ? ". Deleting it takes it off them too." : "")</p>
+            var spaces = W.T.Rooms.Current().Where(r => r.Has.Contains(_old.Id)).OrderBy(r => r.Name, NameOrder.Comparer).ToList();
+            @if (spaces.Count > 0)
+            {
+                <h3 class="form-sub">Out of use</h3>
+                <ul class="out-list" data-testid="equipment-out">
+                    @foreach (var r in spaces)
+                    {
+                        var o = OutNowOrNext(r.Id);
+                        <li data-testid="equipment-out-row" data-space="@r.Name">
+                            <span class="out-name">@r.Name</span>
+                            <small class="@(o is null ? "" : "out-said")">@(o is null ? "In use" : EquipmentWords.Spell(o, W.Today))</small>
+                            <button type="button" class="btn quiet" @onclick="() => OpenOut(o?.Id, r.Id)" data-testid="equipment-out-open">@(o is null ? "Out of use…" : "Change…")</button>
+                        </li>
+                    }
+                </ul>
+            }
         }
     </ChildContent>
     <Extra>
@@ -48,4 +64,13 @@
     {
         if (W.Commit(t => Edits.RemoveEquipment(t, _old!.Id))) D.Close();
     }
+
+    /// <summary>The spell it is out of use in there today, or else the next one to come.</summary>
+    private OutOfUse? OutNowOrNext(Guid roomId) => Spaces.OutOn(W.T, roomId, _old!.Id, W.Today)
+        ?? W.T.OutOfUse.Where(o => o.RoomId == roomId && o.EquipmentId == _old.Id && o.From > W.Today).OrderBy(o => o.From).ThenBy(o => o.Id).FirstOrDefault();
+
+    private void OpenOut(Guid? id, Guid roomId) => D.Show<OutOfUseForm>(new Dictionary<string, object?>
+    {
+        [nameof(OutOfUseForm.Id)] = id, [nameof(OutOfUseForm.RoomId)] = roomId, [nameof(OutOfUseForm.EquipmentId)] = _old!.Id,
+    });
 }

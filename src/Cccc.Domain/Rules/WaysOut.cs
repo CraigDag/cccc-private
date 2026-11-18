@@ -81,8 +81,8 @@ public static class WaysOut
         DateOnly today, TimeOnly now, EventViewer viewer, List<WayOut> ways)
     {
         if (ways.Count >= Most) return;
-        // Only where it may go: a space without what the class needs is no way out, however free it is.
-        if (spaces.Count > 0 && (spaces = [.. spaces.Where(r => Spaces.Suits(t, s.ClassId, r))]).Count == 0) return;
+        // Only where it may go: a space without what the class needs, or with it out of use that day, is no way out, however free it is.
+        if (spaces.Count > 0 && (spaces = [.. spaces.Where(r => Spaces.Suits(t, s.ClassId, r, s.Date))]).Count == 0) return;
         int at = Minutes(s.Start);
         var ask = new OpeningAsk
         {
@@ -120,7 +120,7 @@ public static class WaysOut
 
     /// <summary>
     /// Its own space, then each space its class has been in (the most used first), then the rest of the same kind,
-    /// and for a class that needs equipment every space that has it: where it could go, in the order to offer them.
+    /// and for a class that needs equipment every space that has it (the clash check then says whether it is in use that day): where it could go, in the order to offer them.
     /// A space with no kind is like no other. None when it has no space, so none is needed; a former space is
     /// offered to nothing ahead.
     /// </summary>
@@ -131,7 +131,7 @@ public static class WaysOut
         bool needs = Spaces.Needed(t, s.ClassId).Count > 0;
         var like = t.Rooms.Current()
             .Where(r => r.Id != own && (used.ContainsKey(r.Id) || (room.Category is { Length: > 0 } kind && r.Category == kind)
-                                        || (needs && Spaces.Suits(t, s.ClassId, r.Id))))
+                                        || (needs && Spaces.HasAll(t, s.ClassId, r.Id))))
             .OrderByDescending(r => used.GetValueOrDefault(r.Id))
             .ThenBy(r => r.Name, NameOrder.Comparer)
             .Select(r => r.Id);

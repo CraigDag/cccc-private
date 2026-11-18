@@ -185,21 +185,34 @@ public sealed class LiveProject
         return later?.By;
     }
 
-    private static string Describe(Op op) => op.Collection switch
+    private static string Describe(Op op) => Describe(op.Collection);
+
+    /// <summary>What a change to one thing in a collection is, in the words Undo says it could not take back: every collection has its own.</summary>
+    internal static string Describe(string collection) => collection switch
     {
-        "sessions" => "a session",
-        "scratch" => "a class in the Scratch Week",
-        "registers" => "a register",
+        "settings" => "the settings",
+        "semesters" => "a semester",
+        "closures" => "a closure",
+        "rooms" => "a space",
+        "equipment" => "a piece of equipment",
+        "programmes" => "a programme",
+        "groups" => "a group",
+        "branches" => "a branch",
+        "disciplines" => "a discipline",
         "students" => "a student",
         "facilitators" => "a facilitator",
-        "rooms" => "a room",
-        "equipment" => "a piece of equipment",
+        "areas" => "an area",
         "classes" => "a class",
-        "events" => "an event",
+        "timeRules" => "a time rule",
+        "sessions" => "a session",
+        "registers" => "a register",
         "absences" => "an absence",
+        "events" => "an event",
+        "scratch" => "a class in the Scratch Week",
         "requests" => "asking to be away",
         "offers" => "an offer to cover",
         "spaceAsks" => "asking for a space",
+        "outOfUse" => "equipment out of use",
         _ => "one change",
     };
 

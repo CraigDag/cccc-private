@@ -118,11 +118,13 @@ public static class Collections
     /// <summary>Facilitators asking for a space (<see cref="Rules.Asking"/>), never classes until a yes adds one.</summary>
     public static readonly Collection<SpaceAsk> SpaceAsks = new("spaceAsks", t => t.SpaceAsks, (t, s) => t with { SpaceAsks = s });
 
+    public static readonly Collection<OutOfUse> OutOfUse = new("outOfUse", t => t.OutOfUse, (t, s) => t with { OutOfUse = s });
+
     public static IReadOnlyList<Collection> All { get; } =
     [
         Settings, Semesters, Closures, Rooms, Equipment, Programmes, Groups, Branches, Disciplines, Students,
         Facilitators, Areas, Classes, TimeRules, Sessions, Registers, Absences, Events, Scratch, Requests, Offers,
-        SpaceAsks,
+        SpaceAsks, OutOfUse,
     ];
 
     private static readonly Dictionary<string, Collection> ByName = All.ToDictionary(c => c.Name);

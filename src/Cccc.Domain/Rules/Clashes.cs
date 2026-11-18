@@ -127,9 +127,9 @@ public static class Clashes
 
         // The wrong space for the class: one warning naming everything it lacks there, on that class alone.
         foreach (var o in list)
-            if (Spaces.Lacking(t, o.Session) is { Count: > 0 } lacking)
+            if (Spaces.Lacks(t, o.Session.ClassId, o.Session.RoomId, o.Date) is { Count: > 0 } lacks)
                 found.Add(new Clash(ClashKind.SpaceLacksEquipment,
-                    $"Space \"{RoomOf(o)}\" lacks what \"{o.Session.DisplayTitle}\" needs: {string.Join(", ", lacking.Select(e => e.Name))} ({When(o)})", [o.Session.Id]));
+                    $"Space \"{RoomOf(o)}\" lacks what \"{o.Session.DisplayTitle}\" needs: {Spaces.Say(lacks)} ({When(o)})", [o.Session.Id]));
 
         foreach (var o in list.Where(o => o.NeedsCover))
         {

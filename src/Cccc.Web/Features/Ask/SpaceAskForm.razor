@@ -60,7 +60,7 @@
                     else
                     {
                         <span class="muted">Free then:</span>
-                        @foreach (var (r, lacking) in free.Select(r => (r, Spaces.Lacking(t, _classId, r.Id))).OrderBy(x => x.Item2.Count > 0).ToList())
+                        @foreach (var (r, lacking) in free.Select(r => (r, Spaces.Lacks(t, _classId, r.Id, _date))).OrderBy(x => x.Item2.Count > 0).ToList())
                         {
                             <button type="button" class="@(lacking.Count > 0 ? "space-pick lacks" : "space-pick")" style="--c:@r.Colour" @onclick="() => { _roomId = r.Id; Check(); }"
                                     data-testid="ask-free-space" data-lacks="@(lacking.Count > 0 ? "1" : "0")">
@@ -169,7 +169,7 @@
     private string Mark(Timetable t, Room r, IReadOnlyDictionary<Guid, Occurrence> busy, IReadOnlyDictionary<Guid, EventOnDay> booked) =>
         busy.TryGetValue(r.Id, out var b) ? $" — busy: {Looks.Title(t, b.Session)} {Looks.When(b.Start, b.End)}"
         : booked.TryGetValue(r.Id, out var e) ? " — " + Booking(e)
-        : Spaces.Lacking(t, _classId, r.Id) is { Count: > 0 } lacking ? " — " + Cccc.Web.Features.Data.EquipmentWords.Without(lacking) : "";
+        : Spaces.Lacks(t, _classId, r.Id, _date) is { Count: > 0 } lacking ? " — " + Cccc.Web.Features.Data.EquipmentWords.Without(lacking) : "";
 
     /// <summary>An event in a space, as the reader may see it: its name and hours, or only that the space is taken.</summary>
     private string Booking(EventOnDay e) => !W.Access.Events.Sees(e.Event) ? "booked"

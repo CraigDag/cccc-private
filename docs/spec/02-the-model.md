@@ -14,7 +14,8 @@ with an identity has a `Guid Id`, and every reference is by id. Colours are `#RR
 
 | Thing | Fields |
 |---|---|
-| **Room** | `Name`, `Category?`, `Colour` |
+| **Room** | `Name`, `Category?`, `Colour`, `Has` (equipment ids, the rebuild's own) |
+| **Equipment** | `Name` — listed once by the school (the rebuild's own): rigging points, crash mats, a sprung floor |
 | **Programme** | `Name`, `Colour`, `IsGuest` (old name `Strand`) |
 | **Group** | `Name`, `Colour`, `ProgrammeId?` |
 | **Branch** | `Name`, `Colour` — a family of disciplines |
@@ -29,7 +30,7 @@ Initials for a facilitator are the first letters of the first two words of their
 | Thing | Fields |
 |---|---|
 | **Area** | `Name`, `WeeklyTarget?` — a curriculum strand a class counts towards |
-| **Class** | `Name`, `Colour`, `AreaId?`, `Workload` (Counted, DropIn = "open session", NotCounted) |
+| **Class** | `Name`, `Colour`, `AreaId?`, `Workload` (Counted, DropIn = "open session", NotCounted), `Effort` (NotSet, Light, Moderate, Hard) and `Needs` (equipment ids), both the rebuild's own |
 | **TimeRule** | `Name`, `Kind` (Preparation, Break), `ClassIds`, `Percent` (prep), `Minutes` (break), `Days` (break; empty = every day), `Condition` (TeachesBeforeAndAfter, TeachesThatDay) |
 
 ## The timetable
@@ -70,6 +71,11 @@ answered `Answer` and `AnsweredAt`. Whether one is still waiting is worked out f
 `RoomId`, `Audience` (the whole building, or groups), `ClassId?`, `Title` (its own name, or blank for the
 class's), `AskedAt`, and once answered `Answer`, `AnsweredAt` and, for a yes, the `SessionId` it added. A
 class that is not one yet, in a list of its own, so nothing that counts classes can read one by accident.
+
+**Equipment out of use** (`OutOfUse`, the rebuild's own) — `RoomId`, `EquipmentId`, `From`, `Until?` (its
+last day out of use; none until somebody says it is back). A piece one space has, out of use there on those
+days: the space lacks it then ([`03`](03-the-rules.md#equipment-out-of-use-spacesouton-the-rebuilds-own)).
+**There is no field for why.**
 
 **The Scratch Week** (`Scratch`, schema 24 in the current app) — a plan: sessions exactly like the
 ones above, in a collection of their own, all dated in one week no semester reaches (the Monday

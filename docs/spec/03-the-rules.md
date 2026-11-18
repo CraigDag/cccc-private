@@ -438,6 +438,37 @@ WHO is in what SPACE: the space has to be fit for the class, and the current app
   brought it: a format-4 build would replay a piece as a collection it has never heard of, and save a
   space or a class back without its ticks.
 
+## Equipment out of use (`Spaces.OutOn`, the rebuild's own)
+
+A mat torn on Monday is a space without crash mats until it is mended, and the timetable should say so the
+same way it says a space never had them.
+
+- **A piece a space has goes out of use from a day**, until a day or until somebody says it is back
+  (`OutOfUse`). On those days the space lacks it exactly as if it did not have it (`Spaces.Lacks`), so
+  everything that asks whether a space is fit for a class asks for that day: the clash check rings a class
+  needing it there, and the ways out, the answer to a space asked for and the add form's free spaces take
+  it as the wrong space then. **Each lack says which it is**: *Crash mats* is a space that has none, *Crash
+  mats out of use, back Thu 26 Nov* one whose mats are away until the day after the last day out
+  (`Spaces.Say`), or only *out of use* until somebody says. The Scratch Week has no days for it to be out on.
+- **Find a time and Make room look in such a space only on the days it is in use** (`Openings.InUseOn`):
+  which spaces have it at all is asked without a day (`Spaces.Missing`), so the space is still one to look
+  in, and a day on which every space asked has it out says so (*Aerial Hall: Crash mats out of use, back
+  Thu 26 Nov*). A way out is never another time in a space while it is out there.
+- **Two spells on one day are one**: the one lasting longest is said (until somebody says, then the latest
+  end). One in a space no longer the school's, or for a piece the space no longer has, keeps nothing from
+  anybody and is not listed.
+- **Which classes it leaves without it** (`Spaces.Affected`) is said before it goes out of use and beside
+  it on an administrator's Now: each that happens in that space on one of its days with a class that needs
+  it, soonest first, a class needing cover included and one cancelled not, and from a time on the first day
+  only what has not ended by then.
+- **Back in use is from today**: one that went out before today is out until yesterday, so the days it was
+  out stay as they were; one that has not started yet is as if it never was. Undo puts either back. One
+  already back is refused. **Nothing is moved by itself**: a class it rings stays where it is until
+  somebody takes a way out.
+- **It goes with what it is about**: deleting the piece, or a space outright, takes its spells in the same
+  step; a space kept as former keeps its own with its past. Next year keeps what is still out when it
+  starts, never in a former space. **The store's format 7** brought it, for the same reason as 5.
+
 ## What a class is usually like (`Habits.Like`, the rebuild's own)
 
 A class typed in a line (*aerial fri 13*) says little; the rest is what that class usually is.

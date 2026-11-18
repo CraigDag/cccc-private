@@ -141,6 +141,9 @@ public static class NextYear
             Requests = EntitySet<TimeOffRequest>.Of(t.Requests.Where(r => r.To >= starts && t.Facilitators[r.FacilitatorId] is { FormerSince: null })),
             Offers = EntitySet<CoverOffer>.Empty,
             SpaceAsks = EntitySet<SpaceAsk>.Of(t.SpaceAsks.Where(a => a.Answer is null && a.Date >= starts && t.Facilitators[a.FacilitatorId] is { FormerSince: null })),
+            // A piece out of use goes with its days, as an absence does: still out in the new year is still out then.
+            // Not in a former space, which next year does not have.
+            OutOfUse = EntitySet<OutOfUse>.Of(t.OutOfUse.Where(o => (o.Until is not { } last || last >= starts) && t.Rooms[o.RoomId] is { FormerSince: null })),
         };
         if (closeHolidays)
             next = next with

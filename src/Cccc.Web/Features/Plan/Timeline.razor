@@ -80,7 +80,7 @@
             var rowDay = PlanModel.FromDayKey(row.Key) ?? Day;
             // A row that is one space's: what is on it is when that space is in use.
             var space = Lens != Lens.Spaces ? null : M.RowsAreDays ? row.Section : row.Id is not null ? row.Name : null;
-            IReadOnlyList<Equipment> lacking = chosenClass is not null && row.Id is { } rid ? Spaces.Lacking(t, chosenClass, rid) : [];
+            IReadOnlyList<Lack> lacking = chosenClass is not null && row.Id is { } rid ? Spaces.Lacks(t, chosenClass, rid, Day) : [];
             <div class="tl-row @(bars.Count == 0 ? "free" : "") @(M.RowsAreDays && rowDay == W.Today ? "today" : "") @(M.RowsAreDays && rowDay == Day ? "picked" : "") @(lacking.Count > 0 ? "lacks" : "")" data-row="@row.Key" data-testid="row" data-space="@space"
                  data-lacks="@(lacking.Count > 0 ? row.Name + " " + Cccc.Web.Features.Data.EquipmentWords.Without(lacking) : null)">
                 <div class="tl-label" title="@row.Name">
@@ -96,7 +96,8 @@
                     }
                     @if (lacking.Count > 0)
                     {
-                        <small class="row-lacks" data-testid="row-lacks">@Cccc.Web.Features.Data.EquipmentWords.Without(lacking)</small>
+                        @* Cut short beside the name, so said in full when pointed at; the name's own title stays its name. *@
+                        <small class="row-lacks" data-testid="row-lacks" title="@Cccc.Web.Features.Data.EquipmentWords.Without(lacking)">@Cccc.Web.Features.Data.EquipmentWords.Without(lacking)</small>
                     }
                     else if (bars.Count == 0)
                     {

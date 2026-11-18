@@ -28,7 +28,9 @@
     var clashes = Clashes.ForWeek(t, today).Where(c => c.IsRing && c.SessionIds.Any(todayIds.Contains)).ToList();
     var closure = Occurrences.ClosureFor(t, today, null);
     var semester = t.SemesterFor(today);
-    int needs = cover.Count + registers.Count + clashes.Count + (earlier.Count > 0 ? 1 : 0);
+    // What is out of use today, with how many of this week's classes need it there: an administrator's to say it is back.
+    var outs = W.Access.MayUseAdminTools ? Spaces.OutOfUseOn(t, today) : [];
+    int needs = cover.Count + registers.Count + clashes.Count + outs.Count + (earlier.Count > 0 ? 1 : 0);
     // Today's classes that changed since the weekday before began, from the timetable's own history, so a
     // change made late yesterday or this morning is seen by whoever opens Now. Guest classes stay hidden.
     // Somebody linked to a facilitator is told what is new for them from the last two weeks of it: one reading serves both.
@@ -305,6 +307,13 @@
             {
                 <button type="button" class="need warn" @onclick="() => OpenPlan(today, null, c.SessionIds[0])" data-testid="need"><span class="need-kind">Clash</span><span>@c.Description</span></button>
             }
+            @foreach (var o in outs)
+            {
+                int week = Spaces.Affected(t, o, today, Cccc.Domain.Week.MondayOf(today).AddDays(6), W.Clock.TimeOfDay).Count;
+                <button type="button" class="need @(week > 0 ? "warn" : "")" @onclick="() => OpenOut(o.Id)" data-testid="need-out">
+                    <span class="need-kind">Out of use</span><b>@Cccc.Web.Features.Data.EquipmentWords.What(t, o)</b>
+                    <small>@Cccc.Web.Features.Data.EquipmentWords.Back(o) · @(week == 0 ? "no class needs it there for the rest of this week" : Looks.Count(week, "class needs", "classes need") + " it there for the rest of this week")</small></button>
+            }
             @if (changed.Count > 0)
             {
                 <h2 class="now-section">Changed since @(since == today.AddDays(-1) ? "yesterday" : since.DayOfWeek.ToString())</h2>
@@ -368,6 +377,8 @@
     }
 
     private void AnswerSpace(Guid id) => D.Show<AnswerForm>(new Dictionary<string, object?> { [nameof(AnswerForm.SpaceAskId)] = id });
+
+    private void OpenOut(Guid id) => D.Show<Cccc.Web.Features.Data.OutOfUseForm>(new Dictionary<string, object?> { [nameof(Cccc.Web.Features.Data.OutOfUseForm.Id)] = id });
 
     private void Answer(Guid? request, Guid? offer) => D.Show<AnswerForm>(new Dictionary<string, object?>
     {

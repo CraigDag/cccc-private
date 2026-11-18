@@ -55,7 +55,7 @@ One SQLite database file, `cccc.db`, in WAL mode:
 | `ops` | batch, index, collection, thing id, `before` JSON, `after` JSON |
 | `snapshots` | project id, sequence, whole state JSON, compressed |
 | `accounts`, `signins` | see [`05-access-and-privacy.md`](05-access-and-privacy.md) |
-| `meta` | the store's own format number: **5** since equipment (4 added what facilitators ask; 3 former classes, spaces and facilitators; 2 the Scratch Week). An older store is brought up as it opens (its timetables simply have an empty Scratch Week, nothing former and nothing asked); a store of a newer number is refused, so an older build never opens a store whose timetables hold something it would drop or offer again |
+| `meta` | the store's own format number: **7** since equipment out of use (6 added asking for a space; 5 equipment; 4 what facilitators ask; 3 former classes, spaces and facilitators; 2 the Scratch Week). An older store is brought up as it opens (its timetables simply have an empty Scratch Week, nothing former and nothing asked); a store of a newer number is refused, so an older build never opens a store whose timetables hold something it would drop or offer again |
 | `screens` | the screens paired to show the building ([`05`](05-access-and-privacy.md#screens-in-the-building)): a name such as *Corridor*, the space it shows (none for the whole building), when it was paired and last looked (written at most every five minutes), and **the hash of its token, never the token**, so a copy of the store lets nobody pose as a screen. Nothing in it is a person's, and who paired a screen is not kept. It needs no format number: a build that never reads it loses nothing, and a screen paired since just asks to be paired again |
 | `calendar_files` | per timetable and facilitator, what their phone calendar downloads have carried: each entry's id, first and last day and its two time lines, **never a title or a place**, and nothing whose last day has passed. The next download publishes what has gone since as cancelled ([`07`](07-screens.md#registers-people--places-reports-admin-my-week)). Goes with its timetable when that is purged; it needs no format number, since a build that never reads it loses nothing |
 | `news_seen` | per timetable and facilitator, what they have said they saw of what changed for them (Got it, [`03`](03-the-rules.md#what-is-new-to-a-facilitator-news)): a class id and the place in the history of the last change to it they saw, **nothing else**, and nothing older than the changes still read. A person's own reading, not the timetable, so it is never a change, an Undo or a download. Goes with its timetable when that is purged; no format number, for the same reason |
@@ -82,7 +82,7 @@ command (`cccc backup <path>`), so the existing rclone off-site sync keeps worki
 ## Export and import
 
 - **Export** a project as `.cccc2` — a zip holding `project.json` (the state) and `format.txt`, whose
-  marker is `cccc2 6` since asking for a space (`cccc2 5` added equipment, `cccc2 4` what facilitators
+  marker is `cccc2 7` since equipment out of use (`cccc2 6` added asking for a space, `cccc2 5` equipment, `cccc2 4` what facilitators
   ask, `cccc2 3` former classes, spaces and facilitators, `cccc2 2` the Scratch Week). Older files still
   read, with nothing asked, nothing former and, from `cccc2 1`, an empty Scratch Week. **The marker is
   the store's own format** (a test holds `ProjectFiles.Format` to `ProjectStore.FormatVersion`), so a

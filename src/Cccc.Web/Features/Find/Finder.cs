@@ -121,6 +121,8 @@ public static class FindIndex
         if (q.Length == 0) return actions;
         // Once a year, so found only when asked for: by "holiday", "Easter", "Christmas" or the Danish "helligdage", through its detail.
         if (admin) actions.Add(new FindHit("close-holidays", "Close the public holidays", "Denmark's helligdage this school year · Easter, Ascension, Whitsun, Christmas", null, null));
+        // Found only when asked for, by what a person says of it: "broken", "repair", "out of use", through its detail.
+        if (admin) actions.Add(new FindHit("out-of-use", "Put equipment out of use", "Broken or being repaired · the plan rings each class that needs it there", null, null));
         // An action is found by its own words, and then by where it lives ("Plan ▸ Term"), after every name found.
         foreach (var a in actions)
         {

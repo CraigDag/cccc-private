@@ -156,6 +156,8 @@
                 D.Show<EventForm>(new Dictionary<string, object?> { [nameof(EventForm.Date)] = V.RealDay }); break;
             case "find-time":
                 D.Show<FindTimeForm>(FindTimeForm.From(W.T, V)); break;
+            case "out-of-use":
+                D.Show<Cccc.Web.Features.Data.OutOfUseForm>(); break;
             case "quick-add" when h.Draft is { } draft:
                 // To the plan on its day, so the form opens over the day it would join; nothing is added until OK.
                 if (V.Scale == Scale.Term) V.Scale = Scale.Day;

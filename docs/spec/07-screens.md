@@ -248,6 +248,16 @@ More has it.
   spaces it left out (*Aerial needs Crash mats and Rigging points, so only Aerial Hall and Big Top are
   looked in*). People & places ▸ Equipment lists each piece with where it is and what needs it; Spaces
   and Classes tick theirs.
+- **Equipment out of use**, for administrators: a piece's form in People & places ▸ Equipment lists each
+  space that has it, *In use* or *Out of use since Wed 18 Nov, back Mon 23 Nov*, with *Out of use…* or
+  *Change…*; *broken*, *repair* or *out of use* in Ctrl+K opens the same form for any space. It takes the
+  space, the piece, the first day and the day it is back in use (empty until somebody knows), refuses a
+  return before it goes, and says before OK which classes need it there while it is out (the first four,
+  and how many more). A spell already made offers *Back in use*, or *Delete* when none of it has come. The
+  equipment list says it beside the space on the days it is out (*Big Top (out of use)*), and an
+  administrator's Now has a line for each piece out of use today, with how many of the rest of this week's
+  classes need it there, opening the form. On the plan it is the equipment ring above, saying *out of use*
+  and when it is back, and the add form's free spaces and the space list say it beside the space that day.
 - **Find a time** beside *+ Class*, for editors (below).
 - **Copy** (day, week, clear the weeks after), **Print** (the four documents, narrowed as the screen
   is, and a facilitator's semester for their phone when the plan is narrowed to one) and **Show** (open

@@ -3,6 +3,7 @@ using Cccc.Domain.Model;
 using Cccc.Domain.Rules;
 using Cccc.Domain.Sample;
 using Cccc.Web.Features.Data;
+using Cccc.Web.Features.Find;
 
 namespace Cccc.Web.Tests;
 
@@ -47,7 +48,7 @@ public class EquipmentWordsTests
         Assert.Equal("Crash mats, Rigging points", EquipmentWords.Names(T, Space("Aerial Hall").Has));
         Assert.Equal("Crash mats, Rigging points", EquipmentWords.Names(T, [Piece("Rigging points").Id, Guid.NewGuid(), Piece("Crash mats").Id, Piece("Crash mats").Id]));
         Assert.Equal("", EquipmentWords.Names(T, Space("Canteen").Has));
-        Assert.Equal("without Crash mats and Rigging points", EquipmentWords.Without(Spaces.Lacking(T, Class("Aerial").Id, Space("Canteen").Id)));
+        Assert.Equal("without Crash mats and Rigging points", EquipmentWords.Without(Spaces.Missing(T, Class("Aerial").Id, Space("Canteen").Id)));
         Assert.Equal("", EquipmentWords.And([]));
         Assert.Equal("Mirrors", EquipmentWords.And(["Mirrors"]));
         Assert.Equal("Crash mats, Mirrors and Sprung floor", EquipmentWords.And(["Crash mats", "Mirrors", "Sprung floor"]));
@@ -62,6 +63,60 @@ public class EquipmentWordsTests
         };
         Assert.Equal("Barre, Aaben trapez", EquipmentWords.Names(t, [aa.Id, barre.Id]));
         Assert.Equal("In Bakery and Aalborg Hall · needed by no class", EquipmentWords.Uses(t, aa.Id));
+    }
+
+    [Fact]
+    public void APieceOutOfUseSaysWhereUntilWhenAndWhichClassesItLeavesWithoutIt()
+    {
+        var mats = Piece("Crash mats");
+        var hall = Space("Aerial Hall");
+        var o = new OutOfUse { RoomId = hall.Id, EquipmentId = mats.Id, From = Monday, Until = Monday.AddDays(2) };
+        var t = T with { OutOfUse = EntitySet<OutOfUse>.Of([o]) };
+        Assert.Equal("Crash mats in Aerial Hall", EquipmentWords.What(t, o));
+        Assert.Equal("back Thu 19 Nov", EquipmentWords.Back(o));
+        Assert.Equal("out of use, back Thu 19 Nov", EquipmentWords.OutShort(o));
+        Assert.Equal("Out of use since Mon 16 Nov, back Thu 19 Nov", EquipmentWords.Spell(o, Monday.AddDays(1)));
+        Assert.Equal("Out of use since Mon 16 Nov, back Thu 19 Nov", EquipmentWords.Spell(o, Monday));
+        Assert.Equal("Out of use from Mon 16 Nov, back Thu 19 Nov", EquipmentWords.Spell(o, Monday.AddDays(-1)));
+        var open = o with { Until = null };
+        Assert.Equal("until somebody says it is back", EquipmentWords.Back(open));
+        Assert.Equal("out of use", EquipmentWords.OutShort(open));
+        Assert.Equal("Out of use since Mon 16 Nov, until somebody says it is back", EquipmentWords.Spell(open, Monday));
+
+        // The list of equipment says it beside the space, on the days it is out only.
+        var inUse = EquipmentWords.Uses(t, mats.Id, Monday.AddDays(3));
+        Assert.Equal(EquipmentWords.Uses(T, mats.Id), inUse);
+        Assert.Equal(inUse.Replace("Aerial Hall", "Aerial Hall (out of use, back Thu 19 Nov)"), EquipmentWords.Uses(t, mats.Id, Monday));
+        Assert.StartsWith("In Aerial Hall, Big Top, Gym and Studio B · needed by ", inUse);
+
+        // Beside a space a class is offered: what it has not, then what it has out of use.
+        Assert.Equal("Crash mats out of use, back Thu 19 Nov", EquipmentWords.Without(Spaces.Lacks(t, Class("Aerial").Id, hall.Id, Monday)));
+        var gym = Space("Gym");
+        var t2 = t with { OutOfUse = t.OutOfUse.Put(o with { Id = Guid.NewGuid(), RoomId = gym.Id, Until = null }) };
+        Assert.Equal("without Rigging points; Crash mats out of use", EquipmentWords.Without(Spaces.Lacks(t2, Class("Aerial").Id, gym.Id, Monday)));
+        Assert.Equal("without Rigging points", EquipmentWords.Without(Spaces.Lacks(t2, Class("Aerial").Id, gym.Id, Monday.AddDays(-1))));
+
+        // What it leaves without it: the first few, soonest first, and how many more.
+        var affected = Spaces.Affected(t, o, Monday, Monday.AddDays(6));
+        Assert.Equal("2 classes need it there while it is out: Aerial Tue 17 Nov 09:00, Aerial Wed 18 Nov 10:45.", EquipmentWords.Affects(t, affected));
+        Assert.Equal("2 classes need it there while it is out: Aerial Tue 17 Nov 09:00 and 1 more.", EquipmentWords.Affects(t, affected, most: 1));
+        Assert.Equal("1 class needs it there while it is out: Aerial Wed 18 Nov 10:45.", EquipmentWords.Affects(t, [.. affected.Skip(1)]));
+        Assert.Equal("No class needs it there while it is out.", EquipmentWords.Affects(t, []));
+        // From a time on the first day, what has ended by then needs nothing any more; the days after it all count.
+        Assert.Equal(2, Spaces.Affected(t, o, Monday.AddDays(1), Monday.AddDays(6), new TimeOnly(10, 59)).Count);
+        var left = Assert.Single(Spaces.Affected(t, o, Monday.AddDays(1), Monday.AddDays(6), new TimeOnly(11, 0)));
+        Assert.Equal((Monday.AddDays(2), new TimeOnly(10, 45)), (left.Date, left.Start));
+        Assert.Equal(2, Spaces.Affected(t, o, Monday, Monday.AddDays(6), new TimeOnly(23, 0)).Count);
+    }
+
+    [Fact]
+    public void CtrlKOffersToPutEquipmentOutOfUseToAnAdministratorWhoAsksAndNobodyElse()
+    {
+        foreach (var q in new[] { "broken", "Repair", "out of use", "equipment" })
+            Assert.Equal("Put equipment out of use", Assert.Single(FindIndex.Search(T, q, mayEdit: true, admin: true), h => h.Kind == "out-of-use").Label);
+        Assert.Equal("out-of-use", FindIndex.Search(T, "broken", mayEdit: true, admin: true)[0].Kind);
+        Assert.DoesNotContain(FindIndex.Search(T, "broken", mayEdit: true, admin: false), h => h.Kind == "out-of-use");
+        Assert.DoesNotContain(FindIndex.Search(T, "", mayEdit: true, admin: true), h => h.Kind == "out-of-use");
     }
 
     [Fact]

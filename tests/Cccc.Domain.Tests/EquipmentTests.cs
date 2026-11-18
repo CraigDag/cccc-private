@@ -55,16 +55,16 @@ public class EquipmentTests
     {
         var s = Built();
         var t = s.B.T;
-        Assert.Equal(["Crash mats", "Rigging points"], Names(Spaces.Lacking(t, s.Aerial.Id, s.Studio.Id)));
-        Assert.Equal(["Rigging points"], Names(Spaces.Lacking(t, s.Aerial.Id, s.Gym.Id)));
-        Assert.Empty(Spaces.Lacking(t, s.Aerial.Id, s.Hall.Id));
-        Assert.True(Spaces.Suits(t, s.Aerial.Id, s.Hall.Id));
-        Assert.False(Spaces.Suits(t, s.Aerial.Id, s.Gym.Id));
+        Assert.Equal(["Crash mats", "Rigging points"], Names(Spaces.Lacking(t, s.Aerial.Id, s.Studio.Id, Tuesday)));
+        Assert.Equal(["Rigging points"], Names(Spaces.Lacking(t, s.Aerial.Id, s.Gym.Id, Tuesday)));
+        Assert.Empty(Spaces.Lacking(t, s.Aerial.Id, s.Hall.Id, Tuesday));
+        Assert.True(Spaces.Suits(t, s.Aerial.Id, s.Hall.Id, Tuesday));
+        Assert.False(Spaces.Suits(t, s.Aerial.Id, s.Gym.Id, Tuesday));
         // A class that needs nothing suits every space; no class, or no space, lacks nothing.
-        Assert.Empty(Spaces.Lacking(t, s.Juggling.Id, s.Studio.Id));
-        Assert.True(Spaces.Suits(t, s.Juggling.Id, s.Studio.Id));
-        Assert.Empty(Spaces.Lacking(t, null, s.Studio.Id));
-        Assert.Empty(Spaces.Lacking(t, s.Aerial.Id, null));
+        Assert.Empty(Spaces.Lacking(t, s.Juggling.Id, s.Studio.Id, Tuesday));
+        Assert.True(Spaces.Suits(t, s.Juggling.Id, s.Studio.Id, Tuesday));
+        Assert.Empty(Spaces.Lacking(t, null, s.Studio.Id, Tuesday));
+        Assert.Empty(Spaces.Lacking(t, s.Aerial.Id, null, Tuesday));
         Assert.Equal(["Crash mats", "Rigging points"], Names(Spaces.Needed(t, s.Aerial.Id)));
         Assert.Empty(Spaces.Needed(t, s.Juggling.Id));
         Assert.Empty(Spaces.Needed(t, null));
@@ -76,8 +76,8 @@ public class EquipmentTests
         var bars = b.Equipment("Barrer");
         var swinging = b.Class("Swinging trapeze", needs: [trapeze, bars, s.Rigging, s.Rigging]);
         var gone = b.T with { Classes = b.T.Classes.Put(swinging with { Needs = swinging.Needs.Add(Guid.NewGuid()) }) };
-        Assert.Equal(["Barrer", "Rigging points", "Aaben trapez"], Names(Spaces.Lacking(gone, swinging.Id, s.Studio.Id)));
-        Assert.Equal(["Barrer", "Aaben trapez"], Names(Spaces.Lacking(gone, swinging.Id, s.Hall.Id)));
+        Assert.Equal(["Barrer", "Rigging points", "Aaben trapez"], Names(Spaces.Lacking(gone, swinging.Id, s.Studio.Id, Tuesday)));
+        Assert.Equal(["Barrer", "Aaben trapez"], Names(Spaces.Lacking(gone, swinging.Id, s.Hall.Id, Tuesday)));
         Assert.Equal(["Barrer", "Rigging points", "Aaben trapez"], Names(Spaces.Needed(gone, swinging.Id)));
     }
 

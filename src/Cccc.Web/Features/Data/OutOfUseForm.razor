@@ -1,0 +1,121 @@
+@inject Dialogs D
+@* A piece a space has, out of use from a day: until a day, or until somebody says it is back. No box for why: what
+   happened, and to whom, is not the timetable's. *@
+@{
+    var t = W.T;
+    var draft = Draft();
+    var affected = draft is null || _why is not null ? [] : Spaces.Affected(t, draft, W.Today, Last(t), W.Clock.TimeOfDay);
+}
+<DialogFrame Title="@(_old is null ? "Put equipment out of use" : "Out of use: " + EquipmentWords.What(t, _old))" OnOk="Save"
+             OkLabel="@(_old is null ? "Put it out of use" : "OK")" OkEnabled="@(_why is null)">
+    <ChildContent>
+        @if (_old is null)
+        {
+            @if (!Rooms(t).Any())
+            {
+                <p class="notice" data-testid="out-no-spaces">No space has any equipment yet: tick what each space has in People &amp; places ▸ Spaces first.</p>
+            }
+            else
+            {
+                <div class="field two">
+                    <label><span>Space</span>
+                        <select value="@_roomId" @onchange="e => { _roomId = Guid.TryParse(e.Value?.ToString(), out var g) ? g : null; _pieceId = PiecesIn(W.T, _roomId).FirstOrDefault()?.Id; Check(); }" data-testid="out-room">
+                            @foreach (var r in Rooms(t))
+                            {
+                                <option value="@r.Id">@r.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label><span>What is out of use</span>
+                        <select value="@_pieceId" @onchange="e => { _pieceId = Guid.TryParse(e.Value?.ToString(), out var g) ? g : null; Check(); }" data-testid="out-piece">
+                            @foreach (var e in PiecesIn(t, _roomId))
+                            {
+                                <option value="@e.Id">@e.Name</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+            }
+        }
+        <div class="field two">
+            <label><span>Out of use from</span><input type="date" @bind="_from" @bind:after="Check" data-testid="out-from" /></label>
+            <label><span>Back in use on</span><input type="date" @bind="_back" @bind:after="Check" data-testid="out-back" /></label>
+        </div>
+        <p class="hint">Leave "Back in use on" empty until you know: it stays out of use until somebody says it is back.</p>
+        @if (_why is not null)
+        {
+            <p class="form-error" data-testid="out-why">@_why</p>
+        }
+        else
+        {
+            <p class="@(affected.Count > 0 ? "notice" : "hint")" data-testid="out-affects">@EquipmentWords.Affects(t, affected)</p>
+        }
+        <p class="hint">While it is out, the plan rings each class that needs it there and offers a way out, and Find a time
+            looks elsewhere on those days. Nothing is moved. There is no box for why: what happened, and to whom, is not the
+            timetable's.</p>
+    </ChildContent>
+    <Extra>
+        @if (_old is not null && (_old.Until is not { } last || last >= W.Today))
+        {
+            <button type="button" class="btn @(_old.From > W.Today ? "danger" : "")" @onclick="BackInUse" data-testid="out-back-in-use">@(_old.From > W.Today ? "Delete" : "Back in use")</button>
+        }
+    </Extra>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    /// <summary>A spell to change, or none to put a piece out of use.</summary>
+    [Parameter] public Guid? Id { get; set; }
+    /// <summary>The space and piece to start with, when the form is opened from one.</summary>
+    [Parameter] public Guid? RoomId { get; set; }
+    [Parameter] public Guid? EquipmentId { get; set; }
+    private OutOfUse? _old;
+    private Guid? _roomId, _pieceId;
+    private DateOnly _from;
+    private DateOnly? _back;
+    private string? _why;
+
+    protected override void OnInitialized()
+    {
+        var t = W.T;
+        _old = Id is { } id ? t.OutOfUse[id] : null;
+        _from = _old?.From ?? W.Today;
+        _back = _old?.Until?.AddDays(1);
+        _roomId = _old?.RoomId ?? (Rooms(t).Any(r => r.Id == RoomId) ? RoomId : Rooms(t).FirstOrDefault()?.Id);
+        _pieceId = _old?.EquipmentId ?? (PiecesIn(t, _roomId).Any(e => e.Id == EquipmentId) ? EquipmentId : PiecesIn(t, _roomId).FirstOrDefault()?.Id);
+        Check();
+    }
+
+    /// <summary>The spaces with anything to be out of use, in the order a person reads names.</summary>
+    private static IEnumerable<Room> Rooms(Timetable t) => t.Rooms.Current().Where(r => r.Has.Count > 0).OrderBy(r => r.Name, NameOrder.Comparer);
+
+    /// <summary>What a space has, in the order a person reads names.</summary>
+    private static IEnumerable<Equipment> PiecesIn(Timetable t, Guid? roomId) =>
+        (t.Rooms.Find(roomId)?.Has ?? []).Select(e => t.Equipment[e]).OfType<Equipment>().DistinctBy(e => e.Id).OrderBy(e => e.Name, NameOrder.Comparer);
+
+    /// <summary>The spell as the form now says it, or none until a space and a piece are chosen.</summary>
+    private OutOfUse? Draft() => _roomId is { } r && _pieceId is { } e
+        ? (_old ?? new OutOfUse()) with { RoomId = r, EquipmentId = e, From = _from, Until = _back?.AddDays(-1) }
+        : null;
+
+    /// <summary>The last day the classes it affects are looked for in, until somebody says it is back: the last day anything is timetabled.</summary>
+    private DateOnly Last(Timetable t) => _back?.AddDays(-1) ?? t.Sessions.Select(s => s.Date).Where(d => !Cccc.Domain.Week.IsScratch(d)).DefaultIfEmpty(W.Today).Max();
+
+    private void Check()
+    {
+        _why = _roomId is null || _pieceId is null ? "Choose the space, and what in it is out of use."
+            : _back is { } back && back <= _from ? "It comes back in use after the day it goes out of use, not before."
+            : null;
+    }
+
+    private void Save()
+    {
+        Check();
+        if (_why is not null || Draft() is not { } o) return;
+        if (W.Commit(t => Edits.PutOutOfUse(t, o))) D.Close();
+    }
+
+    private void BackInUse()
+    {
+        if (W.Commit(t => Edits.BackInUse(t, _old!.Id, W.Today))) D.Close();
+    }
+}

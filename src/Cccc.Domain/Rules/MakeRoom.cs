@@ -51,6 +51,8 @@ public static class MakeRoom
             var events = EventSchedule.On(t, day);
             // Who the class needs that is elsewhere that day, as Find a time asks it; its spaces are asked below.
             var busy = Busy.For(t, c, day, viewer, occurrences, events).Where(b => b.Kind != BusyKind.Space).ToList();
+            // Only the spaces with what it needs in use that day, as Find a time asks it.
+            var open = Openings.InUseOn(t, c, spaces, day);
             int first = day == today ? Math.Max(dayStart, Openings.Up(Openings.Minutes(now) + 1)) : dayStart;
             // Each other class alone in the way that day, in the order first met: the first time it is, and the last.
             var alone = new List<(Guid Other, TimeOnly First, Guid? FirstSpace, TimeOnly Last, Guid? LastSpace)>();
@@ -74,7 +76,7 @@ public static class MakeRoom
                 }
                 var used = Spaces.Uses(occurrences, self).Where(u => u.O.Start < end && start < u.O.End).ToList();
                 var booked = Spaces.Booked(t, events, start, end);
-                foreach (var r in spaces)
+                foreach (var r in open)
                 {
                     if (booked.ContainsKey(r)) continue;
                     // The one other class: the one keeping its people, groups or students, the one in the space, or both.

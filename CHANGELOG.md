@@ -161,6 +161,16 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   staff only (editors, administrators, facilitators and anybody tagged Staff), never says why anybody is
   away, and keeps nothing: ending it forgets every tick, and one left running ends by itself after three
   hours.
+- **Equipment out of use.** When a crash mat is torn or the rigging is waiting for an inspection, open the
+  piece in People & places ▸ Equipment (or type *broken* into Ctrl+K) and put it out of use in that space,
+  from a day until it is back, or until you say it is. Before you press OK the form says which classes
+  need it there while it is out (*2 classes need it there while it is out: Aerial Tue 24 Nov 09:00, Aerial
+  Wed 25 Nov 10:45*). On those days the plan rings each of them, the side panel saying so and when it is
+  back (*Crash mats out of use, back Thu 26 Nov*), and the way out is the same time in a space with it in
+  use; Find a time, making room and asking for a space look elsewhere on those days, and look there again
+  once it is back. An administrator's Now says what is out of use today and how many of this week's
+  classes still need it there; pressing it opens it, where *Back in use* says it is. Nothing is moved by itself, and
+  Undo takes any of it back. There is no box for why: what happened, and to whom, is not the timetable's.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

@@ -99,6 +99,26 @@ public sealed record Equipment : IEntity
     public string Name { get; init; } = "";
 }
 
+/// <summary>
+/// A piece of equipment in one space out of use from a day, until a day or until somebody says it is back: a
+/// mat torn, a sling condemned, the tumble track waiting for a part. While it is, the space lacks it
+/// (<see cref="Rules.Spaces.Lacking(Timetable, Guid?, Guid?, DateOnly)"/>), so a class needing it there is ringed
+/// with its ways out. The rebuild's own. There is no box for why: what happened, and to whom, is not the
+/// timetable's.
+/// </summary>
+public sealed record OutOfUse : IEntity
+{
+    public Guid Id { get; init; } = Guid.NewGuid();
+    public Guid RoomId { get; init; }
+    public Guid EquipmentId { get; init; }
+    public DateOnly From { get; init; }
+
+    /// <summary>Its last day out of use, or null until somebody says it is back.</summary>
+    public DateOnly? Until { get; init; }
+
+    public bool Covers(DateOnly date) => date >= From && (Until is not { } last || date <= last);
+}
+
 /// <summary>A programme. Still <c>Strand</c> in the old code and file.</summary>
 public sealed record Programme : IEntity
 {

@@ -116,7 +116,7 @@ public static class Asking
         var inUse = Spaces.InUse(t, a.Date, a.Start, a.End);
         var booked = Spaces.Booked(t, a.Date, a.Start, a.End);
         return t.Rooms.Current().Where(r => r.Id != a.RoomId && !inUse.ContainsKey(r.Id) && !booked.ContainsKey(r.Id))
-            .OrderBy(r => !Spaces.Suits(t, a.ClassId, r.Id)).ThenBy(r => r.Name, NameOrder.Comparer).ThenBy(r => r.Id).ToList();
+            .OrderBy(r => !Spaces.Suits(t, a.ClassId, r.Id, a.Date)).ThenBy(r => r.Name, NameOrder.Comparer).ThenBy(r => r.Id).ToList();
     }
 
     /// <summary>

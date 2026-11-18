@@ -52,7 +52,7 @@ else
             break;
         case "equipment":
             <AddBar Kind="k" OnAdd="() => Show<EquipmentForm>(null)" />
-            <Rows Items="@Filter(t.Equipment.Select(e => Row.Of(e.Id, e.Name, null, EquipmentWords.Uses(t, e.Id))))" OnOpen="id => Show<EquipmentForm>(id)" />
+            <Rows Items="@Filter(t.Equipment.Select(e => Row.Of(e.Id, e.Name, null, EquipmentWords.Uses(t, e.Id, W.Today))))" OnOpen="id => Show<EquipmentForm>(id)" />
             break;
         case "areas":
             <AddBar Kind="k" OnAdd="() => Show<AreaForm>(null)" />

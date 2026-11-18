@@ -17,6 +17,7 @@ public class AccessTests
     [InlineData("requests", true, true, true)]
     [InlineData("offers", true, true, true)]
     [InlineData("spaceAsks", true, true, true)]
+    [InlineData("outOfUse", false, false, true)]
     [InlineData("absences", false, false, true)]
     [InlineData("sessions", false, true, true)]
     [InlineData("events", false, true, true)]
@@ -137,7 +138,7 @@ public class ProjectFileTests
         using var ms = new MemoryStream();
         using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
         {
-            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 7");   // one past this build's
+            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 8");   // one past this build's
             using (var w = new StreamWriter(zip.CreateEntry("project.json").Open())) w.Write("{}");
         }
         var e = Assert.Throws<InvalidDataException>(() => ProjectFiles.Read(ms.ToArray()));
@@ -155,7 +156,7 @@ public class ProjectFileTests
         {
             using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 1");
             var json = System.Text.Json.Nodes.JsonNode.Parse(ModelJson.Serialise(t))!.AsObject();
-            foreach (var later in new[] { "scratch", "requests", "offers", "spaceAsks" }) Assert.True(json.Remove(later), later);
+            foreach (var later in new[] { "scratch", "requests", "offers", "spaceAsks", "outOfUse" }) Assert.True(json.Remove(later), later);
             using (var w = new StreamWriter(zip.CreateEntry("project.json").Open())) w.Write(json.ToJsonString());
         }
         var back = ProjectFiles.Read(ms.ToArray());
@@ -164,22 +165,26 @@ public class ProjectFileTests
         Assert.Empty(back.Requests);
         Assert.Empty(back.Offers);
         Assert.Empty(back.SpaceAsks);
+        Assert.Empty(back.OutOfUse);
         Assert.DoesNotContain(back.Classes, c => c.FormerSince is not null);
         // And what this build writes says the format it is, so an older build refuses it rather than drop
         // the plan or what was asked, or offer a former class ahead again.
         var gone = t.Classes.First();
         var asked = new SpaceAsk { FacilitatorId = t.Facilitators.First().Id, Date = Day, Start = new(16, 0), End = new(17, 0), RoomId = t.Rooms.First().Id, Title = "Extra practice" };
+        var broken = new OutOfUse { RoomId = t.Rooms.First(r => r.Has.Count > 0).Id, EquipmentId = t.Rooms.First(r => r.Has.Count > 0).Has[0], From = Day, Until = Day.AddDays(2) };
         var planned = t with { Scratch = EntitySet<Session>.Of([new Session { Date = ScratchWeek.Monday }]),
-                               Classes = t.Classes.Put(gone with { FormerSince = Day }), SpaceAsks = EntitySet<SpaceAsk>.Of([asked]) };
+                               Classes = t.Classes.Put(gone with { FormerSince = Day }), SpaceAsks = EntitySet<SpaceAsk>.Of([asked]),
+                               OutOfUse = EntitySet<OutOfUse>.Of([broken]) };
         var again = ProjectFiles.Read(ProjectFiles.Write(planned));
         Assert.Single(again.Scratch);
         Assert.Equal(Day, again.Classes[gone.Id]!.FormerSince);
         Assert.Equal(t.Requests.Single(), again.Requests.Single());
         Assert.Equal(t.Offers.Single(), again.Offers.Single());
         Assert.Equal(asked, again.SpaceAsks.Single());
+        Assert.Equal(broken, again.OutOfUse.Single());
         using var written = new System.IO.Compression.ZipArchive(new MemoryStream(ProjectFiles.Write(planned)));
         using var r = new StreamReader(written.GetEntry("format.txt")!.Open());
-        Assert.Equal("cccc2 6", r.ReadToEnd());
+        Assert.Equal("cccc2 7", r.ReadToEnd());
     }
 
     /// <summary>

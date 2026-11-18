@@ -98,6 +98,17 @@ public class ProjectStoreTests
     }
 
     [Fact]
+    public void EveryCollectionIsSaidInItsOwnWordsWhenUndoCannotTakeItBack()
+    {
+        var words = Collections.All.Select(c => LiveProject.Describe(c.Name)).ToList();
+        Assert.NotEmpty(words);
+        Assert.DoesNotContain("one change", words);
+        Assert.Equal(words.Count, words.Distinct().Count());
+        Assert.Equal("equipment out of use", LiveProject.Describe(Collections.OutOfUse.Name));
+        Assert.Equal("one change", LiveProject.Describe("nothing called this"));
+    }
+
+    [Fact]
     public void AskingAnsweredSinceIsNotTakenBackByTheAskersUndoAndTheAnswerIsTheAdministrators()
     {
         using var s = new Scratch();
@@ -413,6 +424,7 @@ public class ProjectStoreTests
             ("requests", 4), ("offers", 4),
             ("equipment", 5),            // with what a space has and a class needs, fields on rooms and classes
             ("spaceAsks", 6),
+            ("outOfUse", 7),
         ];
         string[] first = ["settings", "semesters", "closures", "rooms", "programmes", "groups", "branches", "disciplines",
                           "students", "facilitators", "areas", "classes", "timeRules", "sessions", "registers", "absences", "events"];

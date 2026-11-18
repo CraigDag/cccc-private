@@ -83,6 +83,9 @@ public sealed record Timetable
     /// </summary>
     public EntitySet<SpaceAsk> SpaceAsks { get; init; } = EntitySet<SpaceAsk>.Empty;
 
+    /// <summary>Equipment out of use in a space for a while (<see cref="Model.OutOfUse"/>). See <see cref="Rules.Spaces"/>.</summary>
+    public EntitySet<OutOfUse> OutOfUse { get; init; } = EntitySet<OutOfUse>.Empty;
+
     public static Timetable Empty { get; } = new();
 
     /// <summary>The sessions dated Monday to Sunday of this week. A week nobody filled is blank.</summary>

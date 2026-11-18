@@ -79,7 +79,7 @@ else if (space is not null && Asking.StateOf(space, W.Today, W.Clock.TimeOfDay) 
                         <option value="@space.RoomId">@(asked?.Name ?? "The space asked for"), as asked</option>
                         @foreach (var r in others)
                         {
-                            <option value="@r.Id">@r.Name, free then@(Spaces.Lacking(t, space.ClassId, r.Id) is { Count: > 0 } lacking ? " — " + Cccc.Web.Features.Data.EquipmentWords.Without(lacking) : "")</option>
+                            <option value="@r.Id">@r.Name, free then@(Spaces.Lacks(t, space.ClassId, r.Id, space.Date) is { Count: > 0 } lacking ? " — " + Cccc.Web.Features.Data.EquipmentWords.Without(lacking) : "")</option>
                         }
                     </select>
                 </label>

@@ -74,15 +74,20 @@ public static class Openings
 
     /// <summary>
     /// The spaces asked that the class may go in, in the order asked: each once, still the school's, and with
-    /// everything the class needs (<see cref="Spaces.Suits"/>), since a space without it is the wrong space
-    /// however free it is. The others are left out, and <see cref="Unsuited"/> says which.
+    /// everything the class needs (<see cref="Spaces.HasAll"/>), since a space without it is the wrong space
+    /// however free it is. The others are left out, and <see cref="Unsuited"/> says which. A space with something
+    /// out of use is looked in on the days it is not (<see cref="Spaces.Suits"/>).
     /// </summary>
     public static List<Guid> SpacesFor(Timetable t, OpeningAsk ask) =>
-        ask.Spaces.Distinct().Where(r => t.Rooms.Contains(r) && Spaces.Suits(t, ask.Class.ClassId, r)).ToList();
+        ask.Spaces.Distinct().Where(r => t.Rooms.Contains(r) && Spaces.HasAll(t, ask.Class.ClassId, r)).ToList();
 
-    /// <summary>The spaces asked that are left out for lacking what the class needs, in the order asked.</summary>
+    /// <summary>The spaces asked that are left out for not having what the class needs at all, in the order asked.</summary>
     public static IReadOnlyList<Guid> Unsuited(Timetable t, OpeningAsk ask) =>
-        ask.Spaces.Distinct().Where(r => t.Rooms.Contains(r) && !Spaces.Suits(t, ask.Class.ClassId, r)).ToList();
+        ask.Spaces.Distinct().Where(r => t.Rooms.Contains(r) && !Spaces.HasAll(t, ask.Class.ClassId, r)).ToList();
+
+    /// <summary>The spaces of these that have everything the class needs in use on a day, in the same order.</summary>
+    internal static List<Guid> InUseOn(Timetable t, Session c, IReadOnlyList<Guid> spaces, DateOnly day) =>
+        spaces.Where(r => Spaces.Suits(t, c.ClassId, r, day)).ToList();
 
     /// <summary>The class at a date and time, in a space: every part of it moved by as much as the class.</summary>
     public static Session Placed(Session c, DateOnly date, TimeOnly start, Guid? space) =>
@@ -122,6 +127,8 @@ public static class Openings
             var seen = events.Where(e => viewer.Sees(e.Event)).ToList();
             // Who the class needs that is elsewhere that day; its own space aside, since it may go in any of its spaces.
             var busy = Busy.For(t, c, day, viewer, occurrences, events).Where(b => b.Kind != BusyKind.Space).ToList();
+            // The spaces with what it needs in use that day: one with a piece out of use is no space for it then.
+            var open = InUseOn(t, c, spaces, day);
 
             // The spaces free for the whole of the class starting at minute m, empty when it needs none;
             // null when its people or groups are not free then, or no space is.
@@ -139,7 +146,7 @@ public static class Openings
                 if (!withSpace || !needsSpace) return [];
                 var used = Spaces.InUse(occurrences, start, end, self);
                 var booked = Spaces.Booked(t, events, start, end);
-                var free = spaces.Where(r => !used.ContainsKey(r) && !booked.ContainsKey(r)).ToList();
+                var free = open.Where(r => !used.ContainsKey(r) && !booked.ContainsKey(r)).ToList();
                 return free.Count > 0 ? free : null;
             }
 
@@ -167,7 +174,8 @@ public static class Openings
                 runLast = m;
             }
             Close();
-            if (!any && first + length <= dayEnd) Note(noTime, day, WhyNoTime(t, c, day, people, first, dayEnd, Fits));
+            if (!any && first + length <= dayEnd)
+                Note(noTime, day, WhyNoTime(t, c, day, people, first, dayEnd, Fits, spaces.Count > 0 && open.Count == 0 ? spaces : null));
         }
         return new(found, more, notSearched, noTime) { Unsuited = Unsuited(t, ask) };
     }
@@ -251,10 +259,11 @@ public static class Openings
 
     /// <summary>
     /// Why a day looked in has no time: somebody away the whole of it, the longest everybody is free
-    /// together when that is too short, or no space free when they are.
+    /// together when that is too short, what the class needs out of use in every space asked
+    /// (<paramref name="allOut"/>), or no space free when they are.
     /// </summary>
     private static string WhyNoTime(Timetable t, Session c, DateOnly day, IReadOnlyList<Guid> people, int first, int dayEnd,
-        Func<Session, int, bool, IReadOnlyList<Guid>?> fits)
+        Func<Session, int, bool, IReadOnlyList<Guid>?> fits, IReadOnlyList<Guid>? allOut)
     {
         var quarters = Enumerable.Range(0, (dayEnd - first) / StepMinutes).Select(i => first + i * StepMinutes).ToList();
         var away = people.Where(id => quarters.All(m => Occurrences.IsAway(t, id, day, At(m), At(m + StepMinutes))))
@@ -270,6 +279,9 @@ public static class Openings
         }
         if (longest == 0) return "Never all free at once";
         if (longest < (int)c.Length.TotalMinutes) return $"Free together for {Week.Duration(TimeSpan.FromMinutes(longest))} at most";
+        if (allOut is not null)
+            return string.Join("; ", allOut.Select(r => (Room: t.Rooms[r]!, Out: Spaces.Lacks(t, c.ClassId, r, day).Where(l => l.Out is not null).ToList()))
+                .Select(x => $"{x.Room.Name}: {string.Join(", ", x.Out.Select(Spaces.SayOut))}"));
         return "No space is free when everybody is";
     }
 
