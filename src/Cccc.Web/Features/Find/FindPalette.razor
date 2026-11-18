@@ -29,7 +29,7 @@
                 var h = hits[i];
                 int at = i;
                 <li role="option" aria-selected="@(i == _at ? "true" : "false")">
-                    <button type="button" class="find-hit @(i == _at ? "on" : "")" @onclick="() => Go(h)" @onmouseenter="() => _at = at" data-testid="find-hit">
+                    <button type="button" class="find-hit @(i == _at ? "on" : "") @(h.Kind == "quick-add" ? "quick" : "")" @onclick="() => Go(h)" @onmouseenter="() => _at = at" data-testid="find-hit">
                         <span class="find-kind k-@h.Kind" style="@(h.Colour is null ? "" : $"--c:{h.Colour}")">@Badge(h)</span>
                         <span class="find-label">@h.Label</span>
                         <small>@h.Detail</small>
@@ -37,7 +37,7 @@
                 </li>
             }
         </ul>
-        <footer class="find-foot">↑ ↓ to move · Enter to open · a person or space opens their day</footer>
+        <footer class="find-foot">↑ ↓ to move · Enter to open · a person or space opens their day@(W.Access.MayEdit ? " · type a class and a time to add it, like “aerial fri 13”" : "")</footer>
     </section>
 }
 @code {
@@ -72,7 +72,10 @@
 
     // The keys act on what has been typed, never on the list last drawn: typing quickly can run ahead of
     // the screen, and Enter straight after "Studio B" opened Studio A, which led the list for "Studio".
-    private IReadOnlyList<FindHit> Hits() => FindIndex.Search(W.T, _q, W.Access.MayEdit, W.Access.MayUseAdminTools);
+    private IReadOnlyList<FindHit> Hits() => FindIndex.Search(W.T, _q, W.Access.MayEdit, W.Access.MayUseAdminTools, today: W.Today, shown: Shown());
+
+    /// <summary>The day a typed "fri" counts from: the one the plan shows, when the plan is what is on screen.</summary>
+    private DateOnly Shown() => V.Started && Nav.ToBaseRelativePath(Nav.Uri).StartsWith("plan", StringComparison.Ordinal) ? V.Day : W.Today;
 
     private void OnKey(KeyboardEventArgs e)
     {
@@ -85,7 +88,7 @@
 
     private static string Badge(FindHit h) => h.Kind switch
     {
-        "facilitator" => "F", "student" => "S", "room" => "◻", "group" => "G", "programme" => "P", _ => "→",
+        "facilitator" => "F", "student" => "S", "room" => "◻", "group" => "G", "programme" => "P", "quick-add" => "+", _ => "→",
     };
 
     private void Go(FindHit h)
@@ -115,6 +118,14 @@
                 D.Show<EventForm>(new Dictionary<string, object?> { [nameof(EventForm.Date)] = V.RealDay }); break;
             case "find-time":
                 D.Show<FindTimeForm>(FindTimeForm.From(W.T, V)); break;
+            case "quick-add" when h.Draft is { } draft:
+                // To the plan on its day, so the form opens over the day it would join; nothing is added until OK.
+                if (V.Scale == Scale.Term) V.Scale = Scale.Day;
+                V.GoTo(draft.Date);
+                V.Changed();
+                Nav.NavigateTo("plan");
+                D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.Draft)] = draft });
+                break;
         }
     }
 

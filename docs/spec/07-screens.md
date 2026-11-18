@@ -44,6 +44,16 @@ Nothing depends on a web font: the laptop may be offline.
 - **One drawer at a time**, focus trapped, Escape closes, OK before Cancel.
 - **Every page is drawn again as each minute turns**, so a screen left open all day (Now on the office
   wall) keeps up with the clock beside it, and with the date after midnight.
+- **A class can be typed into Find in one line** (`QuickAdd`), for editors: *aerial fri 13*, *juggling ba2
+  with cleo and bo tomorrow 9.30-11 studio b*, *staff meeting 4/12 15:30 canteen*. It reads names whole
+  and longest first (*aerial hall* is the space, *aerial* the class), without their spaces (*ba1*), by a
+  first name, or by the start of exactly one (*acro*); a day name counts from the week the plan shows,
+  and from today anywhere else; a date the ways people write one (*4/12*, *4.12*, *27 nov*); a time or a
+  length (*13-14:30*, *1-2.30pm*, *at 2*, *9 for 90m*), an hour from 1 to 6 being the afternoon. With no
+  class named, the words left are the title. Whatever it does not say comes from the class's most like
+  session (`Habits.Like`). It comes first in Find, saying what it would add, where the rest came from and
+  any word it did not understand (*stu (Studio A or Studio B?)*); Enter opens the add form on it, over
+  the plan on its day, and nothing is added until OK there. A coach is never offered it.
 - **Find's keys act on what has been typed**, never on the list last drawn: Enter straight after the
   last letter opens the top match for all of it. **And nothing typed straight after Ctrl+K or / is
   lost**: Find opens after a round trip and its box takes the focus after another, so `shell.js` keeps

@@ -87,6 +87,13 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   each lacks, and Find a time and making room look only in spaces that have it and say which they left
   out. Deleting a piece takes it off every space and class at once, and Undo puts it all back. Nothing
   needs anything until you say so.
+- **Add a class by typing it.** In Find (Ctrl+K), type a class the way you would say it: *aerial fri 13*,
+  or *juggling ba2 with cleo and bo tomorrow 9.30-11 studio b*. The first line in Find says what it would
+  add (*Add Aerial · Fri 4 Dec 13:00–14:30*), and whatever you left out (the group, the space, who
+  teaches, how long) is as that class usually is, from its most like week, which it names. Words it did
+  not understand are listed, never quietly used. Enter opens the add form filled in, on that day of the
+  plan, so you look it over and press OK; nothing is added before. With no class named, your words are
+  the title (*staff meeting fri 15:30 canteen*).
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

@@ -329,6 +329,19 @@ WHO is in what SPACE: the space has to be fit for the class, and the current app
   brought it: a format-4 build would replay a piece as a collection it has never heard of, and save a
   space or a class back without its ticks.
 
+## What a class is usually like (`Habits.Like`, the rebuild's own)
+
+A class typed in a line (*aerial fri 13*) says little; the rest is what that class usually is.
+
+- **The most like session of the class**: for the groups or with the facilitators named, if any were;
+  then on the same weekday; then nearest the start named; then the latest before that day, and only
+  when there is none before, the soonest after. A cancelled one did not run, so it is never the one, and
+  nothing former comes with it (`Former.Strip`, as for every copy).
+- **It fills only what the line did not say**: who it is for, the space, who teaches (keeping who is in
+  only part of it only at the very same times), the start, the length. What the line says always wins.
+- **It is a suggestion, never a rule anything counts by**: the add form shows the result, saying which
+  day the rest came from, and nothing is saved until OK.
+
 ## A week against the one before (`WeekChanges`)
 
 - A week is compared with **the last week before it with anything in it**, at most half a year back: a

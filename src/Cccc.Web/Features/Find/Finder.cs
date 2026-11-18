@@ -24,18 +24,23 @@ public sealed class Finder
     }
 }
 
-/// <summary>One answer in Find: a thing to look at, or a thing to do.</summary>
-public sealed record FindHit(string Kind, string Label, string? Detail, Guid? Id, string? Colour);
+/// <summary>One answer in Find: a thing to look at, or a thing to do. A class typed in to add carries its draft.</summary>
+public sealed record FindHit(string Kind, string Label, string? Detail, Guid? Id, string? Colour, Cccc.Domain.Model.Session? Draft = null);
 
 public static class FindIndex
 {
     /// <summary>
     /// Everything Find can reach, ranked: a name that starts with the words beats one that only
     /// contains them, and people come before places before groups. Nothing here is logged or put in a URL.
+    /// For somebody who may edit, a line that reads as a class to add (<see cref="QuickAdd"/>) comes first:
+    /// <paramref name="today"/> and the day the plan shows say which Friday "fri" is.
     /// </summary>
-    public static IReadOnlyList<FindHit> Search(Cccc.Domain.Model.Timetable t, string query, bool mayEdit, bool admin, int max = 12)
+    public static IReadOnlyList<FindHit> Search(Cccc.Domain.Model.Timetable t, string query, bool mayEdit, bool admin, int max = 12,
+        DateOnly? today = null, DateOnly? shown = null)
     {
         var q = query.Trim();
+        var quick = mayEdit && today is { } now && q.Length > 0 && QuickAdd.Read(t, q, now, shown ?? now) is { } reading
+            ? QuickAdd.Hit(t, reading) : null;
         var hits = new List<(int Rank, FindHit Hit)>();
         int Score(string name)
         {
@@ -94,6 +99,7 @@ public static class FindIndex
             if (s < 0 && a.Detail is { } where && Score(where) is var w and >= 0) s = 3 + w;
             if (s >= 0) hits.Add((s * 10 + 5, a));
         }
-        return hits.OrderBy(h => h.Rank).ThenBy(h => h.Hit.Label, Cccc.Domain.NameOrder.Comparer).Select(h => h.Hit).Take(max).ToList();
+        var found = hits.OrderBy(h => h.Rank).ThenBy(h => h.Hit.Label, Cccc.Domain.NameOrder.Comparer).Select(h => h.Hit);
+        return quick is null ? found.Take(max).ToList() : [quick, .. found.Take(max - 1)];
     }
 }
