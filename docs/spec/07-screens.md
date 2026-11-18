@@ -90,6 +90,20 @@ Nothing depends on a web font: the laptop may be offline.
   (`Reading.MayBeAnAdd`).
 - **The absence form says what it takes them off before OK**, as *Can't come* does: each class with what
   recording it would leave it, or for a student *They would miss* and the classes (`Away.WhatItLeaves`).
+  **For a facilitator it then offers who covers** what it leaves still to come (`CoverAll.ForAbsence`):
+  *Who covers the 3 still to come* (or *Who covers Creation lab*), **Not yet** chosen (*They wait on the
+  Cover page*), the first three as the Cover page ranks them, each with its initials and the same words
+  (*Free for all 3 · has taught Creation lab · 10h this week*; *Free · …* for one class), dashed when free
+  for only some, and the rest under **Somebody else**, which opens by itself when the one chosen is under
+  it. Choosing somebody says what OK will do (*OK records it with Dag Øverlie covering 2 of the 3;
+  Creation lab on Tue 24 Nov still needs cover. One Undo takes both back.*), and OK does exactly that, the
+  classes they are free for (`Edits.RecordAway`); *Nobody is free for any of it* when nobody is. Because
+  the call that somebody is ill is when cover gets decided: Ctrl+K, *esme sick*, a person, OK. Not yet
+  stays the default, so recording an absence never covers anything unasked.
+- **A disclosure in a form is the person's to open and close.** `shell.js` closes an open `<details>` on a
+  click elsewhere only when it is a menu (`data-menu`: *You* and the phone's *More*), since closing every
+  one closed Somebody else under the person's own choice, a class's warnings at the first click into
+  another field, and its student list.
 - **Find's keys act on what has been typed**, never on the list last drawn: Enter straight after the
   last letter opens the top match for all of it. **And nothing typed straight after Ctrl+K or / is
   lost**: Find opens after a round trip and its box takes the focus after another, so `shell.js` keeps

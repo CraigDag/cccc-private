@@ -48,8 +48,11 @@
         e.preventDefault();
         e.stopPropagation();
     }, true);
+    // A menu drawn as a disclosure (the "me" menu, the phone's More) closes on a click anywhere else, or on a choice
+    // made in it. A disclosure in a form is the person's to open and close: closing it from here closed Somebody else
+    // under the person's own choice in it, and a class's warnings on the first click into another field.
     document.addEventListener('click', e => {
-        document.querySelectorAll('details[open]').forEach(d => {
+        document.querySelectorAll('details[open][data-menu]').forEach(d => {
             if (!d.contains(e.target) || e.target.closest('a, button[type=submit], .dock-sheet a')) d.removeAttribute('open');
         });
     });

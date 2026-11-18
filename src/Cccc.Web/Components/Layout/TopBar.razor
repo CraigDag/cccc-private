@@ -29,7 +29,7 @@
             <button type="button" class="btn quiet undo" disabled="@(!p.CanUndo(W.Access.By))" title="@(p.UndoLabel(W.Access.By) is { } u ? "Undo: " + u : "Nothing of yours to undo")" @onclick="W.Undo" data-testid="undo">↶ <span>Undo</span></button>
             <button type="button" class="btn quiet redo" disabled="@(!p.CanRedo(W.Access.By))" title="@(p.RedoLabel(W.Access.By) is { } r ? "Redo: " + r : "")" @onclick="W.Redo" data-testid="redo">↷</button>
         }
-        <details class="me" data-testid="me-menu">
+        <details class="me" data-menu data-testid="me-menu">
             <summary aria-label="You"><span class="disc me-disc">@Initials(W.Access.Display)</span></summary>
             <div class="me-panel">
                 <div class="me-who" data-testid="signed-in-as"><b>@W.Access.Display</b><small>@RoleName</small></div>
@@ -59,7 +59,7 @@
     <NavLink class="dock-item" href="plan"><span aria-hidden="true">▤</span>Plan</NavLink>
     <NavLink class="dock-item" href="registers"><span aria-hidden="true">✓</span>Registers</NavLink>
     <button type="button" class="dock-item" @onclick="F.Open" data-testid="dock-find"><span aria-hidden="true">⌕</span>Find</button>
-    <details class="dock-more">
+    <details class="dock-more" data-menu>
         <summary class="dock-item"><span aria-hidden="true">⋯</span>More</summary>
         <div class="dock-sheet">
             @if (W.Access.FacilitatorId is not null) { <NavLink class="me-link" href="my-week">My week</NavLink> }

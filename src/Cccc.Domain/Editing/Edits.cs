@@ -235,25 +235,55 @@ public static class Edits
     /// </summary>
     public static Batch CoverAll(Timetable t, Guid awayId, Guid coverId, IEnumerable<Guid> sessionIds, AskingReader reader, DateTimeOffset at)
     {
-        var who = t.Facilitators[coverId] is { } f && !f.IsFormer() ? f : throw new EditRefused("That facilitator is no longer on this timetable.");
+        var who = Coverer(t, coverId);
         var d = new Draft(t);
+        var taken = TakeAll(d, awayId, who, sessionIds, reader, at);
+        return d.ToBatch(Covering(t, who, awayId, taken));
+    }
+
+    /// <summary>
+    /// A facilitator's absence recorded, or changed, with one person covering what it leaves needing cover among
+    /// <paramref name="sessionIds"/>, as one change, so one Undo takes back both: the absence as
+    /// <see cref="PutAbsence(Timetable, Absence)"/> records it, then each class exactly as <see cref="CoverAll"/>
+    /// gives it, on the timetable with the absence in. Refused whole when that leaves nothing for them to take, so
+    /// an absence is never recorded with a cover the person was told about and did not get.
+    /// </summary>
+    public static Batch RecordAway(Timetable t, Absence a, Guid coverId, IEnumerable<Guid> sessionIds, AskingReader reader, DateTimeOffset at)
+    {
+        if (a.Person != AbsentPerson.Facilitator) throw new EditRefused("A student being away leaves no class needing cover.");
+        var who = Coverer(t, coverId);
+        var d = new Draft(t);
+        PutAbsence(d, a);
+        var taken = TakeAll(d, a.PersonId, who, sessionIds, reader, at);
+        return d.ToBatch($"{(t.Absences.Contains(a.Id) ? "Changed an absence" : "Recorded an absence")}, with {Covering(t, who, a.PersonId, taken)}");
+    }
+
+    private static Facilitator Coverer(Timetable t, Guid id) =>
+        t.Facilitators[id] is { } f && !f.IsFormer() ? f : throw new EditRefused("That facilitator is no longer on this timetable.");
+
+    /// <summary>Each of the classes still needing cover for <paramref name="awayId"/> that <paramref name="who"/> is free for, given to them, in order.</summary>
+    private static List<Session> TakeAll(Draft d, Guid awayId, Facilitator who, IEnumerable<Guid> sessionIds, AskingReader reader, DateTimeOffset at)
+    {
         var taken = new List<Session>();
-        foreach (var id in sessionIds.Select(id => t.Sessions[id]).OfType<Session>().OrderBy(s => s.Date).ThenBy(s => s.Start).ThenBy(s => s.Id).Select(s => s.Id))
+        foreach (var id in sessionIds.Select(id => d.Current.Sessions[id]).OfType<Session>().OrderBy(s => s.Date).ThenBy(s => s.Start).ThenBy(s => s.Id).Select(s => s.Id))
         {
             var s = d.Current.Sessions[id]!;
             var gap = Occurrences.Resolve(d.Current, s);
             if (!gap.NeedsCover || !gap.AwayIds.Contains(awayId)) continue;
-            if (!Cover.Ranked(d.Current, gap).Any(c => c.Person.Id == coverId && c.IsFree)) continue;
-            d.Put(Collections.Sessions, Normalised(s with { CoverIds = [coverId], CoverNote = null }));
+            if (!Cover.Ranked(d.Current, gap).Any(c => c.Person.Id == who.Id && c.IsFree)) continue;
+            d.Put(Collections.Sessions, Normalised(s with { CoverIds = [who.Id], CoverNote = null }));
             if (reader.Answers)
-                foreach (var o in t.Offers.Where(o => o.SessionId == s.Id && o.FacilitatorId == coverId && o.Answer is null))
+                foreach (var o in d.Current.Offers.Where(o => o.SessionId == s.Id && o.FacilitatorId == who.Id && o.Answer is null))
                     d.Put(Collections.Offers, o with { Answer = Answer.Yes, AnsweredAt = at });
             taken.Add(s);
         }
         if (taken.Count == 0) throw new EditRefused($"None of it is left for {who.Name}: it has cover now, or they are not free then any more.");
-        return d.ToBatch(taken.Count == 1 ? $"{who.Name} covering {taken[0].DisplayTitle}"
-            : $"{who.Name} covering {taken.Count} of {t.Facilitators[awayId]?.Name ?? "somebody"}'s classes");
+        return taken;
     }
+
+    private static string Covering(Timetable t, Facilitator who, Guid awayId, List<Session> taken) =>
+        taken.Count == 1 ? $"{who.Name} covering {taken[0].DisplayTitle}"
+            : $"{who.Name} covering {taken.Count} of {t.Facilitators[awayId]?.Name ?? "somebody"}'s classes";
 
     public static TimeOnly Snap(TimeOnly t)
     {

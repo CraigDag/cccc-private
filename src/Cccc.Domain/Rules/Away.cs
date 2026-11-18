@@ -29,9 +29,12 @@ public static class Away
     /// </summary>
     public static IReadOnlyList<(Occurrence Now, Occurrence After)> WhatItLeaves(Timetable t, Absence a)
     {
-        var after = t with { Absences = t.Absences.Put(a) };
+        var after = With(t, a);
         return TakesOff(t, a).Select(o => (o, Occurrences.Resolve(after, o.Session))).ToList();
     }
+
+    /// <summary>The timetable as recording it would leave it, before it is recorded: what is said about it is read here.</summary>
+    public static Timetable With(Timetable t, Absence a) => t with { Absences = t.Absences.Put(a) };
 
     private static bool Reaches(Timetable t, Absence a, Occurrence o)
     {

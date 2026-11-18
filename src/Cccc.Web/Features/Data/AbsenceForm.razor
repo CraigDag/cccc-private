@@ -1,6 +1,9 @@
 @* An absence, recorded or changed by an administrator, and what it takes them off before OK: the classes it
-   leaves needing cover, or for a student the classes they would miss. Find opens it filled in from a typed line. *@
+   leaves needing cover, or for a student the classes they would miss. For a facilitator it offers who could cover
+   what it leaves still to come, ranked as the Cover page ranks them; "Not yet" until somebody is chosen, and OK with
+   somebody chosen records both as one change. Find opens it filled in from a typed line. *@
 @using Cccc.Web.Features.Ask
+@using Cccc.Web.Features.Sessions
 @using Cccc.Web.Features.Week
 @inject Dialogs D
 @{
@@ -8,6 +11,8 @@
     var shown = _why is null ? Current() : null;
     var leaves = shown is null ? [] : Away.WhatItLeaves(t, shown);
     bool student = shown?.Person == AbsentPerson.Student;
+    var cover = shown is null ? null : CoverAll.ForAbsence(t, shown, W.Today, W.Clock.TimeOfDay);
+    var chosen = cover?.Takers.FirstOrDefault(c => c.Person.Id == _coverId);
 }
 <DialogFrame Title="@(_old is null ? "Record an absence" : "Edit an absence")" OnOk="Save" OkEnabled="@(_why is null)">
     <ChildContent>
@@ -68,6 +73,43 @@
                 </ul>
             }
         }
+        @if (cover is not null)
+        {
+            int of = cover.Stretch.Gaps.Count;
+            <h3 class="form-sub" data-testid="away-cover-heading">@(of == 1 ? "Who covers " + Looks.Title(t, cover.Stretch.Gaps[0].Session) : $"Who covers the {of} still to come")</h3>
+            <div class="checks rows away-cover" data-testid="away-cover">
+                <label>
+                    <input type="radio" name="away-cover" checked="@(chosen is null)" @onchange="() => _coverId = null" data-testid="away-cover-none" />
+                    <span class="grow">Not yet<small class="ac-words">@(of == 1 ? "It waits" : "They wait") on the Cover page.</small></span>
+                </label>
+                @foreach (var c in cover.Takers.Take(MostOffered))
+                {
+                    @Choice(t, c, of, c == chosen)
+                }
+                @if (cover.Takers.Count == 0)
+                {
+                    <p class="muted" data-testid="away-cover-nobody">Nobody is free for any of it.</p>
+                }
+            </div>
+            @if (cover.Takers.Count > MostOffered)
+            {
+                @* Open while somebody under it is chosen, so what OK does is on screen; opened and closed here, not by the browser alone. *@
+                bool more = _more || chosen is not null && !cover.Takers.Take(MostOffered).Contains(chosen);
+                <details class="field away-cover-more" open="@more" data-testid="away-cover-more">
+                    <summary @onclick="() => _more = !more" @onclick:preventDefault="true">Somebody else (@(cover.Takers.Count - MostOffered) more)</summary>
+                    <div class="checks rows away-cover">
+                        @foreach (var c in cover.Takers.Skip(MostOffered))
+                        {
+                            @Choice(t, c, of, c == chosen)
+                        }
+                    </div>
+                </details>
+            }
+            @if (chosen is not null)
+            {
+                <p data-testid="away-cover-says">@CoverWords.Recording(t, chosen, cover.Stretch)</p>
+            }
+        }
         @if (_why is not null)
         {
             <p class="form-error">@_why</p>
@@ -86,6 +128,8 @@
     /// <summary>A new absence to start from, read from a line typed into Find; nothing is recorded until OK.</summary>
     [Parameter] public Absence? Draft { get; set; }
     private const int MostShown = 8;
+    /// <summary>Who to cover it shown at once, as the Cover page's card shows them; the rest are under Somebody else.</summary>
+    private const int MostOffered = 3;
     private readonly Absence _new = new();
     private Absence? _old;
     private string _who = "", _notice = "", _cause = "";
@@ -93,6 +137,8 @@
     private DateOnly _from, _to;
     private TimeOnly? _startTime, _endTime;
     private string? _why;
+    private Guid? _coverId;
+    private bool _more;
 
     protected override void OnInitialized()
     {
@@ -128,12 +174,25 @@
             : null;
     }
 
+    /// <summary>One person to cover it, and what taking it would mean for them; dashed when they are free for only some of it.</summary>
+    private RenderFragment Choice(Timetable t, StretchTaker c, int of, bool chosen) =>
+        @<label class="@(c.Free.Count == of ? "" : "part")">
+            <input type="radio" name="away-cover" checked="@chosen" @onchange="() => _coverId = c.Person.Id"
+                   data-testid="away-cover-pick" aria-label="@CoverWords.Press(c, of)" />
+            <span class="disc" style="--c:@c.Person.Colour">@c.Person.Initials</span>
+            <span class="grow"><b>@c.Person.Name@(c.Person.IsGuest ? " (guest)" : "")</b><small class="ac-words">@CoverWords.Taker(t, c, of)</small></span>
+        </label>;
+
     private void Save()
     {
         Check();
         if (_why is not null) return;
         var a = Current();
-        if (W.Commit(t => Edits.PutAbsence(t, a))) D.Close();
+        // The same reading the form shows, so OK does what it said: the classes the person chosen is free for.
+        var c = CoverAll.ForAbsence(W.T, a, W.Today, W.Clock.TimeOfDay)?.Takers.FirstOrDefault(x => x.Person.Id == _coverId);
+        if (W.Commit(t => c is null ? Edits.PutAbsence(t, a)
+                : Edits.RecordAway(t, a, c.Person.Id, c.Free.Select(o => o.Session.Id), W.Access.Asking, W.Clock.Now)))
+            D.Close();
     }
 
     private void Delete()

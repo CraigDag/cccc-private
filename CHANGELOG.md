@@ -119,6 +119,13 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   week (*Free for all 3 · has taught Creation lab · 10h this week*, or *Free for 2 of 3, busy for 1*).
   One press gives them every class they are free for, and one Undo takes it all back; anything they
   cannot take keeps its own card, so nobody ends up in two rooms at once.
+- **Cover it as you record it.** Recording a facilitator away (from People & places, or by typing
+  *esme sick* into Ctrl+K) now asks who covers what it leaves, with the same three best-placed people
+  and anybody else under *Somebody else*. *Not yet* is chosen to begin with, so nothing is covered
+  unless you choose somebody; choose them and the form says exactly what OK will do (*OK records it
+  with Cleo Marchetti covering all 3*), and one Undo takes back the absence and the cover together.
+- **A form's folded sections stay open while you work in it**: a class's warnings and its list of
+  students no longer fold away at the first click into another box.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

@@ -21,6 +21,12 @@ public sealed record StretchTaker(Facilitator Person, IReadOnlyList<Occurrence> 
 }
 
 /// <summary>
+/// What recording an absence would leave needing cover that is still to come, and who could take all of it, best
+/// first: what the absence form offers as it is recorded (<see cref="CoverAll.ForAbsence"/>).
+/// </summary>
+public sealed record AbsenceCover(AwayStretch Stretch, IReadOnlyList<StretchTaker> Takers);
+
+/// <summary>
 /// One substitute for everything one person being away leaves needing cover (the rebuild's own). Each class is
 /// asked of <see cref="Cover.Ranked"/>, so somebody away then is never offered it and somebody teaching then is
 /// busy for it, exactly as that class's own cover picks say; a class at the same time as one they would already be
@@ -38,13 +44,33 @@ public static class CoverAll
     /// One class alone is its own cover card's; one that has started is for recording who stood in, one at a time.
     /// </summary>
     public static IReadOnlyList<AwayStretch> Stretches(Timetable t, IReadOnlyList<Occurrence> occurrences, DateOnly today, TimeOnly now) =>
-        occurrences.Where(o => o.NeedsCover && (o.Date > today || (o.Date == today && o.Start > now)))
+        occurrences.Where(o => o.NeedsCover && ToCome(o, today, now))
             .SelectMany(o => o.AwayIds.Select(id => (Id: id, O: o)))
             .GroupBy(x => x.Id)
             .Where(g => g.Count() > 1)
             .Select(g => new AwayStretch(g.Key, g.Select(x => x.O).OrderBy(o => o.Date).ThenBy(o => o.Start).ThenBy(o => o.Session.Id).ToList()))
             .OrderBy(s => t.Facilitators[s.AwayId]?.Name ?? "", NameOrder.Comparer)
             .ToList();
+
+    /// <summary>
+    /// What recording <paramref name="a"/> would leave needing cover that has not started by <paramref name="now"/> on
+    /// <paramref name="today"/>, as one stretch even of one class, with who could take it ranked as <see cref="Ranked"/>
+    /// ranks the Cover page's, against the timetable with it in (<see cref="Away.With"/>), so the person it is for is
+    /// away and nobody's week counts what they would no longer teach. Its classes are the ones
+    /// <see cref="Away.WhatItLeaves"/> says would need cover, in the same order, so the form's two lists agree. Null
+    /// when it leaves nothing still to come needing cover, as a student's absence never does.
+    /// </summary>
+    public static AbsenceCover? ForAbsence(Timetable t, Absence a, DateOnly today, TimeOnly now)
+    {
+        if (a.Person != AbsentPerson.Facilitator) return null;
+        var gaps = Away.WhatItLeaves(t, a).Select(x => x.After).Where(o => o.NeedsCover && ToCome(o, today, now)).ToList();
+        if (gaps.Count == 0) return null;
+        var s = new AwayStretch(a.PersonId, gaps);
+        return new AbsenceCover(s, Ranked(Away.With(t, a), s, today));
+    }
+
+    /// <summary>Not started yet: one that has is for recording who stood in, one at a time.</summary>
+    private static bool ToCome(Occurrence o, DateOnly today, TimeOnly now) => o.Date > today || (o.Date == today && o.Start > now);
 
     /// <summary>Who could take the stretch, free for at least one of its classes, best first; what they taught counts from before <paramref name="today"/>.</summary>
     public static IReadOnlyList<StretchTaker> Ranked(Timetable t, AwayStretch s, DateOnly today)

@@ -304,4 +304,132 @@ public class CoverAllTests
         Assert.Equal(OfferState.Covering, Asking.StateOf(editor, editor.Offers[hers.Id]!, Today));
         Assert.Equal([cleo.Id], editor.Sessions[mon.Id]!.CoverIds);
     }
+
+    // ---- As an absence is recorded ------------------------------------------------------------------
+
+    [Fact]
+    public void RecordingAnAbsenceOffersWhatItWouldLeaveNeedingCoverAsOneStretchEvenOfOneClassStillToCome()
+    {
+        var b = new Build();
+        var esme = b.Facilitator("Esme");
+        var cleo = b.Facilitator("Cleo");
+        var finn = b.Facilitator("Finn");
+        var dag = b.Facilitator("Dag");
+        var strength = b.Class("Strength");
+        var lab = b.Class("Creation lab");
+        b.Session(Monday, "07:00", "08:00", null, null, strength, In(esme));             // started by half past seven
+        var mon = b.Session(Monday, "09:00", "10:30", null, null, strength, In(esme));
+        b.Session(Tuesday, "09:00", "10:00", null, null, lab, In(esme), In(finn));       // Finn still teaches it
+        var tue = b.Session(Tuesday, "13:00", "16:00", null, null, lab, In(esme));
+        var dags = b.Session(Tuesday, "11:00", "12:00", null, null, strength, In(dag));
+        b.Put(dags with { CoverIds = [esme.Id] });                                        // hers to cover: on paper after
+        b.Away(dag, Tuesday);
+        b.Session(Wednesday, "09:00", "10:30", null, null, strength, In(esme));          // after it ends
+        var a = new Absence { Person = AbsentPerson.Facilitator, PersonId = esme.Id, From = Monday, To = Tuesday };
+
+        var c = CoverAll.ForAbsence(b.T, a, Today, Early)!;
+        Assert.Equal(esme.Id, c.Stretch.AwayId);
+        Assert.Equal([mon.Id, tue.Id], c.Stretch.Gaps.Select(o => o.Session.Id));
+        Assert.All(c.Stretch.Gaps, o => Assert.True(o.NeedsCover));
+        // Cleo and Finn free for both; Dag, away on Tuesday, free for Monday's only; never Esme herself.
+        Assert.Equal([cleo.Id, finn.Id, dag.Id], c.Takers.Select(x => x.Person.Id));
+        Assert.Equal([mon.Id], c.Takers[2].Free.Select(o => o.Session.Id));
+        Assert.Empty(c.Takers[2].Busy);
+        // At eleven on Monday, Monday's has started; one class left is still offered here; none, nothing.
+        Assert.Equal([tue.Id], CoverAll.ForAbsence(b.T, a, Today, new TimeOnly(11, 0))!.Stretch.Gaps.Select(o => o.Session.Id));
+        Assert.Null(CoverAll.ForAbsence(b.T, a, Tuesday, new TimeOnly(13, 0)));
+    }
+
+    [Fact]
+    public void ATakersWeekIsReadWithTheAbsenceInAsTheCoverPageWouldReadItOnceRecorded()
+    {
+        var b = new Build();
+        var esme = b.Facilitator("Esme");
+        var bo = b.Facilitator("Bo");
+        var cleo = b.Facilitator("Cleo");
+        var strength = b.Class("Strength");
+        var mon = b.Session(Monday, "09:00", "10:30", null, null, strength, In(esme));
+        var shared = b.Session(Tuesday, "09:00", "11:00", null, null, strength, In(bo, "09:00", "10:00"), In(esme, "10:00", "11:00"));
+        b.Put(shared with { CoverIds = [cleo.Id] });                                      // Cleo stands in for Bo's hour
+        b.Away(bo, Tuesday);
+        var a = new Absence { Person = AbsentPerson.Facilitator, PersonId = esme.Id, From = Monday, To = Tuesday };
+
+        var c = CoverAll.ForAbsence(b.T, a, Today, Early)!;
+        Assert.Equal([mon.Id], c.Stretch.Gaps.Select(o => o.Session.Id));
+        // With Esme away too, Cleo covering stands in for both their parts: two hours that week, not the one she has now.
+        Assert.Equal(TimeSpan.FromHours(1), Cover.Ranked(b.T, c.Stretch.Gaps[0]).Single(x => x.Person.Id == cleo.Id).Week.Total);
+        Assert.Equal(TimeSpan.FromHours(2), c.Takers.Single(x => x.Person.Id == cleo.Id).Week);
+    }
+
+    [Fact]
+    public void AStudentBeingAwayIsOfferedNoCoverEvenOnAClassThatNeedsIt()
+    {
+        var b = new Build();
+        var bo = b.Facilitator("Bo");
+        b.Facilitator("Cleo");
+        var g = b.Group("BA1");
+        var alba = b.Student("Alba", g);
+        var acro = b.Session(Monday, "09:00", "10:30", Audience.ForGroup(g.Id), null, b.Class("Acro"), In(bo));
+        b.Away(bo, Monday);
+        var a = new Absence { Person = AbsentPerson.Student, PersonId = alba.Id, From = Monday, To = Monday };
+
+        Assert.Equal([acro.Id], Away.WhatItLeaves(b.T, a).Where(x => x.After.NeedsCover).Select(x => x.Now.Session.Id));
+        Assert.Null(CoverAll.ForAbsence(b.T, a, Today, Early));
+        Refused(() => Edits.RecordAway(b.T, a, b.T.Facilitators.Single(f => f.Name == "Cleo").Id, [acro.Id], AskingReader.Administrator, At),
+            "A student being away leaves no class needing cover");
+    }
+
+    [Fact]
+    public void RecordingItWithSomebodyCoveringIsOneChangeThatOneUndoTakesBackWhole()
+    {
+        var b = new Build();
+        var esme = b.Facilitator("Esme");
+        var dag = b.Facilitator("Dag");
+        var strength = b.Class("Strength");
+        var mon = b.Session(Monday, "09:00", "10:30", null, null, strength, In(esme));
+        var tue = b.Session(Tuesday, "13:00", "16:00", null, null, strength, In(esme));
+        var wed = b.Session(Wednesday, "09:00", "10:30", null, null, strength, In(esme));
+        b.Session(Tuesday, "13:00", "15:00", null, null, b.Class("Juggling"), In(dag));
+        var offer = new CoverOffer { SessionId = wed.Id, FacilitatorId = dag.Id, OfferedAt = At.AddDays(-1) };
+        b.T = b.T with { Offers = b.T.Offers.Put(offer) };
+        var before = b.T;
+        var a = new Absence { Person = AbsentPerson.Facilitator, PersonId = esme.Id, From = Monday, To = Wednesday, Cause = AbsenceCause.Illness };
+
+        var batch = Edits.RecordAway(before, a, dag.Id, [wed.Id, mon.Id, tue.Id], AskingReader.Administrator, At);
+        Assert.Equal("Recorded an absence, with Dag covering 2 of Esme's classes", batch.Label);
+        var t = Apply.Batch(before, batch);
+        Assert.Equal(a, t.Absences[a.Id]);
+        Assert.Equal([dag.Id], t.Sessions[mon.Id]!.CoverIds);
+        Assert.Equal([dag.Id], t.Sessions[wed.Id]!.CoverIds);
+        Assert.True(Occurrences.Resolve(t, t.Sessions[tue.Id]!).NeedsCover);              // Dag teaches Juggling then
+        Assert.Equal(Answer.Yes, t.Offers[offer.Id]!.Answer);
+        var undone = Apply.Batch(t, batch.Inverse());                                       // one Undo, all of it
+        Assert.Empty(undone.Absences);
+        Assert.All([mon.Id, tue.Id, wed.Id], id => Assert.Empty(undone.Sessions[id]!.CoverIds));
+        Assert.Null(undone.Offers[offer.Id]!.Answer);
+
+        // Changed to run into Thursday, it covers Thursday's too and says it was a change.
+        var thu = b.Session(Thursday, "09:00", "10:00", null, null, strength, In(esme));
+        var longer = Edits.RecordAway(t with { Sessions = t.Sessions.Put(thu) }, a with { To = Thursday }, dag.Id, [thu.Id], AskingReader.Administrator, At);
+        Assert.Equal("Changed an absence, with Dag covering Strength", longer.Label);
+    }
+
+    [Fact]
+    public void RecordingItIsRefusedWholeWhenNothingIsLeftForThePersonChosen()
+    {
+        var b = new Build();
+        var esme = b.Facilitator("Esme");
+        var cleo = b.Facilitator("Cleo");
+        var dag = b.Facilitator("Dag");
+        var strength = b.Class("Strength");
+        var mon = b.Session(Monday, "09:00", "10:30", null, null, strength, In(esme));
+        b.Session(Monday, "09:00", "11:00", null, null, b.Class("Juggling"), In(dag));
+        var a = new Absence { Person = AbsentPerson.Facilitator, PersonId = esme.Id, From = Monday, To = Monday };
+
+        // Covered by the absence going in first: before it, nothing needs cover, so the order is what makes it work.
+        Assert.Equal([cleo.Id], Apply.Batch(b.T, Edits.RecordAway(b.T, a, cleo.Id, [mon.Id], AskingReader.Nobody, At)).Sessions[mon.Id]!.CoverIds);
+        Refused(() => Edits.RecordAway(b.T, a, dag.Id, [mon.Id], AskingReader.Nobody, At), "None of it is left for Dag");
+        var gone = b.T with { Facilitators = b.T.Facilitators.Put(cleo with { FormerSince = Monday }) };
+        Refused(() => Edits.RecordAway(gone, a, cleo.Id, [mon.Id], AskingReader.Nobody, At), "no longer on this timetable");
+    }
 }

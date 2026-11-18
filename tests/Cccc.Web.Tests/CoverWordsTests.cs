@@ -83,4 +83,24 @@ public class CoverWordsTests
         var c = new StretchTaker(Named(t, "Cleo"), s.Gaps, [], [.. classes], 4, false, TimeSpan.FromHours(10));
         Assert.Equal("Free for all 3 · has taught Creation lab and Strength and conditioning · 10h this week", CoverWords.Taker(t, c, 3));
     }
+
+    [Fact]
+    public void TheAbsenceFormOffersThemAsTheCoverPageWouldOnceItIsRecordedAndSaysWhatOkWillDo()
+    {
+        var esme = new Absence { Person = AbsentPerson.Facilitator, PersonId = Named(Sample, "Esme").Id, From = NextMonday, To = NextMonday.AddDays(2) };
+        var c = CoverAll.ForAbsence(Sample, esme, Today, new TimeOnly(10, 15))!;
+        var (t, s) = EsmeAway(Sample);
+        Assert.Equal(Said(t, s), c.Takers.Select(x => x.Person.Name.Split(' ')[0] + ": " + CoverWords.Taker(Sample, x, c.Stretch.Gaps.Count)));
+
+        Assert.Equal("OK records it with Cleo Marchetti covering all 3. One Undo takes both back.", CoverWords.Recording(Sample, c.Takers[0], c.Stretch));
+        Assert.Equal("OK records it with Dag Øverlie covering 2 of the 3; Creation lab on Tue 24 Nov still needs cover. One Undo takes both back.",
+            CoverWords.Recording(Sample, c.Takers[3], c.Stretch));
+        var gwen = new StretchTaker(Named(Sample, "Gwen"), [c.Stretch.Gaps[2]], [c.Stretch.Gaps[0], c.Stretch.Gaps[1]], [], 0, false, TimeSpan.Zero);
+        Assert.Equal("OK records it with Gwen Stroud covering 1 of the 3; 2 still need cover. One Undo takes both back.", CoverWords.Recording(Sample, gwen, c.Stretch));
+
+        // Away for Tuesday's alone: the one class is named.
+        var tuesday = CoverAll.ForAbsence(Sample, esme with { From = NextMonday.AddDays(1), To = NextMonday.AddDays(1) }, Today, new TimeOnly(10, 15))!;
+        Assert.Equal("OK records it with Cleo Marchetti covering Creation lab. One Undo takes both back.", CoverWords.Recording(Sample, tuesday.Takers[0], tuesday.Stretch));
+        Assert.Equal("Free · has taught Creation lab · 10h this week", CoverWords.Taker(Sample, tuesday.Takers[0], 1));
+    }
 }

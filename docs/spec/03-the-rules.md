@@ -168,6 +168,16 @@ two rooms at once, and a class covered since is left alone. Their own offers for
 answered yes when an administrator presses, as the single picks answer one; nothing left to take is
 refused, in words.
 
+**As an absence is recorded** (`CoverAll.ForAbsence`), what it would leave needing cover that has not started
+is one stretch even of one class, its classes the ones `Away.WhatItLeaves` says would need cover, in the same
+order, and who could take it is ranked as above **against the timetable with the absence in** (`Away.With`):
+the person it is for is away, and a week counts what each person would be in the room for then (somebody
+covering a part they share with the absent person stands in for both parts). A student's absence is offered
+none. **Recording it with somebody chosen is one change** (`Edits.RecordAway`): the absence, then each class
+exactly as the one press gives it, on the timetable with the absence in, so one Undo takes back both. When
+nothing is left for the person chosen (covered since, or busy now) **the whole of it is refused**, the
+absence too: never an absence recorded with a cover somebody was told about and did not get.
+
 ## Asking (`Asking`, the rebuild's own)
 
 A facilitator asks for themselves, through the account linked to them, and an administrator answers.
