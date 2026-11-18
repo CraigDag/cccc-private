@@ -9,9 +9,10 @@ namespace Cccc.Domain.Rules;
 /// <summary>
 /// A class that changed in a way somebody in the building would notice: as it was when the window opened
 /// and as it is now. <see cref="Was"/> null means it was added in the window; <see cref="Now"/> null, deleted.
-/// <see cref="By"/> is everybody who changed it, by login, in the order they first did; <see cref="At"/> the last time.
+/// <see cref="By"/> is everybody who changed it, by login, in the order they first did; <see cref="At"/> the last time,
+/// and <see cref="Sequence"/> that last change's place in the history, which is what Got it remembers (<see cref="News"/>).
 /// </summary>
-public sealed record ClassChange(Guid Id, Session? Was, Session? Now, ImmutableList<string> By, DateTimeOffset At)
+public sealed record ClassChange(Guid Id, Session? Was, Session? Now, ImmutableList<string> By, DateTimeOffset At, long Sequence = 0)
 {
     private bool Both => Was is not null && Now is not null;
     public bool Added => Was is null;
@@ -47,24 +48,31 @@ public static class Recent
     }
 
     /// <summary>The day's classes that changed in <paramref name="changes"/>, the latest first, against the timetable as it is now.</summary>
-    public static IReadOnlyList<ClassChange> ForDay(Timetable t, IEnumerable<Change> changes, DateOnly day)
+    public static IReadOnlyList<ClassChange> ForDay(Timetable t, IEnumerable<Change> changes, DateOnly day) =>
+        Gather(t, changes).Where(x => x.Was?.Date == day || x.Now?.Date == day).OrderByDescending(x => x.At).ToList();
+
+    /// <summary>
+    /// Every class that changed noticeably in <paramref name="changes"/>: as it was before the first of them and as it
+    /// is in <paramref name="t"/> now, with everybody who changed it and when they last did. A class in
+    /// <paramref name="upTo"/> counts only its changes after the one named there, so it is as it was just after that.
+    /// </summary>
+    internal static IEnumerable<ClassChange> Gather(Timetable t, IEnumerable<Change> changes, IReadOnlyDictionary<Guid, long>? upTo = null)
     {
-        var seen = new Dictionary<Guid, (Session? Was, List<string> By, DateTimeOffset At)>();
+        var seen = new Dictionary<Guid, (Session? Was, List<string> By, DateTimeOffset At, long Sequence)>();
         foreach (var c in changes.OrderBy(c => c.Sequence))
         {
             foreach (var op in c.Batch.Ops)
             {
                 if (op.Collection != Collections.Sessions.Name) continue;
-                var (was, by, _) = seen.TryGetValue(op.Id, out var e) ? e : (Read(op.Before), new List<string>(), c.At);
+                if (upTo is not null && upTo.TryGetValue(op.Id, out var u) && c.Sequence <= u) continue;
+                var (was, by, _, _) = seen.TryGetValue(op.Id, out var e) ? e : (Read(op.Before), new List<string>(), c.At, c.Sequence);
                 if (!by.Contains(c.By, StringComparer.OrdinalIgnoreCase)) by.Add(c.By);
-                seen[op.Id] = (was, by, c.At);
+                seen[op.Id] = (was, by, c.At, c.Sequence);
             }
         }
         return seen
-            .Select(kv => new ClassChange(kv.Key, kv.Value.Was, t.Sessions[kv.Key], [.. kv.Value.By], kv.Value.At))
-            .Where(x => (x.Was?.Date == day || x.Now?.Date == day) && Noticeable(x.Was, x.Now))
-            .OrderByDescending(x => x.At)
-            .ToList();
+            .Select(kv => new ClassChange(kv.Key, kv.Value.Was, t.Sessions[kv.Key], [.. kv.Value.By], kv.Value.At, kv.Value.Sequence))
+            .Where(x => Noticeable(x.Was, x.Now));
     }
 
     /// <summary>Whether somebody in the building would notice the difference between the two.</summary>

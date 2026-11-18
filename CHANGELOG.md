@@ -126,6 +126,15 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   with Cleo Marchetti covering all 3*), and one Undo takes back the absence and the cover together.
 - **A form's folded sections stay open while you work in it**: a class's warnings and its list of
   students no longer fold away at the first click into another box.
+- **New for you.** A coach's Now now lists what changed in their next two weeks that they have not seen:
+  *You cover it, for Esme Halloran*, *Not yours now: Bo Lindqvist teaches it*, *Moved from Thu 26 Nov*,
+  *Was in Big Top*, *Dag Øverlie covering for you*, each with who changed it and when. A week built or
+  cleared ahead is one line (*6 new classes*). **Got it** takes a line off (or *Got them all*), and it
+  comes back only if the class changes again, saying what is different from what they saw. A change they
+  made themselves is never news to them. On the Cover page, editors and administrators see beside each
+  class covered whether the person covering has seen it (*Seen*, or *Not seen yet* in amber), so you know
+  who still needs a phone call. What somebody has seen is kept beside the timetable, never in it, and goes
+  when they are erased.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

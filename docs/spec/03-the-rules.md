@@ -69,6 +69,21 @@ old app has a class that carries the reasoning, it is named in brackets so the h
   are not the timetable changing. A change put back inside the window, moved and moved back or
   undone, is no change.
 
+## What is new to a facilitator (`News`)
+
+- **Their own classes, before their days come**: a class is theirs when they teach or cover it, as it
+  was or as it is now, on a day from today to thirteen days after and not over yet, so one moved away,
+  given to somebody else or deleted is news to them, and so is one given to them. Read from the last
+  fourteen days of the history, exactly as `Recent` reads it.
+- **News until they say they have seen it** (Got it), remembered as the last change to that class they
+  saw: changed again after that, it is news again, told from as they saw it, and put back where they
+  saw it, it is no change to them. **A change they made themselves counts as seen**, through any sign-in
+  linked to them, since they saw the class as they left it, so an administrator who also teaches is
+  never told what they did.
+- **Whether somebody has seen it** (`News.Seen`) is the same reading asked the other way: false while
+  it is news to them, true once seen, and nothing when nothing changed it lately, so the Cover page and
+  their own Now cannot disagree.
+
 ## Registers
 
 - **Three marks**: Present, Excused (away and the school knew), Absent (the default, by saying

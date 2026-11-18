@@ -125,7 +125,12 @@ A big serif clock line (*Tuesday 17 November, 11:42*). For somebody linked to a 
 today** comes first: their own classes today, their part of a shared one, marked *now*, *covering* or
 *you are away*, with what changed since yesterday under any class of theirs that did, and the
 classes they no longer have today struck through and saying why; choosing one opens their week with
-that class chosen. Then **the building as a board**, like
+that class chosen. Under it, **New for you**: what changed in their next two weeks that they have not
+seen (`News`), soonest first, each in their own words (*You cover it, for Esme Halloran*, *Not yours
+now: Bo Lindqvist teaches it*, *Moved from Thu 26 Nov · was 09:00–11:00*, *Dag Øverlie covering for
+you*), with who changed it and when; a week's added or deleted classes are one line (*6 new classes*,
+`NewsWords.Lines`), because building or clearing a week ahead is one act, not six pieces of news. **Got
+it** beside each, and *Got them all*; a line opens their week on its day with the class chosen. Then **the building as a board**, like
 departures at a station: a row a space, grouped by category (headed only when there are two
 categories or more, here and on the plan, the add form and the printed day), each with a thin bar of its whole day (its
 classes in their colours, a tick at now), what is in it now (class, group, initials, how far through)
@@ -250,6 +255,12 @@ class that needs cover, so it is settled where it was noticed. Below: what is co
 a day hatched with its times. Busy people are still offered: busy is advice, never a refusal.
 Whoever has offered to cover it says *Offered*, and ranks first among the free; pressing them is the
 administrator's yes to the offer.
+
+**Whether the person covering has seen it**: for editors and administrators, each covered class says
+*Seen* or, in amber, *Not seen yet* (*Seen by Cleo Marchetti; not seen yet by Dag Øverlie* for two),
+read as that person's own New for you reads it (`News.Seen`), for whoever signs in with an account
+linked to them; nothing when nothing changed it lately. It closes the loop a phone call used to: the
+person arranging cover knows who already knows. A coach does not see whether a colleague has.
 
 **Somebody away for several classes still to come gets one card above the rest** (`CoverStretch`,
 `CoverAll`): *Away for 3 classes that need cover*, their name, the classes a line each, and **one person for

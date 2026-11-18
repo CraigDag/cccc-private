@@ -5,6 +5,7 @@
 @using Cccc.Web.Features.Plan
 @using Cccc.Web.Features.Ask
 @inject Dialogs D
+@inject SeenNews Seen
 
 <PageTitle>Now · CCCC Scheduler</PageTitle>
 @{
@@ -30,10 +31,12 @@
     int needs = cover.Count + registers.Count + clashes.Count + (earlier.Count > 0 ? 1 : 0);
     // Today's classes that changed since the weekday before began, from the timetable's own history, so a
     // change made late yesterday or this morning is seen by whoever opens Now. Guest classes stay hidden.
+    // Somebody linked to a facilitator is told what is new for them from the last two weeks of it: one reading serves both.
     var since = Recent.Since(today);
-    var changed = W.Project is { } live
-        ? Recent.ForDay(t, live.ChangesMadeSince(W.Clock.StartOf(since)), today).Where(c => !Guests.IsGuestOnly(t, (c.Now ?? c.Was)!)).ToList()
-        : [];
+    bool coach = W.Access.FacilitatorId is { } lf && t.Facilitators[lf] is not null;
+    var read = W.Project is { } live ? live.ChangesMadeSince(W.Clock.StartOf(coach ? News.ReadFrom(today) : since)) : [];
+    var sinceStart = W.Clock.StartOf(since);
+    var changed = Recent.ForDay(t, read.Where(c => c.At >= sinceStart), today).Where(c => !Guests.IsGuestOnly(t, (c.Now ?? c.Was)!)).ToList();
     // Every space's little day bar shares one frame: the school day, widened to whatever is on today.
     int day0 = Math.Min(8 * 60, happening.Select(o => PlanModel.Minutes(o.Start) / 60 * 60).DefaultIfEmpty(8 * 60).Min());
     int day1 = Math.Max(18 * 60, happening.Select(o => (PlanModel.Minutes(o.End) + 59) / 60 * 60).DefaultIfEmpty(18 * 60).Max());
@@ -101,6 +104,38 @@
                                 <span class="agenda-time">@Cccc.Domain.Week.Hm(c.Was!.Start)</span><b>@Looks.Title(t, c.Was!)</b>
                                 <span class="change-what">@ChangeWords.NoLongerTheirsWhat(t, c, today)</span>
                             </div></li>
+                        }
+                    </ul>
+                }
+                // What is new for them in their next two weeks, until they say they have seen it; what they did
+                // themselves, through this sign-in or another linked to them, they have seen.
+                var news = W.Project is { } project
+                    ? NewsWords.Lines(News.For(t, read, me, today, new TimeOnly(local.Hour, local.Minute),
+                        Seen.LoginsOf([me]).GetValueOrDefault(me, [W.Access.By]), Seen.Read(project.Id, me)))
+                    : [];
+                @if (news.Count > 0)
+                {
+                    <div class="news-head">
+                        <h2 class="now-section">New for you</h2>
+                        @if (news.Count > 1)
+                        {
+                            <button type="button" class="link" @onclick="() => GotIt(me, news.SelectMany(l => l.Changes), read)" data-testid="news-got-all">Got them all</button>
+                        }
+                    </div>
+                    <ul class="news" data-testid="news">
+                        @foreach (var line in news)
+                        {
+                            var s = line.Shown;
+                            Guid? open = line.Kind == NewsKind.One && line.First.Now is not null ? s.Id : null;
+                            <li class="news-line" @key="line.First.Id" data-testid="news-line">
+                                <button type="button" class="change @(NewsWords.Off(line, me) ? "off" : "")" style="--c:@(Looks.ColourOf(t, s) ?? "var(--rule)")"
+                                        @onclick="() => OpenPlan(s.Date, PersonFocus(person), open)" data-testid="news-open">
+                                    <span class="change-what" data-testid="news-what">@NewsWords.What(t, line, me)</span>
+                                    <span><b>@NewsWords.Title(t, line)</b> <small>@NewsWords.When(t, line)</small></span>
+                                    <small class="change-by">@string.Join(" and ", line.By.Select(W.NameOf)), @W.Clock.Describe(line.At)</small>
+                                </button>
+                                <button type="button" class="btn quiet news-got" @onclick="() => GotIt(me, line.Changes, read)" data-testid="news-got">Got it</button>
+                            </li>
                         }
                     </ul>
                 }
@@ -313,6 +348,12 @@
     private static Focus RoomFocus(Room r) => new("room", r.Id, r.Name);
     private static string Pct(int minutes, int span) => (Math.Clamp(minutes * 100.0 / Math.Max(1, span), 0, 100)).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
     private static Focus PersonFocus(Facilitator f) => new("facilitator", f.Id, f.Name);
+
+    /// <summary>They have seen these: each is news again only once it changes after this.</summary>
+    private void GotIt(Guid me, IEnumerable<ClassChange> items, IReadOnlyList<Change> read)
+    {
+        if (W.Project is { } p) Seen.GotIt(p.Id, me, items.ToList(), read);
+    }
 
     private void Answer(Guid? request, Guid? offer) => D.Show<AnswerForm>(new Dictionary<string, object?>
     {

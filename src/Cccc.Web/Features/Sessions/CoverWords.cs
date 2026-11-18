@@ -50,4 +50,23 @@ public static class CoverWords
 
     /// <summary>"Cleo covers all of it", "Dag covers 2 of them": what pressing their name does, for a screen reader.</summary>
     public static string Press(StretchTaker c, int of) => $"{c.Person.Name} covers {(c.Free.Count == of ? "all of it" : $"{c.Free.Count} of them")}";
+
+    /// <summary>
+    /// Whether whoever covers <paramref name="s"/> has seen what changed for them (<see cref="News.Seen"/>, by person):
+    /// "Seen" or "Not seen yet", and with several covering "Seen by Cleo Marchetti; not seen yet by Dag Øverlie".
+    /// Nothing when nothing changed it lately that was news to any of them, or none of them signs in.
+    /// </summary>
+    public static SeenWords? Seen(Timetable t, Session s, IReadOnlyDictionary<Guid, IReadOnlyDictionary<Guid, bool>> seenBy)
+    {
+        var said = s.CoverIds.Where(id => seenBy.TryGetValue(id, out var m) && m.ContainsKey(s.Id)).Select(id => (Id: id, Seen: seenBy[id][s.Id])).ToList();
+        if (said.Count == 0) return null;
+        bool all = said.All(x => x.Seen);
+        if (s.CoverIds.Count == 1) return new(all ? "Seen" : "Not seen yet", all);
+        List<Guid> yes = [.. said.Where(x => x.Seen).Select(x => x.Id)], no = [.. said.Where(x => !x.Seen).Select(x => x.Id)];
+        return new((yes.Count > 0 ? "Seen by " + Looks.Names(t, yes) : "")
+                   + (no.Count > 0 ? (yes.Count > 0 ? "; not seen yet by " : "Not seen yet by ") + Looks.Names(t, no) : ""), all);
+    }
 }
+
+/// <summary>What the Cover page says about whether whoever covers a class has seen it; <see cref="All"/> when each said has.</summary>
+public sealed record SeenWords(string Text, bool All);

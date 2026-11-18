@@ -202,8 +202,14 @@ public sealed class LiveProject
         _ => "one change",
     };
 
-    /// <summary>Who has this project open now: "Also editing: …".</summary>
-    private (DateTimeOffset Since, long Sequence, IReadOnlyList<Change> Changes)? _recent;
+    /// <summary>
+    /// What <see cref="ChangesMadeSince"/> last read, for each moment asked from: Now asks for the last two weeks
+    /// and a screen in the building for since yesterday, and neither should push the other's reading out.
+    /// </summary>
+    private readonly Dictionary<DateTimeOffset, (long Sequence, IReadOnlyList<Change> Changes)> _recent = [];
+
+    /// <summary>A day's moments replace the day before's, so a handful is enough.</summary>
+    private const int RecentKept = 4;
 
     /// <summary>
     /// Every change made at or after <paramref name="since"/>, read from the store once for each new
@@ -214,14 +220,18 @@ public sealed class LiveProject
         long seq;
         lock (_gate)
         {
-            if (_recent is { } r && r.Since == since && r.Sequence == Sequence) return r.Changes;
+            if (_recent.TryGetValue(since, out var r) && r.Sequence == Sequence) return r.Changes;
             seq = Sequence;
         }
         var changes = _store.ChangesMadeSince(Id, since);
         lock (_gate)
         {
             // Only keep it if nothing was committed while it was being read.
-            if (Sequence == seq) _recent = (since, seq, changes);
+            if (Sequence == seq)
+            {
+                if (_recent.Count >= RecentKept && !_recent.ContainsKey(since)) _recent.Clear();
+                _recent[since] = (seq, changes);
+            }
         }
         return changes;
     }
@@ -268,7 +278,7 @@ public sealed class LiveProject
             _undo.Clear();
             _redo.Clear();
             LastChange = null;
-            _recent = null;
+            _recent.Clear();
             result = new Changed(State, Sequence, "", "", []);
         }
         ChangedEvent?.Invoke(result);

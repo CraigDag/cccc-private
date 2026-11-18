@@ -131,6 +131,8 @@ public sealed class ProjectStore
         CREATE TABLE IF NOT EXISTS setup (token TEXT PRIMARY KEY, created TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS calendar_files (
             project TEXT NOT NULL, person TEXT NOT NULL, held TEXT NOT NULL, PRIMARY KEY (project, person));
+        CREATE TABLE IF NOT EXISTS news_seen (
+            project TEXT NOT NULL, person TEXT NOT NULL, seen TEXT NOT NULL, PRIMARY KEY (project, person));
         CREATE TABLE IF NOT EXISTS screens (
             id TEXT PRIMARY KEY, name TEXT NOT NULL, room TEXT, token TEXT NOT NULL UNIQUE,
             paired TEXT NOT NULL, seen TEXT);
@@ -213,6 +215,43 @@ public sealed class ProjectStore
         cmd.Parameters.AddWithValue("$p", project.ToString());
         cmd.Parameters.AddWithValue("$f", person.ToString());
         cmd.Parameters.AddWithValue("$h", held);
+        cmd.ExecuteNonQuery();
+    }
+
+    // ---- What a facilitator has seen of what changed for them -------------------------------------
+
+    /// <summary>
+    /// The last change to each of one facilitator's classes that they have said they saw ("Got it" on Now), as the
+    /// web's own text: class ids and places in the history, nothing else. It goes when its project goes.
+    /// </summary>
+    public string? NewsSeen(Guid project, Guid person)
+    {
+        using var c = Connect();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT seen FROM news_seen WHERE project=$p AND person=$f";
+        cmd.Parameters.AddWithValue("$p", project.ToString());
+        cmd.Parameters.AddWithValue("$f", person.ToString());
+        return cmd.ExecuteScalar() as string;
+    }
+
+    public void SetNewsSeen(Guid project, Guid person, string seen)
+    {
+        using var c = Connect();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "INSERT INTO news_seen(project,person,seen) VALUES($p,$f,$s) ON CONFLICT(project,person) DO UPDATE SET seen=$s";
+        cmd.Parameters.AddWithValue("$p", project.ToString());
+        cmd.Parameters.AddWithValue("$f", person.ToString());
+        cmd.Parameters.AddWithValue("$s", seen);
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>Forgets what one facilitator has seen, in every timetable: they were erased.</summary>
+    public void ForgetNewsSeen(Guid person)
+    {
+        using var c = Connect();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "DELETE FROM news_seen WHERE person=$f";
+        cmd.Parameters.AddWithValue("$f", person.ToString());
         cmd.ExecuteNonQuery();
     }
 
@@ -457,7 +496,7 @@ public sealed class ProjectStore
     {
         using var c = Connect();
         using var tx = c.BeginTransaction();
-        foreach (var t in new[] { "batches", "snapshots", "calendar_files" }) Exec(c, $"DELETE FROM {t} WHERE project='{id}'", tx);
+        foreach (var t in new[] { "batches", "snapshots", "calendar_files", "news_seen" }) Exec(c, $"DELETE FROM {t} WHERE project='{id}'", tx);
         Exec(c, $"DELETE FROM projects WHERE id='{id}'", tx);
         tx.Commit();
     }

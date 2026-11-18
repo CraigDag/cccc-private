@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject WeekView V
 @inject Dialogs D
+@inject Cccc.Web.Features.Now.SeenNews Seen
 
 <PageTitle>Cover · CCCC Scheduler</PageTitle>
 @{
@@ -20,6 +21,7 @@
         .GroupBy(a => a.PersonId)
         .Select(g => (Id: g.Key, Name: t.Facilitators[g.Key]?.Name ?? "Somebody removed", Colour: t.Facilitators[g.Key]?.Colour, Absences: g.OrderBy(a => a.From).ToList()))
         .OrderBy(x => x.Name, NameOrder.Comparer).ToList();
+    var seenBy = SeenBy(t, covered);
 }
 <WeekNav Monday="V.Monday" Today="W.Today" Title="Cover" Go="d => V.GoTo(d)" />
 <FollowingNotice />
@@ -73,6 +75,10 @@ else
                 <span class="spine" style="--c:@(Looks.ColourOf(t, o.Session) ?? "var(--rule)")"></span>
                 <span class="name">@Looks.Title(t, o.Session) <small>@Looks.WhenWithDay(o.Session)</small>
                     <span class="cr-who">@Looks.Names(t, o.Session.CoverIds) for @(Looks.Names(t, o.AwayIds) is { Length: > 0 } a ? a : "nobody away now")@(o.Session.CoverNote is { Length: > 0 } n ? " · " + n : "")</span>
+                    @if (CoverWords.Seen(t, o.Session, seenBy) is { } said)
+                    {
+                        <span class="cr-seen @(said.All ? "yes" : "no")" title="Seen: they have pressed Got it on New for you, on their Now page." data-testid="cover-seen">@said.Text</span>
+                    }
                 </span>
                 @if (W.Access.MayEdit && !ended)
                 {
@@ -127,6 +133,22 @@ else
     private void Open(Guid id) => D.Show<CoverForm>(new Dictionary<string, object?> { [nameof(CoverForm.SessionId)] = id });
 
     private void TakeOff(Guid id) => W.Commit(t => Edits.SetCover(t, id, [], null));
+
+    /// <summary>
+    /// Whether each person covering has seen what changed for them, for those who can sign in with an account linked
+    /// to them: read as their own New for you reads it, so the two cannot disagree.
+    /// </summary>
+    private IReadOnlyDictionary<Guid, IReadOnlyDictionary<Guid, bool>> SeenBy(Timetable t, IReadOnlyList<Occurrence> covered)
+    {
+        var answer = new Dictionary<Guid, IReadOnlyDictionary<Guid, bool>>();
+        if (!W.Access.MaySeeWhoHasSeen || W.Project is not { } p || covered.Count == 0) return answer;
+        var logins = Seen.LoginsOf(covered.SelectMany(o => o.Session.CoverIds));
+        if (logins.Count == 0) return answer;
+        var read = p.ChangesMadeSince(W.Clock.StartOf(News.ReadFrom(W.Today)));
+        foreach (var (id, theirs) in logins)
+            answer[id] = News.Seen(t, read, id, W.Today, W.Clock.TimeOfDay, theirs, Seen.Read(p.Id, id));
+        return answer;
+    }
 
     public void Dispose() => V.Moved -= Refresh;
 }

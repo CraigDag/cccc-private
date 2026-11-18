@@ -126,6 +126,11 @@ The live file has held real students since 2026-10-29, so all of this applies to
   file can cancel what has gone: ids, dates and times, never a title, a place or a note, so nothing a
   person wrote is copied out of the timetable, where erasure would have to find it. Erasing a
   facilitator forgets theirs in every timetable.
+- **What a facilitator has seen of what changed for them** (`news_seen`, Got it on Now) is class ids and
+  places in the history only, kept beside the timetable; erasing a facilitator forgets theirs in every
+  timetable. **Whether somebody has seen it is for the people who arrange cover** (`Access.MaySeeWhoHasSeen`:
+  editors and administrators), and only for the classes they cover: a coach is never shown whether a
+  colleague has read something, which would be watching each other.
 - **Absence reasons** are free text an administrator may fill; the form warns not to write health
   details there. **A line typed into Find never fills it** (`QuickAway`): words it does not understand
   (*ada sick flu*) are said in Find and kept nowhere. **Asking to be away has no box for why**, deliberately: a coach asked why would write

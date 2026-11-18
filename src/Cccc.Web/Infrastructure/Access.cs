@@ -35,6 +35,12 @@ public sealed record Access(Account? Account)
     /// </summary>
     public bool MaySeeScratch => IsEditor;
 
+    /// <summary>
+    /// Whether whoever covers a class has seen it (Got it, on their Now) is for the people who arrange cover:
+    /// editors and administrators, following or not. A coach does not see whether a colleague has.
+    /// </summary>
+    public bool MaySeeWhoHasSeen => IsEditor;
+
     /// <summary>Anybody signed in can change something: a facilitator files their own registers.</summary>
     public bool MayEditSomething => !Following && SignedIn;
 

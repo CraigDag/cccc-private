@@ -185,6 +185,12 @@ public class ProjectStoreTests
         Assert.Equal(["at", "after"], store.ChangesMadeSince(id, since.ToOffset(TimeSpan.FromHours(1))).Select(c => c.Batch.Label));   // the same moment in Copenhagen
         Add("later");
         Assert.Equal(["at", "after", "later"], live.ChangesMadeSince(since).Select(c => c.Batch.Label));   // what was read before is not kept past a new change
+        // Two windows asked in turn are both kept, so a page asking for each reads the store once a change, not every time.
+        var recent = live.ChangesMadeSince(since);
+        var longer = live.ChangesMadeSince(since.AddHours(-2));
+        Assert.Equal(["before", "at", "after", "later"], longer.Select(c => c.Batch.Label));
+        Assert.Same(recent, live.ChangesMadeSince(since));
+        Assert.Same(longer, live.ChangesMadeSince(since.AddHours(-2)));
     }
 
     [Fact]
@@ -218,16 +224,26 @@ public class ProjectStoreTests
         store.SetCalendarHeld(other, person, "[1]");
         store.SetCalendarHeld(other, person, "[2]");
         Assert.Equal(("[]", "[2]"), (store.CalendarHeld(id, person), store.CalendarHeld(other, person)));
+        // And so does what they have seen of what changed for them.
+        store.SetNewsSeen(id, person, "{}");
+        store.SetNewsSeen(other, person, "{\"a\":1}");
+        store.SetNewsSeen(other, person, "{\"a\":2}");
+        Assert.Equal(("{}", "{\"a\":2}"), (store.NewsSeen(id, person), store.NewsSeen(other, person)));
         store.Delete(id, s.Now);
         store.Prune(s.Now.AddDays(31));
         Assert.Null(store.Find(id));
         Assert.Null(store.CalendarHeld(id, person));
         Assert.Equal("[2]", store.CalendarHeld(other, person));
+        Assert.Null(store.NewsSeen(id, person));
+        Assert.Equal("{\"a\":2}", store.NewsSeen(other, person));
         // Erased, a person's go from every timetable, and nobody else's do.
         var someoneElse = Guid.NewGuid();
         store.SetCalendarHeld(other, someoneElse, "[3]");
         store.ForgetCalendars(person);
         Assert.Equal(((string?)null, "[3]"), (store.CalendarHeld(other, person), store.CalendarHeld(other, someoneElse)));
+        store.SetNewsSeen(other, someoneElse, "{\"b\":3}");
+        store.ForgetNewsSeen(person);
+        Assert.Equal(((string?)null, "{\"b\":3}"), (store.NewsSeen(other, person), store.NewsSeen(other, someoneElse)));
     }
 
     [Fact]
@@ -259,6 +275,21 @@ public class ProjectStoreTests
         // Nowhere on disk: not in the database file, and not in its write-ahead log either.
         foreach (var file in new[] { store.DatabasePath, store.DatabasePath + "-wal" }.Where(File.Exists))
             Assert.DoesNotContain("Zebedee", File.ReadAllBytes(file).Select(b => (char)b).Aggregate(new System.Text.StringBuilder(), (sb, c) => sb.Append(c)).ToString());
+    }
+
+    [Fact]
+    public void WhatWasReadOfTheHistoryIsReadAgainOnceItIsRewritten()
+    {
+        using var s = new Scratch();
+        var store = s.Open();
+        var id = store.Create("Year", Timetable.Empty, "ada", s.Now);
+        var live = new LiveProjects(store, () => s.Now, () => s.Today).Get(id);
+        live.Commit(new Draft(live.State).Put(Collections.Facilitators, new Facilitator { Name = "Zebedee Unique" }).ToBatch("Changed Zebedee Unique"), "ada");
+        var since = s.Now.AddHours(-1);
+        Assert.Equal(["Changed Zebedee Unique"], live.ChangesMadeSince(since).Select(c => c.Batch.Label));
+        // An erasure rewrites the history without a new change: what was read before it holds the old words.
+        live.Rewrite(json => json.Replace("Zebedee Unique", "[erased]"), label => label.Replace("Zebedee Unique", "[erased]"));
+        Assert.Equal(["Changed [erased]"], live.ChangesMadeSince(since).Select(c => c.Batch.Label));
     }
 
     /// <summary>
