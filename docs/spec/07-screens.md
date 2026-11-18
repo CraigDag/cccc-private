@@ -84,7 +84,10 @@ Nothing depends on a web font: the laptop may be offline.
   they gave said so and last. A day nobody can know says why (*Prep study day*, a week not filled yet),
   and an event is named only to a reader who may see it, otherwise its space is *booked*. **It only
   looks**: Enter opens the plan on that day, narrowed to what was named, or on spaces, people or groups.
-  A class named makes the line a class to add instead, and a line about somebody away is that.
+  A class named makes the line a class to add instead, and a line about somebody away is that. Words
+  left over after naming something with a time may be a class's title (*staff meeting fri 15:30
+  canteen*): to somebody who may add one, adding it comes first and the answer after it
+  (`Reading.MayBeAnAdd`).
 - **The absence form says what it takes them off before OK**, as *Can't come* does: each class with what
   recording it would leave it, or for a student *They would miss* and the classes (`Away.WhatItLeaves`).
 - **Find's keys act on what has been typed**, never on the list last drawn: Enter straight after the

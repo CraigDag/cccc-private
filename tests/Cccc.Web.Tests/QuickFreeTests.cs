@@ -376,6 +376,14 @@ public class QuickFreeTests
         Assert.Equal(("facilitator", "Bo Lindqvist"), (Search("bo fri 10", mayEdit: false, admin: false)[0].Kind, Search("bo fri 10", mayEdit: false, admin: false)[0].Label));
         // A class named is still a class to add, and a line about somebody away is that.
         Assert.Equal("quick-add", Search("staff meeting fri 13")[0].Kind);
+        // Naming a space with a time asks about it, but words it leaves over may be the title of a class to add:
+        // that comes first, to somebody who may add one, and the answer after it.
+        Assert.Equal(["quick-add", "room"], Search("staff meeting fri 15:30 canteen").Take(2).Select(h => h.Kind));
+        Assert.Equal("Add Staff meeting · Fri 20 Nov 15:30–16:30", Search("staff meeting fri 15:30 canteen")[0].Label);
+        Assert.Equal("room", Search("staff meeting fri 15:30 canteen", mayEdit: false, admin: false)[0].Kind);
+        Assert.DoesNotContain(Search("staff canteen fri 15:30"), h => h.Kind == "quick-add");
+        Assert.DoesNotContain(Search("free canteen fri 15:30 meeting"), h => h.Kind == "quick-add");
+        Assert.DoesNotContain(Search("where is bo fri 10 meeting"), h => h.Kind == "quick-add");
         Assert.Equal("quick-add", Search("aerial fri 13")[0].Kind);
         Assert.Equal(["quick-away"], Search("bo off fri 9-12", records: true).Select(h => h.Kind));
         Assert.DoesNotContain(Search("bo off fri 9-12", records: false), h => h.Kind == "facilitator");

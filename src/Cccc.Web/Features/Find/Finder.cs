@@ -42,8 +42,9 @@ public static class FindIndex
     /// is away (<see cref="QuickAway"/>) comes before it: an administrator (<paramref name="recordsAway"/>)
     /// records anybody, and the facilitator signed in (<paramref name="me"/>) asks for themselves. Such a line
     /// is never a class with its words for a title ("Off", "Sick"), whoever reads it. Nor is a question about who or
-    /// what is free (<see cref="QuickFree"/>), which anybody may ask: its answer comes next, the time it is
-    /// <paramref name="now"/> being when "now" is, and an event named only to a reader who may see it
+    /// what is free (<see cref="QuickFree"/>), which anybody may ask, unless it is one only by naming something with a
+    /// time and has words left over for a title (<see cref="QuickFree.Reading.MayBeAnAdd"/>): its answer comes next,
+    /// the time it is <paramref name="now"/> being when "now" is, and an event named only to a reader who may see it
     /// (<paramref name="viewer"/>).
     /// </summary>
     public static IReadOnlyList<FindHit> Search(Cccc.Domain.Model.Timetable t, string query, bool mayEdit, bool admin, int max = 12,
@@ -54,7 +55,7 @@ public static class FindIndex
         var away = today is { } day && q.Length > 0 ? QuickAway.Read(t, q, day, shown ?? day, me) : null;
         var asked = away is null && today is { } asOf && now is { } at && q.Length > 0 ? QuickFree.Read(t, q, asOf, shown ?? asOf, at) : null;
         var quick = mayEdit && today is { } addOn && q.Length > 0 && QuickAdd.Read(t, q, addOn, shown ?? addOn) is { } reading
-                    && (away is null && asked is null || reading.Draft.ClassId is not null)
+                    && (away is null && asked is not { MayBeAnAdd: false } || reading.Draft.ClassId is not null)
             ? QuickAdd.Hit(t, reading) : null;
         var said = away is null || today is not { } on ? null
             : recordsAway ? QuickAway.Hit(t, away, records: true, on)

@@ -34,6 +34,12 @@ public static class QuickFree
     {
         /// <summary>How the stretch was said when it was not two times: "morning", "from 14:00", "until 11:00".</summary>
         public string? Part { get; init; }
+
+        /// <summary>
+        /// Asked only by naming somebody or something with a day, a time or now, and with words left over: "staff
+        /// meeting fri 15:30 canteen" may as well be a class to add with those words for its title, so Find offers that first.
+        /// </summary>
+        public bool MayBeAnAdd { get; init; }
     }
 
     private static readonly string[] FreeWords = ["free", "available", "empty", "vacant", "unused", "spare"];
@@ -150,7 +156,7 @@ public static class QuickFree
             (false, false, true) => Only.Groups,
             _ => Only.Both,
         };
-        return new Reading(day, start, end, span, isNow, things, only, has, notUnderstood) { Part = part };
+        return new Reading(day, start, end, span, isNow, things, only, has, notUnderstood) { Part = part, MayBeAnAdd = !free && !where && notUnderstood.Count > 0 };
     }
 
     /// <summary>

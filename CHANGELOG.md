@@ -110,7 +110,9 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   and facilitators are free and lists them, each with how long (*Big Top: free from 11:30 until 16:00*),
   or only the rooms, the people or the groups when you say so. Somebody free outside the hours they gave
   is listed last and says so, a visiting company is left out, and a day nobody can know about says why
-  (a study day, a week not filled in yet). Enter opens the plan on that day; nothing changes.
+  (a study day, a week not filled in yet). Enter opens the plan on that day; nothing changes. Typing
+  *staff meeting fri 15:30 canteen* still offers to add the staff meeting first, with whether the
+  Canteen is free then beneath it.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and
