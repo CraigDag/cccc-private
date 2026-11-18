@@ -25,6 +25,9 @@ fi
 # AT=10:15 sets the school's clock to that time of day, running on from there: Now and the screens in
 # the building then show the middle of a school day whenever the preview is started.
 if [ -n "${AT:-}" ]; then set -- "$@" "--Clock:Time=$AT"; fi
+# DAY=wed moves it to that day of this week as well, so a walk written for the sample week's Wednesday is
+# about a Wednesday whatever day it is run on.
+if [ -n "${DAY:-}" ]; then set -- "$@" "--Clock:Day=$DAY"; fi
 ASPNETCORE_ENVIRONMENT=Development \
 Store__Path="$STORE" Store__Create=true \
 Preview__Seed=true Preview__Accounts=true \

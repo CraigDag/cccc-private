@@ -112,7 +112,8 @@ public sealed class TermModel
                     {
                         var sum = counted.Aggregate(TimeSpan.Zero, (a, w) => a + w.GroupHours.GetValueOrDefault(g.Id));
                         int shortWeeks = counted.Count(w => cells[(g.Id, w.Monday)].Warn);
-                        totals[g.Id] = new TermCell(D(sum), shortWeeks > 0 ? $"{shortWeeks} short" : null, shortWeeks > 0, 0,
+                        // A week's note counts students; the total's counts weeks, so it says so rather than read as students.
+                        totals[g.Id] = new TermCell(D(sum), shortWeeks > 0 ? $"{Weeks(shortWeeks)} short" : null, shortWeeks > 0, 0,
                             $"{g.Name}: {D(sum)} counted over {Weeks(counted.Count)}" + (shortWeeks > 0 ? $", {Weeks(shortWeeks)} short of the target" : ""));
                     }
                 }
@@ -142,7 +143,7 @@ public sealed class TermModel
                     }
                     if (studentWeeks > 0)
                         totals[st.Id] = hours
-                            ? new TermCell(D(studentHours), studentShort > 0 ? $"{studentShort} short" : null, studentShort > 0, 0,
+                            ? new TermCell(D(studentHours), studentShort > 0 ? $"{Weeks(studentShort)} short" : null, studentShort > 0, 0,
                                 $"{st.Name}: {D(studentHours)} counted over {Weeks(studentWeeks)}" + (studentShort > 0 ? $", {Weeks(studentShort)} short of the target" : ""))
                             : new TermCell(studentClasses.ToString(), null, false, 0, $"{st.Name}: {Cccc.Web.Features.Week.Looks.Count(studentClasses, "class", "classes")} over {Weeks(studentWeeks)}");
                     break;
@@ -183,7 +184,7 @@ public sealed class TermModel
                     {
                         var sum = theirs.Aggregate(TimeSpan.Zero, (a, w) => a + (w.PersonHours.GetValueOrDefault(f.Id)?.Total ?? TimeSpan.Zero));
                         int overWeeks = theirs.Count(w => cells[(f.Id, w.Monday)].Warn);
-                        totals[f.Id] = new TermCell(D(sum), overWeeks > 0 ? $"{overWeeks} over" : null, overWeeks > 0, 0,
+                        totals[f.Id] = new TermCell(D(sum), overWeeks > 0 ? $"{Weeks(overWeeks)} over" : null, overWeeks > 0, 0,
                             $"{f.Name}: {D(sum)} over {Weeks(theirs.Count)}" + (overWeeks > 0 ? $", over their limit in {Weeks(overWeeks)}" : ""));
                     }
                     else

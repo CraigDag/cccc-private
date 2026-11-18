@@ -1059,6 +1059,9 @@ ul.said li + li { margin-top: 4px; }
     .plan-bar > * { flex: none; }
     .tl-name .day-long { display: none; }
     .tl-name .day-short { display: inline; }
+    /* "free" beside a row's name cut "Studio B" to "Studi…" on a phone; the empty row and its quieter
+       name already say it. */
+    .tl-label small { display: none; }
     .plan-bar .grow { display: none; }
     .seg button { padding: 4px 10px; }
     /* A register is taken standing in a room with a phone: marks big enough for a thumb. */

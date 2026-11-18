@@ -3,7 +3,7 @@
 // in its new space. One press takes one, the clash goes, and Undo brings it back. The class it clashes with
 // is a link to its own way out; its teacher is away all day, so it has no other time. Another time says where
 // the class was. An editor is offered them too, a coach only reads the clash, and a phone fits. Best on a
-// preview started with AT=10:15, any day before the sample week's Thursday.
+// preview started with DAY=wed AT=10:15, the sample week's Wednesday, whatever day it is.
 const { chromium } = require('playwright');
 const B = process.env.CCCC_PREVIEW || 'http://127.0.0.1:5299';
 const OUT = (process.env.OUT || '/tmp') + '/';
@@ -73,6 +73,9 @@ const clashGone = (page, title) => page.waitForFunction(t => document.querySelec
 (async () => {
   const browser = await chromium.launch();
   const admin = await signIn(browser, 'admin', { width: 1300, height: 900 });
+  // About the sample week before its Thursday: a preview on a later day says so, rather than failing on whatever today is.
+  const day = (await admin.textContent('.now-head h1 span')).trim();
+  if (/^(Thursday|Friday|Saturday|Sunday)/.test(day)) { log('FAIL the preview says it is ' + day + ': start it with DAY=wed AT=10:15 scripts/preview.sh'); await browser.close(); process.exit(1); }
   await toThursday(admin);
   let creationId;
 

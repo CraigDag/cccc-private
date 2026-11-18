@@ -54,6 +54,7 @@ it. `README.md` says what this is; `docs/spec/` says why each part is shaped the
 scripts/check.sh      # zero warnings, then every suite; read the Total: lines
 scripts/preview.sh    # made-up school on :5299 (admin / editor / coach, "northlight <name>")
 AT=10:15 scripts/preview.sh   # the same at 10:15 school time, for Now and the screens mid-morning
+DAY=wed AT=10:15 scripts/preview.sh   # and on this week's Wednesday, for a walk written for the sample week's Wednesday
 FOLLOW=1 scripts/preview.sh   # the same, also following a made-up school in the current app's own format
 FOLLOW=year scripts/preview.sh   # following a whole made-up school year, at about a real school's size
 scripts/stop.sh       # stop every server this repo started; a leftover answers health checks for the old build

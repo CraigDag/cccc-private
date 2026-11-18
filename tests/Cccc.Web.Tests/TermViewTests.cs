@@ -60,6 +60,14 @@ public class TermViewTests
         Assert.Equal(1.0, Fullest(coach));
         Assert.True(Fullest(admin) < 1.0, $"Ada's fullest week is {Fullest(admin)} of everybody's.");
         Assert.NotEqual(admin.Measure, coach.Measure);
+
+        // Over her limit every week: the total says in how many WEEKS, not a bare number read as hours.
+        var strict = T with { Facilitators = T.Facilitators.Put(ada with { MaxWeeklyHours = TimeSpan.FromHours(1) }) };
+        var over = TermModel.Build(strict, View(Lens.People), As(Role.Administrator), Monday);
+        var adaRow = over.Rows.Single(r => r.Id == ada.Id);
+        int adaWeeks = over.Weeks.Count(w => over.Cell(adaRow, w) is not null);
+        Assert.True(adaWeeks > 1, $"Ada teaches in {adaWeeks} weeks of the sample's term.");
+        Assert.Equal($"{adaWeeks} weeks over", over.Total(adaRow)!.Note);
     }
 
     [Fact]
@@ -117,9 +125,10 @@ public class TermViewTests
             Assert.Null(m.Cell(baRow, w)!.Note);
         }
         Assert.Equal("8h 30m", m.Cell(prepRow, m.Weeks.Single(w => w.Monday == Monday))!.Text);
-        // The term's total: every built week added up, and how many of them were short.
+        // The term's total: every built week added up, and how many of them were short, said as weeks: a
+        // week's own note counts students, and "4 short" under "6 short" read as four students.
         Assert.Equal("37h", m.Total(prepRow)!.Text);
-        Assert.Equal("4 short", m.Total(prepRow)!.Note);
+        Assert.Equal("4 weeks short", m.Total(prepRow)!.Note);
         Assert.True(m.Total(prepRow)!.Warn);
         Assert.Equal("64h", m.Total(baRow)!.Text);
         Assert.Null(m.Total(baRow)!.Note);
@@ -136,7 +145,7 @@ public class TermViewTests
         Assert.False(cell.Warn);
         // A week closed to the group is none of its term: three weeks counted, three short.
         Assert.Equal("28h 30m", shut.Total(shutRow)!.Text);
-        Assert.Equal("3 short", shut.Total(shutRow)!.Note);
+        Assert.Equal("3 weeks short", shut.Total(shutRow)!.Note);
         Assert.EndsWith("counted over 3 weeks, 3 weeks short of the target", shut.Total(shutRow)!.Title);
     }
 
@@ -157,5 +166,8 @@ public class TermViewTests
         Assert.Matches("^[0-9]+$", e.Text);
         Assert.False(e.Warn);
         Assert.EndsWith(e.Text == "1" ? " 1 class" : $" {e.Text} classes", e.Title);
+        // Short every built week, said as weeks beside the total.
+        Assert.Equal("4 weeks short", admin.Total(row)!.Note);
+        Assert.Null(editor.Total(editor.Rows.Single())!.Note);
     }
 }

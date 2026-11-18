@@ -2,14 +2,15 @@ namespace Cccc.Web.Infrastructure;
 
 /// <summary>
 /// The one clock. "Today" is Copenhagen's date, never the server's, so a week ends at a Copenhagen
-/// midnight. Development may pin the date (<c>Clock:Today</c>) so a preview is about a known week, and
-/// set the time of day (<c>Clock:Time</c>, from which the clock runs on) so a preview of Now or a screen
-/// is about the middle of a school day whenever it is looked at.
+/// midnight. Development may move it to another day of this week (<c>Clock:Day</c>, a weekday) and set
+/// the time of day (<c>Clock:Time</c>), from which the clock runs on: a preview of Now or a screen is
+/// about the middle of a school day whenever it is looked at, and a walk written for the sample week's
+/// Wednesday is about a Wednesday whatever day it is run on. Both move the instant itself, so today, the
+/// time and every change's time stamp agree.
 /// </summary>
 public sealed class SchoolClock
 {
     private readonly TimeZoneInfo _zone;
-    private readonly DateOnly? _pinned;
     private readonly TimeSpan _shift;
 
     public SchoolClock(IConfiguration config, IHostEnvironment env, ILogger<SchoolClock> log)
@@ -20,13 +21,25 @@ public sealed class SchoolClock
             log.LogWarning("The Europe/Copenhagen time zone is not installed; using UTC. Install tzdata.");
             _zone = TimeZoneInfo.Utc;
         }
-        if (env.IsDevelopment() && DateOnly.TryParse(config["Clock:Today"], out var d)) _pinned = d;
-        if (env.IsDevelopment() && TimeOnly.TryParse(config["Clock:Time"], System.Globalization.CultureInfo.InvariantCulture, out var at))
-        {
-            var local = Local(DateTimeOffset.UtcNow).DateTime;
-            _shift = local.Date + at.ToTimeSpan() - local;
-        }
+        if (!env.IsDevelopment()) return;
+        var wanted = Weekday(config["Clock:Day"]);
+        bool timed = TimeOnly.TryParse(config["Clock:Time"], System.Globalization.CultureInfo.InvariantCulture, out var at);
+        if (wanted is null && !timed) return;
+        var utc = DateTimeOffset.UtcNow;
+        var local = Local(utc).DateTime;
+        var day = DateOnly.FromDateTime(local);
+        if (wanted is { } d) day = Cccc.Domain.Week.MondayOf(day).AddDays(((int)d + 6) % 7);
+        // Through the zone, so a day across a change to or from summer time still reads the time asked for.
+        var target = day.ToDateTime(timed ? at : TimeOnly.FromDateTime(local));
+        if (_zone.IsInvalidTime(target)) target = target.AddHours(1);
+        _shift = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(target, _zone), TimeSpan.Zero) - utc;
     }
+
+    /// <summary>"wed", "Wednesday" or "WED" as a weekday; anything else is no day asked for.</summary>
+    public static DayOfWeek? Weekday(string? name) =>
+        name is { Length: >= 2 } n
+            ? Enum.GetValues<DayOfWeek>().Cast<DayOfWeek?>().FirstOrDefault(d => d!.Value.ToString().StartsWith(n.Trim(), StringComparison.OrdinalIgnoreCase))
+            : null;
 
     public TimeZoneInfo Zone => _zone;
 
@@ -34,7 +47,7 @@ public sealed class SchoolClock
 
     public DateTimeOffset Local(DateTimeOffset t) => TimeZoneInfo.ConvertTime(t, _zone);
 
-    public DateOnly Today => _pinned ?? DateOnly.FromDateTime(Local(Now).DateTime);
+    public DateOnly Today => DateOnly.FromDateTime(Local(Now).DateTime);
 
     /// <summary>The time of day in Copenhagen now: what has started and what is still ahead.</summary>
     public TimeOnly TimeOfDay => TimeOnly.FromDateTime(Local(Now).DateTime);

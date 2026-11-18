@@ -3,7 +3,7 @@
 // this time, yes (recorded as away), and yes to an offer to cover. The coach reads the answers, is offered
 // the class the yes left needing cover, offers, takes it back and offers again, and the administrator says
 // yes from the class's own side panel, where the offer ranks first. An editor answers nothing; a phone
-// fits. Best on a preview started with AT=10:15, any day before the sample week's Thursday.
+// fits. Best on a preview started with DAY=wed AT=10:15, the sample week's Wednesday, whatever day it is.
 const { chromium } = require('playwright');
 const B = process.env.CCCC_PREVIEW || 'http://127.0.0.1:5299';
 const OUT = (process.env.OUT || '/tmp') + '/';
@@ -50,6 +50,9 @@ async function nowPage(page) {
 (async () => {
   const browser = await chromium.launch();
   const coach = await signIn(browser, 'coach', { width: 1300, height: 900 });
+  // About the sample week before its Thursday: a preview on a later day says so, rather than failing on whatever today is.
+  const day = (await coach.textContent('.now-head h1 span')).trim();
+  if (/^(Thursday|Friday|Saturday|Sunday)/.test(day)) { log('FAIL the preview says it is ' + day + ': start it with DAY=wed AT=10:15 scripts/preview.sh'); await browser.close(); process.exit(1); }
   // The sample is built around this week's Monday: Ada is the coach, away this Thursday; Cleo asked yesterday
   // to be away next Tuesday, and Dag offered to cover Ada's Thursday.
   await coach.goto(B + '/plan');
