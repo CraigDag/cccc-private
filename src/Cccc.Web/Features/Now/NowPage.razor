@@ -6,6 +6,7 @@
 @using Cccc.Web.Features.Ask
 @inject Dialogs D
 @inject SeenNews Seen
+@inject WeekView CoverWeek
 
 <PageTitle>Now · CCCC Scheduler</PageTitle>
 @{
@@ -46,6 +47,8 @@
     var requests = W.Access.MayAnswerAsking ? Asking.RequestsWaiting(t, today) : [];
     var offers = W.Access.MayAnswerAsking ? Asking.OffersWaiting(t, today) : [];
     var spaceAsks = W.Access.MayAnswerAsking ? Asking.SpaceAsksWaiting(t, today, W.Clock.TimeOfDay) : [];
+    // Next week, from Thursday on, for whoever may change the timetable: while there is still time to put it right.
+    var ahead = W.Access.MayEdit ? WeekAhead.For(t, today, W.Access.Events, W.Access.Registers) : null;
 }
 
 <div class="now" data-testid="now-page" data-minute="@Cccc.Domain.Week.Hm(new TimeOnly(local.Hour, local.Minute))">
@@ -314,6 +317,41 @@
                     <span class="need-kind">Out of use</span><b>@Cccc.Web.Features.Data.EquipmentWords.What(t, o)</b>
                     <small>@Cccc.Web.Features.Data.EquipmentWords.Back(o) · @(week == 0 ? "no class needs it there for the rest of this week" : Looks.Count(week, "class needs", "classes need") + " it there for the rest of this week")</small></button>
             }
+            @if (ahead is { } aheadWeek)
+            {
+                var w = aheadWeek.Week;
+                <h2 class="now-section" data-testid="ahead-head">@WeekAheadWords.Head(w.Monday)</h2>
+                <div class="ahead" data-testid="ahead">
+                    @if (w.Blank)
+                    {
+                        <button type="button" class="need warn" @onclick="() => FillAhead(w)" data-testid="ahead-blank">
+                            <span class="need-kind">Blank</span><b>Nothing is planned yet</b><small>@WeekAheadWords.Fill(w.ComparedWith)</small></button>
+                    }
+                    @if (aheadWeek.Clashes.Count > 0)
+                    {
+                        <button type="button" class="need warn" @onclick="() => OpenWeek(w.Monday, issues: true)" data-testid="ahead-clashes">
+                            <span class="need-kind">Clashes</span><b>@WeekAheadWords.Clashes(aheadWeek.Clashes)</b><small>@WeekAheadWords.FirstClash(aheadWeek.Clashes)</small></button>
+                    }
+                    @if (aheadWeek.Cover.Count > 0)
+                    {
+                        <button type="button" class="need warn" @onclick="() => CoverIn(w.Monday)" data-testid="ahead-cover">
+                            <span class="need-kind">Cover</span><b>@WeekAheadWords.Cover(aheadWeek.Cover)</b><small>@WeekAheadWords.FirstCover(t, aheadWeek.Cover)</small></button>
+                    }
+                    @if (w.ClosedDays.Count > 0)
+                    {
+                        <div class="need quiet" data-testid="ahead-closed"><span class="need-kind">Closed</span><b>@WeekAheadWords.Closed(w.ClosedDays)</b></div>
+                    }
+                    @if (w.ComparedWith is { } before && w.Changes.Count > 0)
+                    {
+                        <button type="button" class="need" @onclick="() => ChangesIn(w.Monday, before)" data-testid="ahead-changes">
+                            <span class="need-kind">Changes</span><b>@WeekAheadWords.Changes(w)</b><small>What is different, to look over before it starts</small></button>
+                    }
+                    @if (aheadWeek.Ready)
+                    {
+                        <p class="calm" data-testid="ahead-ready">@WeekAheadWords.Ready(w)</p>
+                    }
+                </div>
+            }
             @if (changed.Count > 0)
             {
                 <h2 class="now-section">Changed since @(since == today.AddDays(-1) ? "yesterday" : since.DayOfWeek.ToString())</h2>
@@ -384,6 +422,43 @@
     {
         [nameof(AnswerForm.RequestId)] = request,
         [nameof(AnswerForm.OfferId)] = offer,
+    });
+
+    /// <summary>A blank week ahead: the last week built, copied onto it (Copy week), or the plan open on it to build it in.</summary>
+    private void FillAhead(TermWeek w)
+    {
+        if (w.ComparedWith is { } from)
+            D.Show<Cccc.Web.Features.Sessions.CopyWeekForm>(new Dictionary<string, object?>
+            {
+                [nameof(Cccc.Web.Features.Sessions.CopyWeekForm.Monday)] = from, [nameof(Cccc.Web.Features.Sessions.CopyWeekForm.Onto)] = w.Monday,
+            });
+        else OpenWeek(w.Monday, issues: false);
+    }
+
+    /// <summary>The plan on a whole week, with its issues listed beside it when asked, as the term at a glance opens one.</summary>
+    private void OpenWeek(DateOnly monday, bool issues)
+    {
+        V.Start(W.Today);
+        V.FocusOn(null);
+        V.Lens = Lens.Spaces;
+        V.Scale = Scale.Week;
+        V.GoTo(monday);
+        V.Chosen = null;
+        V.IssuesOpen = issues;
+        Nav.NavigateTo("plan");
+    }
+
+    /// <summary>The cover page on a week.</summary>
+    private void CoverIn(DateOnly monday)
+    {
+        CoverWeek.Start(W.Today, null);
+        CoverWeek.GoTo(monday);
+        Nav.NavigateTo("cover");
+    }
+
+    private void ChangesIn(DateOnly monday, DateOnly before) => D.Show<WeekChangesForm>(new Dictionary<string, object?>
+    {
+        [nameof(WeekChangesForm.Monday)] = monday, [nameof(WeekChangesForm.Earlier)] = before,
     });
 
     private void OpenPlan(DateOnly day, Focus? focus, Guid? chosen)

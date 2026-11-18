@@ -287,6 +287,8 @@ body:has(.shell, .loading:not(.boot)) .boot { display: none; }
 .space-progress > span { display: block; height: 100%; background: var(--accent); }
 
 .now-needs { position: sticky; top: 0; display: flex; flex-direction: column; gap: 8px; }
+/* Next week's lines, spaced as Today needs spaces its own. */
+.ahead { display: flex; flex-direction: column; gap: 8px; }
 .calm { padding: 14px 16px; border: 1px dashed var(--divider); border-radius: var(--radius); color: var(--text-muted); }
 .need {
     display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 10px 14px; text-align: left;

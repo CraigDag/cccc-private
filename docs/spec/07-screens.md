@@ -142,7 +142,12 @@ needs**, after **Waiting for your answer** for an administrator (what facilitato
 come* with the days and how many of their classes it reaches, amber once its first day has come,
 *Can cover* with the class, and *Space* with its name, space and time and how many clashes a yes would
 make, each opening the answer form): cover still needed, registers waiting for the reader (more than three are one line opening
-Registers, so a whole day of them does not push cover and clashes out of sight), clashes today, then **Changed since
+Registers, so a whole day of them does not push cover and clashes out of sight), clashes today, then, from Thursday
+and for whoever plans the timetable, **Next week · Week 48** (`WeekAhead`): blank (*Copy week 47 onto it…*, opening
+Copy week with next week ticked), its clashes (how many, the first in the clash check's words, opening next week in
+the plan with its issues beside it), the classes needing cover (*Acrobatics Thu 26 Nov 09:00*, opening Cover on next
+week), the days it is closed (*Closed Thursday: Ascension Day*) and how many classes are different from the week
+before (opening the list of them), or *Ready: 25 classes, nothing clashes, nobody needs cover.*; then **Changed since
 yesterday** (since Friday on a Monday): today's classes that were moved, cancelled, given another space
 or teacher or cover, added or deleted, each saying what is different (*Was 09:00–11:00*, *Dag Øverlie
 covering*), who changed it and when, from `Recent`; then today's events and what is still to come.

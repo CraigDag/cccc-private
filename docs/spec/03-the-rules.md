@@ -526,6 +526,19 @@ three say the same (`Asking.TakesOff` and `WhatAYesLeaves` ask it too).
 - Hours are a person's own and an administrator's to see; anybody else reads how many classes. A row is
   shaded only against what the reader may see, so a shade says nothing of anybody else's hours.
 
+## Next week (`WeekAhead`, the rebuild's own)
+
+- **From Thursday on, next week**, counted as the term at a glance counts every week (`TermGlance`): early enough
+  to put it right, late enough that it is mostly built. Never earlier in the week, which is this week's.
+- **Not a week with no school in it**: one the building is closed every school day, or one outside every semester
+  with nothing written in it. A class written in it is said all the same.
+- **What is said is what the plan's issues are**: blank, the clashes ringed (`Clashes`, never a limit) and the
+  classes still needing cover (`Cover`), each in the order the plan lists them, with the days closed and what is
+  different from the week before (`WeekChanges`) beside them. **Ready** is none of the first three.
+- **A group short of its hours is not part of it**: the target is one for every group, so a group taught fewer hours
+  on purpose would be said every week, and a line said every week stops being read. Reports ▸ Student hours has it.
+- For whoever plans the timetable (`Access.MayEdit`); a coach is told nothing of it.
+
 ## Guests (schemas 20 and 21)
 
 - **A guest facilitator is nobody's account**: no link offered, no address match, and an existing link
