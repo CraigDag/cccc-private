@@ -1,0 +1,45 @@
+@* Somebody away for more than one class that needs cover, and one press giving it all to one person: every class
+   in it that person is free for, as one change Undo takes back, the rest still needing cover, so nobody is put in
+   two rooms at once. The order is CoverAll.Ranked's: free for more of it first, then whoever offered, then whoever
+   has been in the room for its classes most often, then the lightest week. *@
+@{
+    var t = W.T;
+    var person = t.Facilitators[Stretch.AwayId];
+    var takers = CoverAll.Ranked(t, Stretch, W.Today);
+    int n = Stretch.Gaps.Count;
+}
+<article class="cover-card cover-stretch" style="--c:@(person?.Colour ?? "var(--rule)")" data-testid="cover-stretch">
+    <div class="cc-when">Away for @n classes that need cover</div>
+    <div class="cs-who">@(person?.Name ?? "Somebody removed")</div>
+    <ul class="cs-gaps">
+        @foreach (var o in Stretch.Gaps)
+        {
+            <li data-testid="stretch-gap">@Looks.DayHeading(o.Date) · @Looks.When(o.Session) · @Looks.Title(t, o.Session)</li>
+        }
+    </ul>
+    <div class="cover-picks" data-testid="stretch-picks">
+        <span class="cp-label">One person for all of it</span>
+        @if (takers.Count == 0)
+        {
+            <span class="muted">Nobody is free for any of it.</span>
+        }
+        @foreach (var c in takers.Take(Count))
+        {
+            <button type="button" class="cover-pick @(c.Free.Count == n ? "free" : "busy")" @onclick="() => Take(c.Person.Id)"
+                    data-testid="stretch-pick" aria-label="@CoverWords.Press(c, n)">
+                <span class="disc" style="--c:@c.Person.Colour">@c.Person.Initials</span>
+                <span class="cp-who">
+                    <span class="cp-name">@c.Person.Name@(c.Person.IsGuest ? " (guest)" : "")</span>
+                    <small>@CoverWords.Taker(t, c, n)</small>
+                </span>
+            </button>
+        }
+    </div>
+</article>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter, EditorRequired] public AwayStretch Stretch { get; set; } = default!;
+    [Parameter] public int Count { get; set; } = 3;
+
+    private void Take(Guid id) => W.Commit(t => Edits.CoverAll(t, Stretch.AwayId, id, Stretch.Gaps.Select(o => o.Session.Id), W.Access.Asking, W.Clock.Now));
+}

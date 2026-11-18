@@ -10,6 +10,8 @@
     var needed = week.Where(o => o.NeedsCover).ToList();
     var covered = week.Where(o => o.Covered).ToList();
     bool ended = DomainWeek.HasEnded(V.Monday, W.Today);
+    // Somebody away for several still to come: one press can give somebody all of it, to whoever may change it.
+    var stretches = W.Access.MayEdit ? CoverAll.Stretches(t, needed, W.Today, W.Clock.TimeOfDay) : [];
     var sunday = V.Monday.AddDays(6);
     // The school's days, and a weekend day only when something is on it.
     var days = Enumerable.Range(0, 7).Select(i => V.Monday.AddDays(i))
@@ -27,6 +29,15 @@
 @if (needed.Count == 0)
 {
     <p class="calm" data-testid="cover-none">Nothing this week needs cover.</p>
+}
+@if (stretches.Count > 0)
+{
+    <div class="cover-cards">
+        @foreach (var s in stretches)
+        {
+            <CoverStretch Stretch="s" @key="s.AwayId" />
+        }
+    </div>
 }
 <div class="cover-cards">
     @foreach (var o in needed)

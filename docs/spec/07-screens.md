@@ -237,6 +237,16 @@ a day hatched with its times. Busy people are still offered: busy is advice, nev
 Whoever has offered to cover it says *Offered*, and ranks first among the free; pressing them is the
 administrator's yes to the offer.
 
+**Somebody away for several classes still to come gets one card above the rest** (`CoverStretch`,
+`CoverAll`): *Away for 3 classes that need cover*, their name, the classes a line each, and **one person for
+all of it**, the first three of `CoverAll.Ranked` as the same buttons: *Free for all 3 · has taught
+Creation lab · 10h this week*, or dashed and *Free for 2 of 3, busy for 1* (or *away for 1*), *Offered*
+first when they offered for one, *would go over their limit* when it would. One press gives them every
+class in it they are free for, one change Undo takes back, and the rest keep their own cards. Because an
+absence is usually several classes and one substitute for all of them is how a school covers it: one
+person who knows the classes, not three people found one class at a time. Editors and administrators see
+it; a class that has started is left to its own card, for recording who stood in.
+
 Who is teaching at a time is one rule, `Teaching.At`, beside `Spaces.InUse`: cover ranks by it and the
 class form marks *teaching Juggling 10:45–12:00* or *away then* beside a facilitator's name with it, so
 the two cannot disagree about who is free.

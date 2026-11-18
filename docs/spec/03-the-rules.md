@@ -146,11 +146,27 @@ All warnings, computed over a week's running occurrences:
 - **Needs cover**, **over hours**, **long gap**, as above.
 - Availability feeds only the clash check.
 
-## Cover (`CoverSubstitutes.Ranked`)
+## Cover (`Cover.Ranked`)
 
 Offer **everybody not away**, ranked rather than filtered: non-guests before guests, free before
 teaching at that time (the week as it runs), then **whoever has offered to cover it** (below), lightest
 week first, then by name. Busy or over a limit is advice, never a refusal.
+
+**One person for a whole absence** (`CoverAll`, the rebuild's own). Somebody away for more than one class
+needing cover that has not started yet is a **stretch**: one card for all of it, beside each class's own.
+Who could take it asks each class of the ranking above, so away then is never offered and teaching then
+is busy, exactly as that class's own picks say; a class at the same time as one they would already take
+from the stretch is busy for them too, so the count they read (*Free for 2 of 3, busy for 1*) is what one
+press gives. Ranked: non-guests before guests, **free for more of it** first, then whoever offered to cover
+one of its classes, then **whoever has been in the room for its classes most often** before today (they
+know them: their own, or covering, never when away), then the lightest week, then by name; anybody free for
+none of it is left out. *Would go over their limit* when their week and what they would take come to more
+than it: said, never a reason to leave them out. **One press is one change** (`Edits.CoverAll`), one Undo:
+each class, soonest first and worked out again after those before it are theirs, that still needs cover
+because of that absence and that they are still free for; the rest still need cover, so nobody is put in
+two rooms at once, and a class covered since is left alone. Their own offers for what they take are
+answered yes when an administrator presses, as the single picks answer one; nothing left to take is
+refused, in words.
 
 ## Asking (`Asking`, the rebuild's own)
 

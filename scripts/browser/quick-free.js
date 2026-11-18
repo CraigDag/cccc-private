@@ -210,6 +210,6 @@ const pickedBlocks = page => page.$$eval('[data-testid=row].picked [data-testid=
   });
 
   await browser.close();
-  log(failed ? `${failed} FAILED` : 'all OK');
+  log(failed ? `${failed} failed` : 'all passed');
   process.exit(failed ? 1 : 0);
 })();

@@ -113,6 +113,12 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   (a study day, a week not filled in yet). Enter opens the plan on that day; nothing changes. Typing
   *staff meeting fri 15:30 canteen* still offers to add the staff meeting first, with whether the
   Canteen is free then beneath it.
+- **One person for a whole absence.** When somebody is away for several classes, the Cover page puts
+  them together on one card, with the three people best placed to take all of it: free for the most of
+  it first, then anybody who offered, then whoever has taught those classes before, then the lightest
+  week (*Free for all 3 · has taught Creation lab · 10h this week*, or *Free for 2 of 3, busy for 1*).
+  One press gives them every class they are free for, and one Undo takes it all back; anything they
+  cannot take keeps its own card, so nobody ends up in two rooms at once.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

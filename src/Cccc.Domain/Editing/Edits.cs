@@ -225,6 +225,36 @@ public static class Edits
                         : $"{string.Join(" and ", ids.Select(id => t.Facilitators[id]?.Name ?? "somebody"))} covering {s.DisplayTitle}");
     }
 
+    /// <summary>
+    /// One person covering everything among <paramref name="sessionIds"/> that <paramref name="awayId"/> being away
+    /// leaves needing cover and that they are free for (<see cref="Rules.CoverAll"/>), as one change one Undo takes
+    /// back. Each class is worked out again from the timetable as it is now, after the ones before it have been
+    /// given to them, so a class covered since is left alone and nobody is put in two rooms at once. Their own
+    /// offers for what they take are answered yes when the reader answers offers, as the Cover page's picks answer
+    /// one. Refused when that leaves nothing to take.
+    /// </summary>
+    public static Batch CoverAll(Timetable t, Guid awayId, Guid coverId, IEnumerable<Guid> sessionIds, AskingReader reader, DateTimeOffset at)
+    {
+        var who = t.Facilitators[coverId] is { } f && !f.IsFormer() ? f : throw new EditRefused("That facilitator is no longer on this timetable.");
+        var d = new Draft(t);
+        var taken = new List<Session>();
+        foreach (var id in sessionIds.Select(id => t.Sessions[id]).OfType<Session>().OrderBy(s => s.Date).ThenBy(s => s.Start).ThenBy(s => s.Id).Select(s => s.Id))
+        {
+            var s = d.Current.Sessions[id]!;
+            var gap = Occurrences.Resolve(d.Current, s);
+            if (!gap.NeedsCover || !gap.AwayIds.Contains(awayId)) continue;
+            if (!Cover.Ranked(d.Current, gap).Any(c => c.Person.Id == coverId && c.IsFree)) continue;
+            d.Put(Collections.Sessions, Normalised(s with { CoverIds = [coverId], CoverNote = null }));
+            if (reader.Answers)
+                foreach (var o in t.Offers.Where(o => o.SessionId == s.Id && o.FacilitatorId == coverId && o.Answer is null))
+                    d.Put(Collections.Offers, o with { Answer = Answer.Yes, AnsweredAt = at });
+            taken.Add(s);
+        }
+        if (taken.Count == 0) throw new EditRefused($"None of it is left for {who.Name}: it has cover now, or they are not free then any more.");
+        return d.ToBatch(taken.Count == 1 ? $"{who.Name} covering {taken[0].DisplayTitle}"
+            : $"{who.Name} covering {taken.Count} of {t.Facilitators[awayId]?.Name ?? "somebody"}'s classes");
+    }
+
     public static TimeOnly Snap(TimeOnly t)
     {
         int m = t.Hour * 60 + t.Minute;
