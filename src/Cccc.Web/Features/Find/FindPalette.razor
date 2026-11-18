@@ -7,6 +7,8 @@
 @using Cccc.Web.Features.Plan
 @using Cccc.Web.Features.Sessions
 @using Cccc.Web.Features.Events
+@using Cccc.Web.Features.Data
+@using Cccc.Web.Features.Ask
 @if (F.IsOpen)
 {
     var hits = Hits();
@@ -29,7 +31,7 @@
                 var h = hits[i];
                 int at = i;
                 <li role="option" aria-selected="@(i == _at ? "true" : "false")">
-                    <button type="button" class="find-hit @(i == _at ? "on" : "") @(h.Kind == "quick-add" ? "quick" : "")" @onclick="() => Go(h)" @onmouseenter="() => _at = at" data-testid="find-hit">
+                    <button type="button" class="find-hit @(i == _at ? "on" : "") @(h.Kind is "quick-add" or "quick-away" or "quick-ask" ? "quick" : "")" @onclick="() => Go(h)" @onmouseenter="() => _at = at" data-testid="find-hit">
                         <span class="find-kind k-@h.Kind" style="@(h.Colour is null ? "" : $"--c:{h.Colour}")">@Badge(h)</span>
                         <span class="find-label">@h.Label</span>
                         <small>@h.Detail</small>
@@ -37,7 +39,7 @@
                 </li>
             }
         </ul>
-        <footer class="find-foot">↑ ↓ to move · Enter to open · a person or space opens their day@(W.Access.MayEdit ? " · type a class and a time to add it, like “aerial fri 13”" : "")</footer>
+        <footer class="find-foot">↑ ↓ to move · Enter to open · a person or space opens their day@(Typed())</footer>
     </section>
 }
 @code {
@@ -72,7 +74,18 @@
 
     // The keys act on what has been typed, never on the list last drawn: typing quickly can run ahead of
     // the screen, and Enter straight after "Studio B" opened Studio A, which led the list for "Studio".
-    private IReadOnlyList<FindHit> Hits() => FindIndex.Search(W.T, _q, W.Access.MayEdit, W.Access.MayUseAdminTools, today: W.Today, shown: Shown());
+    private IReadOnlyList<FindHit> Hits() => FindIndex.Search(W.T, _q, W.Access.MayEdit, W.Access.MayUseAdminTools, today: W.Today, shown: Shown(),
+        recordsAway: W.Access.MayChange("absences"), me: W.Access.MayChange("requests") ? W.Access.FacilitatorId : null);
+
+    /// <summary>What can be typed in, for whoever reads it: a class to add, and somebody away or their own can't-come.</summary>
+    private string Typed()
+    {
+        var said = new List<string>();
+        if (W.Access.MayEdit) said.Add("type a class and a time to add it, like “aerial fri 13”");
+        if (W.Access.MayChange("absences")) said.Add("or who is away, like “bo sick fri”");
+        else if (W.Access.MayChange("requests") && W.Access.FacilitatorId is not null) said.Add("say you can’t come, like “sick tomorrow”");
+        return said.Count == 0 ? "" : " · " + string.Join(" ", said);
+    }
 
     /// <summary>The day a typed "fri" counts from: the one the plan shows, when the plan is what is on screen.</summary>
     private DateOnly Shown() => V.Started && Nav.ToBaseRelativePath(Nav.Uri).StartsWith("plan", StringComparison.Ordinal) ? V.Day : W.Today;
@@ -88,7 +101,8 @@
 
     private static string Badge(FindHit h) => h.Kind switch
     {
-        "facilitator" => "F", "student" => "S", "room" => "◻", "group" => "G", "programme" => "P", "quick-add" => "+", _ => "→",
+        "facilitator" => "F", "student" => "S", "room" => "◻", "group" => "G", "programme" => "P", "quick-add" => "+",
+        "quick-away" => "−", "quick-ask" => "?", _ => "→",
     };
 
     private void Go(FindHit h)
@@ -125,6 +139,19 @@
                 V.Changed();
                 Nav.NavigateTo("plan");
                 D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.Draft)] = draft });
+                break;
+            case "quick-away" when h.Away is { } away:
+                // Over whatever is on screen: the form says what it takes them off, and nothing is recorded until OK.
+                D.Show<AbsenceForm>(new Dictionary<string, object?> { [nameof(AbsenceForm.Draft)] = away });
+                break;
+            case "quick-ask" when h.Away is { } asked:
+                D.Show<CantComeForm>(new Dictionary<string, object?>
+                {
+                    [nameof(CantComeForm.Draft)] = new TimeOffRequest
+                    {
+                        FacilitatorId = asked.PersonId, From = asked.From, To = asked.To, StartTime = asked.StartTime, EndTime = asked.EndTime, AskedOn = W.Today,
+                    },
+                });
                 break;
         }
     }

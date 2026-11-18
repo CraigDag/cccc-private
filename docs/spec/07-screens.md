@@ -54,6 +54,22 @@ Nothing depends on a web font: the laptop may be offline.
   session (`Habits.Like`). It comes first in Find, saying what it would add, where the rest came from and
   any word it did not understand (*stu (Studio A or Studio B?)*); Enter opens the add form on it, over
   the plan on its day, and nothing is added until OK there. A coach is never offered it.
+- **Who is away can be typed into Find the same way** (`QuickAway`): *ada sick*, *bo off fri 9-12*, *dag
+  away 1/12 to 4/12*, *alba absent mon-wed*, *cleo out tomorrow afternoon*. A line is about somebody away
+  only when it says so (*away*, *off*, *out*, *absent*, *sick*, *ill*, *leave*, *holiday*, *can't come*,
+  *not in*) and names one person, a facilitator or a student, or nobody for whoever is signed in. It reads
+  a day, a stretch (*mon to wed*, *until fri*, *this week*, *next week*) or from today; a time (*9-12*,
+  *morning*, *afternoon*, *from 14*, *until 11*) or whole days; and the cause and notice it says
+  (*sick* is an illness, *leave* approved leave, *planned*), the rest of the notice by `Absence.NoticeWhenSaid`.
+  It comes first in Find, saying what it would take them off (*Strength and conditioning Mon 09:00:
+  needs cover*, *takes them off 4 classes, 3 would need cover*, *misses 7 classes*). **An administrator**
+  records it: Enter opens the absence form filled in. **A coach** typing *sick tomorrow* is offered *Ask to
+  be away*, for themselves only, and Enter opens *Can't come* on those days; the line says that only the
+  days are sent, never why. **Nothing typed becomes the reason**: words not understood are said in Find
+  and kept nowhere, as a line about being ill can carry what nobody should store. And whoever reads it, a
+  line about somebody away is never a class titled with its words (*Off*, *Sick*).
+- **The absence form says what it takes them off before OK**, as *Can't come* does: each class with what
+  recording it would leave it, or for a student *They would miss* and the classes (`Away.WhatItLeaves`).
 - **Find's keys act on what has been typed**, never on the list last drawn: Enter straight after the
   last letter opens the top match for all of it. **And nothing typed straight after Ctrl+K or / is
   lost**: Find opens after a round trip and its box takes the focus after another, so `shell.js` keeps

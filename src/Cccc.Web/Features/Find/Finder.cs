@@ -24,8 +24,12 @@ public sealed class Finder
     }
 }
 
-/// <summary>One answer in Find: a thing to look at, or a thing to do. A class typed in to add carries its draft.</summary>
-public sealed record FindHit(string Kind, string Label, string? Detail, Guid? Id, string? Colour, Cccc.Domain.Model.Session? Draft = null);
+/// <summary>
+/// One answer in Find: a thing to look at, or a thing to do. A class typed in to add carries its draft, and
+/// somebody typed in as away carries the absence.
+/// </summary>
+public sealed record FindHit(string Kind, string Label, string? Detail, Guid? Id, string? Colour, Cccc.Domain.Model.Session? Draft = null,
+    Cccc.Domain.Model.Absence? Away = null);
 
 public static class FindIndex
 {
@@ -33,14 +37,23 @@ public static class FindIndex
     /// Everything Find can reach, ranked: a name that starts with the words beats one that only
     /// contains them, and people come before places before groups. Nothing here is logged or put in a URL.
     /// For somebody who may edit, a line that reads as a class to add (<see cref="QuickAdd"/>) comes first:
-    /// <paramref name="today"/> and the day the plan shows say which Friday "fri" is.
+    /// <paramref name="today"/> and the day the plan shows say which Friday "fri" is. A line that says somebody
+    /// is away (<see cref="QuickAway"/>) comes before it: an administrator (<paramref name="recordsAway"/>)
+    /// records anybody, and the facilitator signed in (<paramref name="me"/>) asks for themselves. Such a line
+    /// is never a class with its words for a title ("Off", "Sick"), whoever reads it.
     /// </summary>
     public static IReadOnlyList<FindHit> Search(Cccc.Domain.Model.Timetable t, string query, bool mayEdit, bool admin, int max = 12,
-        DateOnly? today = null, DateOnly? shown = null)
+        DateOnly? today = null, DateOnly? shown = null, bool recordsAway = false, Guid? me = null)
     {
         var q = query.Trim();
+        var away = today is { } day && q.Length > 0 ? QuickAway.Read(t, q, day, shown ?? day, me) : null;
         var quick = mayEdit && today is { } now && q.Length > 0 && QuickAdd.Read(t, q, now, shown ?? now) is { } reading
+                    && (away is null || reading.Draft.ClassId is not null)
             ? QuickAdd.Hit(t, reading) : null;
+        var said = away is null || today is not { } on ? null
+            : recordsAway ? QuickAway.Hit(t, away, records: true, on)
+            : me is { } mine && away.Draft.Person == Cccc.Domain.Model.AbsentPerson.Facilitator && away.Draft.PersonId == mine
+                ? QuickAway.Hit(t, away, records: false, on) : null;
         var hits = new List<(int Rank, FindHit Hit)>();
         int Score(string name)
         {
@@ -100,6 +113,7 @@ public static class FindIndex
             if (s >= 0) hits.Add((s * 10 + 5, a));
         }
         var found = hits.OrderBy(h => h.Rank).ThenBy(h => h.Hit.Label, Cccc.Domain.NameOrder.Comparer).Select(h => h.Hit);
-        return quick is null ? found.Take(max).ToList() : [quick, .. found.Take(max - 1)];
+        FindHit[] first = [.. new[] { said, quick }.OfType<FindHit>()];
+        return [.. first, .. found.Take(max - first.Length)];
     }
 }

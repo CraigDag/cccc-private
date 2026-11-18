@@ -127,7 +127,8 @@ The live file has held real students since 2026-10-29, so all of this applies to
   person wrote is copied out of the timetable, where erasure would have to find it. Erasing a
   facilitator forgets theirs in every timetable.
 - **Absence reasons** are free text an administrator may fill; the form warns not to write health
-  details there. **Asking to be away has no box for why**, deliberately: a coach asked why would write
+  details there. **A line typed into Find never fills it** (`QuickAway`): words it does not understand
+  (*ada sick flu*) are said in Find and kept nowhere. **Asking to be away has no box for why**, deliberately: a coach asked why would write
   what is nobody's business, the illness. What was asked and offered holds ids, days and times only, and
   goes with its person when they are removed or erased (`Edits.RemoveFacilitator`), so the erasure has
   nothing in it to rewrite; the absence a yes recorded stays, as absences do.

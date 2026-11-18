@@ -94,6 +94,14 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   not understand are listed, never quietly used. Enter opens the add form filled in, on that day of the
   plan, so you look it over and press OK; nothing is added before. With no class named, your words are
   the title (*staff meeting fri 15:30 canteen*).
+- **Say who is away by typing it.** In Find, type it as you would say it: *ada sick*, *bo off fri 9-12*,
+  *dag away 1/12 to 4/12*, *alba absent mon-wed*. The first line says who and when, and what it would do:
+  *Strength and conditioning Mon 09:00: needs cover*, or *takes them off 4 classes, 3 would need cover*,
+  or for a student *misses 7 classes*. Enter opens the absence form filled in (sick is an illness, and
+  unplanned), and the form now lists the classes an absence takes them off before you press OK.
+  Anything else you type is shown in Find and never saved, so *flu* never ends up in the reason. A coach
+  typing *sick tomorrow* is offered to ask instead, for themselves only, and the can't-come form opens on
+  those days.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

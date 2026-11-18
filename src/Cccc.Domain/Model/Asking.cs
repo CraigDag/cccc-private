@@ -32,7 +32,7 @@ public sealed record TimeOffRequest : IEntity
     public Absence AsAbsence(Guid id) => new()
     {
         Id = id, Person = AbsentPerson.Facilitator, PersonId = FacilitatorId, From = From, To = To,
-        StartTime = StartTime, EndTime = EndTime, Notice = AskedOn < From ? AbsenceNotice.Planned : AbsenceNotice.Unplanned,
+        StartTime = StartTime, EndTime = EndTime, Notice = Absence.NoticeWhenSaid(AskedOn, From, cause: null),
     };
 }
 

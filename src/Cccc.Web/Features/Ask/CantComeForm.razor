@@ -50,6 +50,8 @@
 </DialogFrame>
 @code {
     [CascadingParameter] public Workspace W { get; set; } = default!;
+    /// <summary>The days and times to start from, read from a line typed into Find; nothing is sent until Send.</summary>
+    [Parameter] public TimeOffRequest? Draft { get; set; }
     private DateOnly _from, _to;
     private bool _allDay = true;
     private TimeOnly? _start, _end;
@@ -57,7 +59,9 @@
 
     protected override void OnInitialized()
     {
-        _from = _to = W.Today;
+        _from = Draft?.From ?? W.Today;
+        _to = Draft?.To ?? _from;
+        if (Draft is { StartTime: { } s, EndTime: { } e }) { _allDay = false; _start = s; _end = e; }
         Check();
     }
 

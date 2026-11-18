@@ -34,33 +34,15 @@ public static class Asking
         _ => r.To < today ? RequestState.Passed : RequestState.Waiting,
     };
 
-    /// <summary>
-    /// The classes a request would take them off: each one on its days that they are in the room for,
-    /// teaching or covering, whose part of it the request's times reach; soonest first.
-    /// </summary>
-    public static IReadOnlyList<Occurrence> TakesOff(Timetable t, TimeOffRequest r)
-    {
-        var away = r.AsAbsence(Guid.Empty);
-        return Occurrences.Between(t, r.From, r.To)
-            .Where(o => o.Happens && o.InTheRoom.Contains(r.FacilitatorId))
-            .Where(o =>
-            {
-                var (a, b) = TimeWindows.InRoom(o, r.FacilitatorId);
-                return b > a && away.Covers(o.Date, a, b);
-            })
-            .ToList();
-    }
+    /// <summary>The classes a request would take them off (<see cref="Away.TakesOff"/>), soonest first.</summary>
+    public static IReadOnlyList<Occurrence> TakesOff(Timetable t, TimeOffRequest r) => Away.TakesOff(t, r.AsAbsence(Guid.Empty));
 
     /// <summary>
-    /// Each class a request takes them off, as it is and as a yes would leave it: needing cover, or still
-    /// taught by somebody else for all of it. Resolved by <see cref="Occurrences.Resolve"/> against the
-    /// timetable with the absence in it, so it says exactly what the plan would say afterwards.
+    /// Each class a request takes them off, as it is and as a yes would leave it (<see cref="Away.WhatItLeaves"/>):
+    /// needing cover, or still taught by somebody else for all of it.
     /// </summary>
-    public static IReadOnlyList<(Occurrence Now, Occurrence After)> WhatAYesLeaves(Timetable t, TimeOffRequest r)
-    {
-        var after = t with { Absences = t.Absences.Put(r.AsAbsence(Guid.NewGuid())) };
-        return TakesOff(t, r).Select(o => (o, Occurrences.Resolve(after, o.Session))).ToList();
-    }
+    public static IReadOnlyList<(Occurrence Now, Occurrence After)> WhatAYesLeaves(Timetable t, TimeOffRequest r) =>
+        Away.WhatItLeaves(t, r.AsAbsence(Guid.NewGuid()));
 
     /// <summary>
     /// What is waiting for an administrator's answer: requests whose last day has not passed, from somebody

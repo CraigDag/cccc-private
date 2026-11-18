@@ -342,6 +342,23 @@ A class typed in a line (*aerial fri 13*) says little; the rest is what that cla
 - **It is a suggestion, never a rule anything counts by**: the add form shows the result, saying which
   day the rest came from, and nothing is saved until OK.
 
+## What an absence takes somebody off (`Away`, the rebuild's own)
+
+Said before it is recorded, by the absence form, by a coach asking and by a line typed into Find, so all
+three say the same (`Asking.TakesOff` and `WhatAYesLeaves` ask it too).
+
+- **A facilitator**: each class on its days that they are in the room for, teaching or covering, whose part
+  of it the absence's times reach; and what recording it would leave it, resolved against the timetable
+  with the absence in it: *needs cover*, *still taught* by whoever else is in for all of it, or, for a
+  class they cover, its cover to change.
+- **A student**: each class they are on (`Roster`) whose time it reaches. A whole-school class has nobody
+  on it, so lunch is never missed. Being away changes nothing about how a class runs.
+- **An absence being changed is read without itself**, so it still lists the classes it takes them off.
+  Cancelled and closed classes take nobody off anything.
+- **Its notice, when nobody says** (`Absence.NoticeWhenSaid`): planned when it is said before its first
+  day, unplanned on the day, and an illness always unplanned, since nobody plans to be ill even when they
+  phone the night before. A coach's yes, which has no cause, is planned when asked before its first day.
+
 ## A week against the one before (`WeekChanges`)
 
 - A week is compared with **the last week before it with anything in it**, at most half a year back: a

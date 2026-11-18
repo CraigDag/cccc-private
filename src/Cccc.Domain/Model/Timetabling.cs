@@ -153,6 +153,13 @@ public sealed record Absence : IEntity
 
     public bool Is(AbsentPerson kind, Guid personId) => Person == kind && PersonId == personId;
 
+    /// <summary>
+    /// The notice an absence has when nobody says: planned when it is said before its first day, unplanned on the
+    /// day itself, and an illness always unplanned, as nobody plans to be ill, even when they phone the night before.
+    /// </summary>
+    public static AbsenceNotice NoticeWhenSaid(DateOnly saidOn, DateOnly from, AbsenceCause? cause) =>
+        cause != AbsenceCause.Illness && saidOn < from ? AbsenceNotice.Planned : AbsenceNotice.Unplanned;
+
     public bool CoversDate(DateOnly date) => date >= From && date <= To;
 
     /// <summary>

@@ -1,8 +1,18 @@
+@* An absence, recorded or changed by an administrator, and what it takes them off before OK: the classes it
+   leaves needing cover, or for a student the classes they would miss. Find opens it filled in from a typed line. *@
+@using Cccc.Web.Features.Ask
+@using Cccc.Web.Features.Week
 @inject Dialogs D
+@{
+    var t = W.T;
+    var shown = _why is null ? Current() : null;
+    var leaves = shown is null ? [] : Away.WhatItLeaves(t, shown);
+    bool student = shown?.Person == AbsentPerson.Student;
+}
 <DialogFrame Title="@(_old is null ? "Record an absence" : "Edit an absence")" OnOk="Save" OkEnabled="@(_why is null)">
     <ChildContent>
         <label class="field"><span>Who</span>
-            <select @bind="_who" @bind:after="Check">
+            <select @bind="_who" @bind:after="Check" data-testid="absence-who">
                 <option value="">Choose…</option>
                 <optgroup label="Facilitators">
                     @* A former facilitator teaches nothing ahead; an absence already on one keeps showing them. *@
@@ -20,23 +30,44 @@
             </select>
         </label>
         <div class="field two">
-            <label><span>From</span><input type="date" @bind="_from" @bind:after="Check" /></label>
-            <label><span>To</span><input type="date" @bind="_to" @bind:after="Check" /></label>
+            <label><span>From</span><input type="date" @bind="_from" @bind:after="Check" data-testid="absence-from" /></label>
+            <label><span>To</span><input type="date" @bind="_to" @bind:after="Check" data-testid="absence-to" /></label>
         </div>
         <div class="field two">
-            <label><span>From time (optional)</span><input type="time" step="900" @bind="_startTime" @bind:after="Check" /></label>
-            <label><span>Until time (optional)</span><input type="time" step="900" @bind="_endTime" @bind:after="Check" /></label>
+            <label><span>From time (optional)</span><input type="time" step="900" @bind="_startTime" @bind:after="Check" data-testid="absence-start" /></label>
+            <label><span>Until time (optional)</span><input type="time" step="900" @bind="_endTime" @bind:after="Check" data-testid="absence-end" /></label>
         </div>
         <div class="field two">
             <label><span>Notice</span>
-                <select @bind="_notice"><option value="">Not said</option><option value="Planned">Planned</option><option value="Unplanned">Unplanned</option></select>
+                <select @bind="_notice" data-testid="absence-notice"><option value="">Not said</option><option value="Planned">Planned</option><option value="Unplanned">Unplanned</option></select>
             </label>
             <label><span>Cause</span>
-                <select @bind="_cause"><option value="">Not said</option><option value="Illness">Illness</option><option value="Personal">Personal</option><option value="ApprovedLeave">Approved leave</option><option value="Other">Other</option></select>
+                <select @bind="_cause" data-testid="absence-cause"><option value="">Not said</option><option value="Illness">Illness</option><option value="Personal">Personal</option><option value="ApprovedLeave">Approved leave</option><option value="Other">Other</option></select>
             </label>
         </div>
-        <label class="field"><span>Reason (administrators only)</span><input @bind="_reason" maxlength="200" /></label>
+        <label class="field"><span>Reason (administrators only)</span><input @bind="_reason" maxlength="200" data-testid="absence-reason" /></label>
         <p class="hint"><b>Never write health details here.</b> This box is for things like "conference" or "family". It is kept in the project and in its history.</p>
+        @if (shown is not null)
+        {
+            <h3 class="form-sub" data-testid="away-heading">@(student ? "They would miss" : "It takes them off")</h3>
+            @if (leaves.Count == 0)
+            {
+                <p class="muted" data-testid="away-none">None of their classes.</p>
+            }
+            else
+            {
+                <ul class="plain-list" data-testid="away-takes">
+                    @foreach (var (now, after) in leaves.Take(MostShown))
+                    {
+                        <li data-testid="away-class"><b>@Looks.Title(t, now.Session)</b> @Looks.WhenWithDay(now.Session)@(student ? "" : " · " + AskingWords.After(t, shown.PersonId, now, after))</li>
+                    }
+                    @if (leaves.Count > MostShown)
+                    {
+                        <li class="muted">and @(leaves.Count - MostShown) more</li>
+                    }
+                </ul>
+            }
+        }
         @if (_why is not null)
         {
             <p class="form-error">@_why</p>
@@ -52,6 +83,10 @@
 @code {
     [CascadingParameter] public Workspace W { get; set; } = default!;
     [Parameter] public Guid? Id { get; set; }
+    /// <summary>A new absence to start from, read from a line typed into Find; nothing is recorded until OK.</summary>
+    [Parameter] public Absence? Draft { get; set; }
+    private const int MostShown = 8;
+    private readonly Absence _new = new();
     private Absence? _old;
     private string _who = "", _notice = "", _cause = "";
     private string? _reason;
@@ -62,16 +97,27 @@
     protected override void OnInitialized()
     {
         _old = Id is { } id ? W.T.Absences[id] : null;
-        _from = _old?.From ?? W.Today;
-        _to = _old?.To ?? W.Today;
-        if (_old is not null)
+        var start = _old ?? Draft;
+        _from = start?.From ?? W.Today;
+        _to = start?.To ?? W.Today;
+        if (start is not null)
         {
-            _who = (_old.Person == AbsentPerson.Facilitator ? "f:" : "s:") + _old.PersonId;
-            _startTime = _old.StartTime; _endTime = _old.EndTime; _reason = _old.Reason;
-            _notice = _old.Notice?.ToString() ?? ""; _cause = _old.Cause?.ToString() ?? "";
+            _who = (start.Person == AbsentPerson.Facilitator ? "f:" : "s:") + start.PersonId;
+            _startTime = start.StartTime; _endTime = start.EndTime; _reason = start.Reason;
+            _notice = start.Notice?.ToString() ?? ""; _cause = start.Cause?.ToString() ?? "";
         }
         Check();
     }
+
+    /// <summary>The absence as the form now says it, for what it takes them off; the same one OK records.</summary>
+    private Absence Current() => (_old ?? Draft ?? _new) with
+    {
+        Person = _who.StartsWith("f:") ? AbsentPerson.Facilitator : AbsentPerson.Student,
+        PersonId = Guid.Parse(_who[2..]), From = _from, To = _to, StartTime = _startTime, EndTime = _endTime,
+        Reason = string.IsNullOrWhiteSpace(_reason) ? null : _reason.Trim(),
+        Notice = Enum.TryParse<AbsenceNotice>(_notice, out var n) ? n : null,
+        Cause = Enum.TryParse<AbsenceCause>(_cause, out var c) ? c : null,
+    };
 
     private void Check()
     {
@@ -86,14 +132,7 @@
     {
         Check();
         if (_why is not null) return;
-        var a = (_old ?? new Absence()) with
-        {
-            Person = _who.StartsWith("f:") ? AbsentPerson.Facilitator : AbsentPerson.Student,
-            PersonId = Guid.Parse(_who[2..]), From = _from, To = _to, StartTime = _startTime, EndTime = _endTime,
-            Reason = string.IsNullOrWhiteSpace(_reason) ? null : _reason.Trim(),
-            Notice = Enum.TryParse<AbsenceNotice>(_notice, out var n) ? n : null,
-            Cause = Enum.TryParse<AbsenceCause>(_cause, out var c) ? c : null,
-        };
+        var a = Current();
         if (W.Commit(t => Edits.PutAbsence(t, a))) D.Close();
     }
 
