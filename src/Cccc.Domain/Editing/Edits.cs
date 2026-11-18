@@ -84,15 +84,16 @@ public static class Edits
     public static Batch PutSession(Timetable t, Session s, string label = "Saved a class")
     {
         if (s.End <= s.Start) throw new EditRefused("A class must end after it starts.");
-        s = TimeWindows.Normalise(s) with
-        {
-            CoverIds = [.. s.CoverIds.Distinct()],
-            AddedStudentIds = [.. s.AddedStudentIds.Distinct()],
-            LeftOffStudentIds = [.. s.LeftOffStudentIds.Distinct()],
-            Audience = s.Audience with { GroupIds = [.. s.Audience.GroupIds.Distinct()] },
-        };
-        return new Draft(t).Put(Collections.Sessions, s).ToBatch(label);
+        return new Draft(t).Put(Collections.Sessions, Normalised(s)).ToBatch(label);
     }
+
+    private static Session Normalised(Session s) => TimeWindows.Normalise(s) with
+    {
+        CoverIds = [.. s.CoverIds.Distinct()],
+        AddedStudentIds = [.. s.AddedStudentIds.Distinct()],
+        LeftOffStudentIds = [.. s.LeftOffStudentIds.Distinct()],
+        Audience = s.Audience with { GroupIds = [.. s.Audience.GroupIds.Distinct()] },
+    };
 
     /// <summary>Removes sessions and their registers.</summary>
     public static Batch RemoveSessions(Timetable t, IEnumerable<Guid> ids, string? label = null)
@@ -154,11 +155,17 @@ public static class Edits
     public static Batch MoveTo(Timetable t, Guid sessionId, DateOnly date, TimeOnly start, Guid? roomId, bool sayMoved)
     {
         var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");
+        var moved = Moved(s, date, start, roomId, sayMoved);
+        return PutSession(t, moved, $"Moved {s.DisplayTitle} to {Week.ShortDate(date)}, {Week.Hm(moved.Start)}");
+    }
+
+    /// <summary>A class as <see cref="MoveTo"/> would leave it: each person's part moved with it, and where it was first when it says it has moved.</summary>
+    public static Session Moved(Session s, DateOnly date, TimeOnly start, Guid? roomId, bool sayMoved)
+    {
         if (sayMoved && Week.MondayOf(date) != s.WeekMonday) throw new EditRefused("A class says it has moved only inside its own week. To move it to another week, copy it there.");
         var moved = Openings.Placed(s, date, Snap(start), roomId);
         var from = sayMoved ? s.MovedFrom ?? new MovedFrom(s.Date, s.Start, s.End) : s.MovedFrom;
-        moved = moved with { MovedFrom = from is { } f && f.Date == moved.Date && f.Start == moved.Start && f.End == moved.End ? null : from };
-        return PutSession(t, moved, $"Moved {s.DisplayTitle} to {Week.ShortDate(date)}, {Week.Hm(moved.Start)}");
+        return moved with { MovedFrom = from is { } f && f.Date == moved.Date && f.Start == moved.Start && f.End == moved.End ? null : from };
     }
 
     /// <summary>
@@ -171,10 +178,35 @@ public static class Edits
         var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");
         var way = WaysOut.For(t, sessionId, today, now, viewer).FirstOrDefault(w => w.Moved.Date == date && w.Moved.Start == start && w.Moved.RoomId == roomId)
             ?? throw new EditRefused("That is no longer a way out: something there has changed since. The ways out it has now are under the class.");
-        string where = t.Rooms.Find(roomId)?.Name ?? "no space";
-        var label = way.SameTime ? $"Moved {s.DisplayTitle} to {where}"
-            : $"Moved {s.DisplayTitle} to {Week.Hm(start)}" + (roomId != s.RoomId ? $" in {where}" : "");
-        return MoveTo(t, sessionId, date, start, roomId, sayMoved: Week.MondayOf(s.Date) <= today) with { Label = label };
+        return MoveTo(t, sessionId, date, start, roomId, sayMoved: Week.MondayOf(s.Date) <= today) with { Label = "Moved " + MovedWhere(t, s, way) };
+    }
+
+    /// <summary>
+    /// Room made for a class (<see cref="Rules.MakeRoom"/>): the other class that was in its way moved to its way out,
+    /// and the class put where it is going, as one step that one Undo takes back. <paramref name="placed"/> is the
+    /// class as it is to be saved. Worked out again from the timetable as it is now, with the class there: when
+    /// moving the other class there no longer takes it out of every clash, the step is refused rather than taken
+    /// into a new one. Once the other class's week has begun, it says it has moved.
+    /// </summary>
+    public static Batch MakeRoom(Timetable t, Session placed, Guid otherId, DateOnly date, TimeOnly start, Guid? roomId,
+        DateOnly today, TimeOnly now, EventViewer viewer)
+    {
+        if (placed.End <= placed.Start) throw new EditRefused("A class must end after it starts.");
+        var other = t.Sessions[otherId] ?? throw new EditRefused("The class that was in the way has gone, so there is nothing to move. Look for a time again.");
+        placed = Normalised(placed);
+        var way = Rules.MakeRoom.Still(t, placed, otherId, date, start, roomId, today, now, viewer)
+            ?? throw new EditRefused($"Moving {other.DisplayTitle} there no longer makes room: something has changed since. Look for a time again.");
+        var moved = Moved(other, date, start, roomId, sayMoved: Week.MondayOf(other.Date) <= today);
+        return new Draft(t).Put(Collections.Sessions, moved).Put(Collections.Sessions, placed)
+            .ToBatch($"Made room for {placed.DisplayTitle}, {Week.ShortDate(placed.Date)} {Week.Hm(placed.Start)}, by moving {MovedWhere(t, other, way)}");
+    }
+
+    /// <summary>Where a way out takes a class, in a label: "Juggling to Studio B", or "Juggling to 11:00", with its space when that changes too.</summary>
+    private static string MovedWhere(Timetable t, Session s, WayOut way)
+    {
+        string where = t.Rooms.Find(way.Moved.RoomId)?.Name ?? "no space";
+        return way.SameTime ? $"{s.DisplayTitle} to {where}"
+            : $"{s.DisplayTitle} to {Week.Hm(way.Moved.Start)}" + (way.Moved.RoomId != s.RoomId ? $" in {where}" : "");
     }
 
     public static Batch SetCancelled(Timetable t, Guid sessionId, bool cancelled, string? note)

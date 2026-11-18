@@ -146,6 +146,51 @@ else
                 @if (found.Openings.Count == 0)
                 {
                     <p class="ft-sum" data-testid="openings-none"><b>Nothing fits</b> @Cccc.Domain.Week.ShortDate(from) to @Cccc.Domain.Week.ShortDate(to). @Hint(c)</p>
+                    var made = RoomMadeFor(t, c);
+                    @if (made.Count > 0)
+                    {
+                        <section class="ft-room" data-testid="make-room">
+                            <h3>Or make room</h3>
+                            <p class="muted">Each of these times has one other class in the way, which can move to where it clashes with nothing. @(SessionId is null ? "Choose one and the class opens with that move ticked: saving makes both." : "Choose one to make both moves; Undo puts both back.")</p>
+                            @foreach (var r in made)
+                            {
+                                var other = t.Sessions[r.Other.Moved.Id];
+                                if (other is null) continue;
+                                <div class="ft-open" data-testid="room-made">
+                                    <button type="button" class="btn ft-when" @onclick="() => TakeRoom(c, r)" data-testid="room-take"
+                                            aria-label="@($"{r.Placed.Date.ToString("dddd d MMMM", CultureInfo.InvariantCulture)}, {Looks.When(r.Placed.Start, r.Placed.End)}{(r.Placed.RoomId is { } pr && t.Rooms[pr] is { } prr ? ", " + prr.Name : "")}, moving {Looks.Title(t, other)}")">@Looks.When(r.Placed.Start, r.Placed.End)</button>
+                                    <div class="ft-what">
+                                        <div class="ft-where">
+                                            <b data-testid="room-day">@r.Placed.Date.ToString("dddd d MMMM", CultureInfo.InvariantCulture)</b>
+                                            @if (r.Placed.RoomId is { } space && t.Rooms[space] is { } room)
+                                            {
+                                                <span class="space-dot" style="--c:@room.Colour"></span><span>@room.Name</span>
+                                            }
+                                        </div>
+                                        @if (r.Notes.Count > 0)
+                                        {
+                                            <ul class="ft-notes">
+                                                @foreach (var n in r.Notes)
+                                                {
+                                                    <li class="@(n.Good ? "good" : "against")" data-testid="room-note">@n.Text</li>
+                                                }
+                                            </ul>
+                                        }
+                                        <p class="ft-moving" data-testid="room-moving">Moving <b>@Looks.Title(t, other)</b> <span class="nowrap">(@Looks.When(other.Start, other.End)@(Looks.Room(t, other) is { Length: > 0 } was ? ", " + was : ""))</span> to <span class="nowrap">@Cccc.Web.Features.Plan.WayOutWords.Where(t, other, r.Other)</span></p>
+                                        @if (r.Other.Notes.Count > 0)
+                                        {
+                                            <ul class="ft-notes">
+                                                @foreach (var n in r.Other.Notes)
+                                                {
+                                                    <li class="@(n.Good ? "good" : "against")" data-testid="room-other-note">@n.Text</li>
+                                                }
+                                            </ul>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </section>
+                    }
                 }
                 else
                 {
@@ -346,6 +391,25 @@ else
         return _found;
     }
 
+    private IReadOnlyList<RoomMade> _made = [];
+    private string? _madeKey;
+    private Timetable? _madeFrom;
+
+    /// <summary>
+    /// Room that could be made, when nothing fits: worked out only then, and again only when what was asked, the
+    /// minute or the timetable has changed (as the times are).
+    /// </summary>
+    private IReadOnlyList<RoomMade> RoomMadeFor(Timetable t, Session c)
+    {
+        if (_madeKey is not null && _madeKey == _key && ReferenceEquals(_madeFrom, t)) return _made;
+        var (from, to) = Range(c);
+        var ask = new OpeningAsk { Class = c, Spaces = SpacesAsked(t, c), From = from, To = to, DayStart = _dayStart, DayEnd = _dayEnd };
+        _made = MakeRoom.For(t, ask, W.Today, W.Clock.TimeOfDay, W.Access.Events);
+        _madeKey = _key;
+        _madeFrom = t;
+        return _made;
+    }
+
     private IEnumerable<Room> SpacesInOrder(Timetable t) => t.Rooms.Current()
         .OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer);
 
@@ -485,6 +549,29 @@ else
             return;
         }
         D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.Draft)] = Openings.Placed(c, o.Date, o.Start, space) });
+    }
+
+    /// <summary>
+    /// Room made: for a class the timetable has, both moves at once (Undo takes both back); for a class being added,
+    /// its form with the time filled in and the other class's move ticked, so saving makes both.
+    /// </summary>
+    private void TakeRoom(Session c, RoomMade r)
+    {
+        var w = r.Other.Moved;
+        if (SessionId is { } id)
+        {
+            var now = W.Clock.TimeOfDay;
+            if (W.Commit(t => Edits.MakeRoom(t, Edits.Moved(t.Sessions[id] ?? throw new EditRefused("That class has gone."), r.Placed.Date, r.Placed.Start, r.Placed.RoomId, _sayMoved),
+                    w.Id, w.Date, w.Start, w.RoomId, W.Today, now, W.Access.Events)))
+            {
+                if (PV.Started && (PV.Scale == Cccc.Web.Features.Plan.Scale.Day ? r.Placed.Date != PV.Day : Cccc.Domain.Week.MondayOf(r.Placed.Date) != PV.Monday)) PV.GoTo(r.Placed.Date);
+                PV.Chosen = id;
+                PV.Changed();
+                D.Close();
+            }
+            return;
+        }
+        D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.Draft)] = r.Placed, [nameof(SessionForm.MakingRoom)] = r.Other });
     }
 
     private void Back() => D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.Draft)] = Draft });

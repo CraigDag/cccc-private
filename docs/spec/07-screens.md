@@ -374,6 +374,14 @@ the plan is narrowed to; a student's group, for a student), Ctrl+K, and *Find a 
   late it can start, and its notes, ✓ for, ! against. A day with no time, and the days not looked in, sit
   in their place in the order, saying why. When there were more than 30, *And 4 more times after these*.
   Nothing at all says what to try: a shorter time, any space, more weeks, longer hours.
+- **Or make room**: under *Nothing fits*, up to three times when one other class is in the way, each a
+  button with its day and space, Find a time's notes as it would be, and the move that makes room
+  (*Moving Creation lab (09:00–12:00, Studio B) to 12:45–15:45, same space*) with that class's own notes.
+  For a class being added, pressing one opens the add form there with *Also move Creation lab … which
+  makes room for this* ticked: its busy spaces, busy people and warnings read the timetable as it would be
+  with the move, saving makes both, and taking the tick off saves the class alone, warning of the clash it
+  makes. At a time the other class is no longer in the way, the form says it stays where it is. From
+  **Another time…**, one press makes both moves. Either way, one Undo puts both back.
 - **Pressing a time** opens the add form filled in with it: the date, the times, the space (each
   person's part moved with the class), to look over and save.
 - **Another time…** on a class's side panel looks only in that class's week, from now, and pressing a

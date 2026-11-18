@@ -254,6 +254,33 @@ trades this clash for another.
   Scratch Week. Moving the other class is that class's own way out, offered when it is chosen; another
   day is Find a time's.
 
+## Making room (`MakeRoom`, the rebuild's own)
+
+When Find a time finds no time at all, the times when **only one other class** is in a class's way, each
+with that class moved to one of its own ways out, so that afterwards neither is in any clash. **At most
+three**, the soonest first, as Find a time lists them.
+
+- **In the way** is Find a time's own question: the class's people, groups or students elsewhere, or the
+  space asked for in use. A time counts when one class and nothing else is the cause, whatever it keeps
+  (its people, the space, or both). Never round somebody away or an event, which are not the timetable's
+  to move, and never two classes: one move is a change to look over, a chain of them is a reshuffle
+  nobody asked for.
+- **Where the other class goes** is the first of its ways out (`WaysOut`) with the class placed there,
+  put to the clash check like every way out; and the class has to be in no clash once it has gone.
+- **Each other class once**: at the first time it alone is in the way, or, when it has no way out then, at
+  the last. Those two are enough: a way out that moves it later only needs the class to start as early as
+  it can, one that moves it earlier only needs it to start as late as it can, and anything else about
+  where it goes is the same at every time between. Twelve other classes at most are looked at, each a
+  search of its day, or two.
+- **Never** before now, at the time a class already has, on a day closed for its groups or a weekend
+  nothing uses (as Find a time), or round a class that has started.
+- **Beside each**: Find a time's notes for the class as it would be once the other has gone, and the way
+  out's own notes for the other class.
+- **Making it** (`Edits.MakeRoom`) moves both in one step, which one Undo takes back. It works the way out
+  again from the timetable as it is now and refuses one no longer offered, so a change somebody else
+  made meanwhile is never walked into. The other class says it has moved once its week has begun, as
+  Find a time does.
+
 ## A week against the one before (`WeekChanges`)
 
 - A week is compared with **the last week before it with anything in it**, at most half a year back: a

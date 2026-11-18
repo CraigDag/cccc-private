@@ -818,6 +818,14 @@ ul.said li + li { margin-top: 4px; }
 .ft-gap.looked { background: transparent; border: 1px dashed var(--divider); }
 .ft-gap-days { margin-right: 4px; font-weight: 650; color: var(--text); }
 .ft-more { font-size: 13px; color: var(--text-muted); }
+/* Room that could be made, when nothing fits: each time with the one class that would move for it. */
+.ft-room { margin: 0 0 18px; }
+.ft-room h3 { margin: 0 0 4px; font-family: var(--serif); font-size: 17px; font-weight: 600; }
+.ft-room > p.muted { margin: 0 0 6px; font-size: 13px; }
+.ft-moving { margin: 6px 0 0; font-size: 13px; overflow-wrap: anywhere; }
+.make-room-note { margin: 0 0 14px; padding: 10px 12px; border-radius: 8px; background: var(--well); font-size: 14px; }
+.make-room-note p { margin: 0; }
+.make-room-note .check { align-items: flex-start; }
 @media (max-width: 560px) {
     .ft-open { grid-template-columns: minmax(0, 1fr); }
     .ft-when { justify-self: start; }

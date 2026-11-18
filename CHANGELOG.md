@@ -62,6 +62,13 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   another. One press moves the class, and Undo puts it back. Under them, the class it clashes with is
   one press away, with its own ways out. A clash in the Issues list opens the class that has not
   started yet.
+- **When nothing fits, Find a time offers to make room.** Under *Nothing fits*, up to three times when
+  just one other class is in the way, each saying where that class would go so that neither clashes with
+  anything (*Moving Creation lab (09:00–12:00, Studio B) to 12:45–15:45, same space*). Choose one for a
+  class you are adding and the add form opens there with that move ticked: saving makes both, or take the
+  tick off to add the class alone. From *Another time…*, one press moves both. Either way, one Undo puts
+  both back. It never moves round somebody who is away or an event, never moves a class that has
+  started, and never moves more than one class.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

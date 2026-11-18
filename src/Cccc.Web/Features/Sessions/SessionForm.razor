@@ -55,6 +55,24 @@ else
 {
     <DialogFrame Title="@((existing is null ? "Add a class" : "Edit " + Cccc.Web.Features.Week.Looks.Title(t, existing)) + (_scratch ? (existing is null ? " to the Scratch Week" : " in the Scratch Week") : ""))" OnOk="Save" OkEnabled="@(_why is null)" Class="wide">
         <ChildContent>
+            @if (!_scratch && MakingRoom is { } way && t.Sessions[way.Moved.Id] is { } inTheWay)
+            {
+                <div class="make-room-note" data-testid="form-make-room">
+                    @if (_roomNeeded && _roomStill)
+                    {
+                        <label class="check"><input type="checkbox" @bind="_makeRoom" @bind:after="Check" data-testid="form-make-room-tick" />
+                            <span>Also move <b>@Cccc.Web.Features.Week.Looks.Title(t, inTheWay)</b> <span class="nowrap">(@Cccc.Web.Features.Week.Looks.When(inTheWay.Start, inTheWay.End)@(Cccc.Web.Features.Week.Looks.Room(t, inTheWay) is { Length: > 0 } was ? ", " + was : ""))</span> to <span class="nowrap">@Cccc.Web.Features.Plan.WayOutWords.Where(t, inTheWay, way)</span>, which makes room for this</span></label>
+                    }
+                    else if (_roomNeeded)
+                    {
+                        <p data-testid="form-make-room-gone">@Cccc.Web.Features.Week.Looks.Title(t, inTheWay) is in the way, but moving it to @Cccc.Web.Features.Plan.WayOutWords.Where(t, inTheWay, way) no longer makes room for the class as it is now, so it stays where it is.</p>
+                    }
+                    else
+                    {
+                        <p data-testid="form-make-room-not-needed">@Cccc.Web.Features.Week.Looks.Title(t, inTheWay) is not in the way at this time, so it stays where it is.</p>
+                    }
+                </div>
+            }
             <div class="form-grid">
                 <label class="field"><span>Class</span>
                     <select @bind="ClassText" @bind:after="OnClassChosen" data-testid="session-class">
@@ -283,6 +301,12 @@ else
     /// <summary>A new class as it was, back from Find a time with the time chosen there: the form starts from it.</summary>
     [Parameter] public Session? Draft { get; set; }
 
+    /// <summary>
+    /// Room made for it in Find a time (<see cref="MakeRoom"/>): the other class in the way, as it would be moved. A
+    /// tick, on until it is taken off, moves it as the class is saved; not while the class no longer clashes with it.
+    /// </summary>
+    [Parameter] public WayOut? MakingRoom { get; set; }
+
     private sealed class Person { public Guid Id; public TimeOnly? From; public TimeOnly? Until; }
 
     /// <summary>Whether this is a class of the Scratch Week: read from its view, written back to it.</summary>
@@ -315,6 +339,18 @@ else
     private Session _base = new();
     private IReadOnlyList<Clash> _warnings = [];
     private string? _why;
+    private bool _makeRoom = true, _roomNeeded, _roomStill;
+
+    /// <summary>
+    /// The other class's move, while it is ticked, the class as it is now still clashes with it where it is, and the
+    /// move still makes room for it (<see cref="MakeRoom.Still"/>, as saving asks).
+    /// </summary>
+    private WayOut? Moving => !_scratch && _makeRoom && _roomNeeded && _roomStill ? MakingRoom : null;
+
+    /// <summary>The timetable the busy marks and the warnings read: with the class in the way moved, while that move is on.</summary>
+    private Timetable Seen => Moving is { } w && T.Sessions[w.Moved.Id] is { } o
+        ? T with { Sessions = T.Sessions.Put(Edits.Moved(o, w.Moved.Date, w.Moved.Start, w.Moved.RoomId, sayMoved: false)) }
+        : T;
 
     private string ClassText { get => _classId?.ToString() ?? ""; set => _classId = Guid.TryParse(value, out var g) ? g : null; }
     private string GroupText { get => _groupId?.ToString() ?? ""; set => _groupId = Guid.TryParse(value, out var g) ? g : null; }
@@ -365,7 +401,7 @@ else
     private IEnumerable<Room> SpacesInOrder() => T.Rooms.Where(r => !r.IsFormer() || r.Id == _roomId)
         .OrderBy(r => r.Category is null).ThenBy(r => r.Category, NameOrder.Comparer).ThenBy(r => r.Name, NameOrder.Comparer);
 
-    private IReadOnlyDictionary<Guid, Occurrence> BusyRooms() => Spaces.InUse(T, _date, _start, _end, except: _id);
+    private IReadOnlyDictionary<Guid, Occurrence> BusyRooms() => Spaces.InUse(Seen, _date, _start, _end, except: _id);
 
     /// <summary>The spaces an event has then, as Find a time counts them. The Scratch Week has no events.</summary>
     private IReadOnlyDictionary<Guid, EventOnDay> BookedRooms() =>
@@ -386,7 +422,7 @@ else
     {
         if (until <= from) return null;
         if (Occurrences.IsAway(T, id, _date, from, until)) return "away then";
-        return Teaching.At(T, _date, from, until, except: _id).TryGetValue(id, out var o)
+        return Teaching.At(Seen, _date, from, until, except: _id).TryGetValue(id, out var o)
             ? $"teaching {Cccc.Web.Features.Week.Looks.Title(T, o.Session)} {Hm(o.Start)}–{Hm(o.End)}"
             : null;
     }
@@ -464,7 +500,11 @@ else
             : p.Audience.Kind == AudienceKind.Groups && p.Audience.GroupIds.Count == 0 ? "Tick at least one group."
             : p.Audience.Kind == AudienceKind.Programme && p.Audience.ProgrammeId is null ? "Choose the programme it is for."
             : null;
-        _warnings = _why is null ? Clashes.CausedBy(T, TimeWindows.Normalise(p)) : [];
+        _roomNeeded = !_scratch && MakingRoom is { } w && T.Sessions[w.Moved.Id] is { } o
+            && Clashes.CausedBy(T, TimeWindows.Normalise(p)).Any(c => c.SessionIds.Contains(o.Id));
+        _roomStill = _roomNeeded && _why is null && MakingRoom is { Moved: var m }
+            && MakeRoom.Still(T, TimeWindows.Normalise(p), m.Id, m.Date, m.Start, m.RoomId, W.Today, W.Clock.TimeOfDay, W.Access.Events) is not null;
+        _warnings = _why is null ? Clashes.CausedBy(Seen, TimeWindows.Normalise(p)) : [];
     }
 
     private void Save()
@@ -475,7 +515,11 @@ else
         bool isNew = _original is null;
         bool changedUnderneath = !isNew && T.Sessions[_id] is { } now && System.Text.Json.JsonSerializer.Serialize(now, ModelJson.Options) != _original;
         var label = (isNew ? "Added " : "Changed ") + Cccc.Web.Features.Week.Looks.Title(T, p) + " on " + Cccc.Domain.Week.ShortDate(p.Date);
-        if (W.Commit(Written(t => Edits.PutSession(t, p, label))))
+        var clock = W.Clock.TimeOfDay;
+        Func<Timetable, Batch> edit = Moving is { } w
+            ? t => Edits.MakeRoom(t, p, w.Moved.Id, w.Moved.Date, w.Moved.Start, w.Moved.RoomId, W.Today, clock, W.Access.Events)
+            : t => Edits.PutSession(t, p, label);
+        if (W.Commit(Written(edit)))
         {
             if (changedUnderneath) W.Warn("Somebody else changed this class while it was open here; yours is the version kept. Undo puts theirs back.");
             // The plan follows what was just saved, and shows it chosen, so it is plain where it went: from the

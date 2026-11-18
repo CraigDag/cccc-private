@@ -94,13 +94,12 @@ public static class Openings
         for (var day = ask.From < today ? today : ask.From; day <= to; day = day.AddDays(1))
         {
             if (Week.IsScratch(day)) continue;
-            if ((Closed(t, day, named) ?? (t.SessionsInWeek(day).Any() ? null : NothingYet)) is { } why)
+            if (NotLookedIn(t, day, named) is { } why)
             {
                 Note(notSearched, day, why);
                 continue;
             }
-            // A weekend is looked in only when the school uses it: when the timetable has a class that day.
-            if (day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday && !t.Sessions.Any(s => s.Date == day)) continue;
+            if (UnusedWeekend(t, day)) continue;
 
             var occurrences = Occurrences.Between(t, day, day);
             var events = EventSchedule.On(t, day);
@@ -156,6 +155,21 @@ public static class Openings
         }
         return new(found, more, notSearched, noTime);
     }
+
+    /// <summary>Whether Find a time looks in a day at all for a class naming these groups: a real day, open, in a week with anything in it.</summary>
+    internal static bool LooksIn(Timetable t, DateOnly day, IReadOnlyList<Guid> named) =>
+        !Week.IsScratch(day) && NotLookedIn(t, day, named) is null && !UnusedWeekend(t, day);
+
+    /// <summary>Why a day is not looked in, said for it: a closure, or a week not filled yet.</summary>
+    private static string? NotLookedIn(Timetable t, DateOnly day, IReadOnlyList<Guid> named) =>
+        Closed(t, day, named) ?? (t.SessionsInWeek(day).Any() ? null : NothingYet);
+
+    /// <summary>A weekend is looked in only when the school uses it: when the timetable has a class that day.</summary>
+    private static bool UnusedWeekend(Timetable t, DateOnly day) =>
+        day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday && !t.Sessions.Any(s => s.Date == day);
+
+    /// <summary>The groups a class names, in the order to say them: none for a whole-building class.</summary>
+    internal static IReadOnlyList<Guid> Named(Timetable t, Session c) => GroupsOf(t, c).Named;
 
     /// <summary>The notes Find a time puts beside a time, for the class as placed there: what being there would mean.</summary>
     public static IReadOnlyList<OpeningNote> NotesAt(Timetable t, Session placed, EventViewer viewer)
@@ -262,10 +276,10 @@ public static class Openings
 
     private static string Title(SchoolEvent e) => e.Title.Trim() is { Length: > 0 } title ? title : "An event";
 
-    private static int Minutes(TimeOnly t) => t.Hour * 60 + t.Minute;
+    internal static int Minutes(TimeOnly t) => t.Hour * 60 + t.Minute;
 
     /// <summary>Up to the next quarter hour, or the same one when it is on one.</summary>
-    private static int Up(int m) => (m + StepMinutes - 1) / StepMinutes * StepMinutes;
+    internal static int Up(int m) => (m + StepMinutes - 1) / StepMinutes * StepMinutes;
 
-    private static TimeOnly At(int m) => m >= 24 * 60 ? new TimeOnly(23, 59) : new TimeOnly(m / 60, m % 60);
+    internal static TimeOnly At(int m) => m >= 24 * 60 ? new TimeOnly(23, 59) : new TimeOnly(m / 60, m % 60);
 }
