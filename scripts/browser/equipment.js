@@ -244,9 +244,13 @@ const LACKING = ['Gym: without Rigging points', 'Studio A: without Crash mats an
     await admin.waitForSelector('[data-testid=find]');
     await admin.waitForFunction(() => document.activeElement?.getAttribute('data-testid') === 'find-input');
     await admin.keyboard.type('rigging');
-    await admin.waitForFunction(() => [...document.querySelectorAll('[data-testid=find-hit] .find-label')].some(l => l.textContent.trim() === 'Big Top'));
-    const hits = await admin.$$eval('[data-testid=find-hit]', hs => hs.map(h => h.querySelector('.find-label').textContent.trim() + ' — ' + h.querySelector('small').textContent.trim()));
-    eq(hits, ['Aerial Hall — Hall · has Rigging points', 'Big Top — Hall · has Rigging points'], 'what Find offers');
+    // Each letter is a round trip, and "ri" already lists the Big Top by what it has, so the list is waited for whole:
+    // anything short of the word lists Ada Brightwater, or more.
+    const want = ['Aerial Hall — Hall · has Rigging points', 'Big Top — Hall · has Rigging points'];
+    const read = () => admin.$$eval('[data-testid=find-hit]', hs => hs.map(h => h.querySelector('.find-label').textContent.trim() + ' — ' + h.querySelector('small').textContent.trim()));
+    await admin.waitForFunction(want => JSON.stringify([...document.querySelectorAll('[data-testid=find-hit]')]
+      .map(h => h.querySelector('.find-label').textContent.trim() + ' — ' + h.querySelector('small').textContent.trim())) === JSON.stringify(want), want, { timeout: 8000 })
+      .catch(async () => { throw new Error(`what Find offers for "${await admin.inputValue('[data-testid=find-input]')}": ${JSON.stringify(await read())}, not ${JSON.stringify(want)}`); });
     await admin.keyboard.press('Escape');
     await admin.waitForSelector('[data-testid=find]', { state: 'detached' });
   });
