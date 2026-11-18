@@ -364,6 +364,13 @@ what it is kept for and offers *Bring back* in place of Delete. A class's form a
 before OK says *Merge*. A picker keeps a former one only where it is the value already chosen, marked
 *(former)*.
 
+**Public holidays…** beside *Add a closure…* in People & places ▸ Semesters (`Data/HolidaysForm`, and
+*easter*, *holidays* or *helligdage* in Ctrl+K for an administrator, never before anything is typed, being
+once a year) lists what `PublicHolidays.For` offers from today: each closure's name, its days (*Thu 25 Mar
+– Mon 29 Mar*), the holidays in it when there are several, and why one is not ticked (*closed already:
+Easter break*, *not a public holiday, but many places close*). OK says how many it adds (*Add 8
+closures*) and is one change named for them (*Closed 8 public holidays*), so one Undo takes them all.
+
 **A figure of a facilitator's hours opens the lines that make it** (`Reports/HoursLines`): a week's
 figure or the total on Reports ▸ Facilitator hours, *21h 30m this week* under a facilitator's name when
 the plan is narrowed to them, and *How it adds up* on My week. The drawer lists every class and time
@@ -395,7 +402,8 @@ and curriculum number.
 **Start next year…** is on every timetable in Administration ▸ Projects (`Admin/NextYearForm`). The
 form is the list, not the button: each semester's week number this year and next (the same, and a line
 saying so when a semester moves 53 weeks to keep it), what carries over, what stays with this year, the
-closures as a tick left off, and the groups arriving as they are. *Make next year* puts the new year in
+closures as a tick left off, next year's own public holidays as a tick left on (listed with their days next
+year), and the groups arriving as they are. *Make next year* puts the new year in
 the list beside this one, which stays open for everybody until somebody opens the new one ([`03`](03-the-rules.md)),
 and a line above the list offers to look at it.
 

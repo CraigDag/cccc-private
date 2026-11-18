@@ -75,6 +75,7 @@ else
         case "semesters":
             <AddBar Kind="k" OnAdd="() => Show<SemesterForm>(null)">
                 <button type="button" class="btn" @onclick="() => Show<ClosureForm>(null)">Add a closure…</button>
+                <button type="button" class="btn" @onclick="() => D.Show<HolidaysForm>()" data-testid="close-holidays">Public holidays…</button>
             </AddBar>
             <h2>Semesters</h2>
             <Rows Items="@Filter(t.Semesters.OrderBy(s => s.FirstMonday).Select(s => Row.Of(s.Id, s.Name, null, $"{DomainWeek.ShortDate(s.FirstMonday)} – {DomainWeek.ShortDate(s.LastMonday.AddDays(6))}, {Looks.Count(s.WeekCount, "week")}")), sorted: false)" OnOpen="id => Show<SemesterForm>(id)" />

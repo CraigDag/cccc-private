@@ -119,6 +119,8 @@ public static class FindIndex
             actions.Add(new FindHit("go-reports", "Reports", "Hours and attendance", null, null));
         }
         if (q.Length == 0) return actions;
+        // Once a year, so found only when asked for: by "holiday", "Easter", "Christmas" or the Danish "helligdage", through its detail.
+        if (admin) actions.Add(new FindHit("close-holidays", "Close the public holidays", "Denmark's helligdage this school year · Easter, Ascension, Whitsun, Christmas", null, null));
         // An action is found by its own words, and then by where it lives ("Plan ▸ Term"), after every name found.
         foreach (var a in actions)
         {

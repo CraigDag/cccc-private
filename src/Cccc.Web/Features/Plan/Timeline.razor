@@ -37,7 +37,7 @@
     </div>
     @if (closure is not null)
     {
-        <div class="tl-closed">The building is closed: @closure.Name</div>
+        <div class="tl-closed" data-testid="day-closed">The building is closed: @closure.Name</div>
     }
     @if (dayEvents.Count > 0 && !M.RowsAreDays)
     {

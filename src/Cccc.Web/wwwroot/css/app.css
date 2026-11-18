@@ -1212,6 +1212,13 @@ ul.said li + li { margin-top: 4px; }
 .ny-check { align-items: flex-start; margin-top: 14px; }
 .ny-check input { margin-top: 3px; }
 .ny-check small { display: block; margin-top: 2px; }
+/* Close the public holidays (HolidaysForm): a row a closure, its days and why it is not ticked under its name. */
+.holidays { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 12px; }
+.check.holiday { align-items: flex-start; margin: 0; padding: 8px 10px; border: 1px solid var(--divider); border-radius: 8px; background: var(--board); }
+.check.holiday input { margin-top: 3px; flex: none; }
+.check.holiday > span { display: flex; flex-direction: column; min-width: 0; }
+.check.holiday small { color: var(--text-muted); overflow-wrap: anywhere; }
+.check.holiday[data-official="no"] b, .check.holiday[data-closed="yes"] b { font-weight: 500; }
 
 /* ---- The roll call (/roll-call) ----------------------------------------------------------------
    A fire drill or an evacuation, ticked on a phone at the assembly point: a name a big target, the space

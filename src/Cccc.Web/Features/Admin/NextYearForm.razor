@@ -81,6 +81,12 @@ else
                 <span>Keep the @Looks.Count(plan.Closures, "closure"), each moved with its semester
                     <small class="muted">Week-numbered ones such as the autumn break land in the same week; Christmas and Easter do not, so check every one. Left off, next year starts with none.</small></span></label>
         }
+        @if (plan.Holidays.Count > 0)
+        {
+            <label class="check ny-check"><input type="checkbox" @bind="_holidays" data-testid="next-year-holidays" />
+                <span>Close next year's public holidays on its school days
+                    <small class="muted" data-testid="next-year-holiday-list">@Cccc.Web.Features.Data.HolidayWords.Listed(plan.Holidays). Each on its own day next year; one a kept closure closes already is not closed twice.</small></span></label>
+        }
         <p class="notice" data-testid="next-year-groups">The groups arrive as they are: nothing here can know who has graduated. If a cohort has finished, remove it in People &amp; places ▸ Groups and add the new intake.</p>
     </DialogFrame>
 }
@@ -92,6 +98,7 @@ else
 
     private string _name = "";
     private bool _closures;
+    private bool _holidays = true;
 
     protected override void OnInitialized() => _name = NextYear.SuggestName(Store.Find(ProjectId)?.Name ?? "");
 
@@ -115,7 +122,7 @@ else
         try
         {
             var name = _name.Trim();
-            var next = NextYear.Make(Live.Get(ProjectId).State, name, _closures);
+            var next = NextYear.Make(Live.Get(ProjectId).State, name, _closures, _holidays && NextYear.For(Live.Get(ProjectId).State)?.Holidays.Count > 0);
             var id = Store.Create(name, next, W.Access.By, W.Clock.Now);
             D.Close();
             // The list says it with the way to look at it; said here only when nothing else will.

@@ -1,0 +1,57 @@
+@* Denmark's public holidays still ahead on this year's school days, each a closure for the whole building, in
+   one press (PublicHolidays). Ticked to start with: every public holiday not closed already. A day many places
+   close beside them (Christmas Eve, the Friday after Ascension) is offered and not ticked. One Undo takes them all. *@
+@inject Dialogs D
+<DialogFrame Title="Close the public holidays" OnOk="Add" OkLabel="@HolidayWords.Adds(_ticked.Count)" OkEnabled="@(_ticked.Count > 0)">
+    @if (_list.Count == 0)
+    {
+        <p data-testid="holidays-none">@(W.T.Semesters.Count == 0
+            ? "This timetable has no semesters yet, so it has no school days to close. Add the semesters first."
+            : "No public holiday still ahead falls on a school day in this timetable's semesters.")</p>
+    }
+    else
+    {
+        <p class="hint">Denmark's public holidays from today to the end of this timetable's semesters, on a school day: Monday to Friday, or a weekend day with a class on it. Each becomes a closure for the whole building; days only a weekend parts are one, so Easter is Thursday to Monday.</p>
+        <div class="holidays" data-testid="holidays">
+            @for (int i = 0; i < _list.Count; i++)
+            {
+                var h = _list[i];
+                int at = i;
+                <label class="check holiday" data-testid="holiday" data-official="@(h.Official ? "yes" : "no")" data-closed="@(h.AlreadyClosed ? "yes" : "no")" data-from="@h.From.ToString("yyyy-MM-dd")">
+                    <input type="checkbox" checked="@_ticked.Contains(at)" @onchange="e => Tick(at, e.Value is true)" />
+                    <span><b data-testid="holiday-name">@h.Name</b><small data-testid="holiday-line">@HolidayWords.Line(h)</small></span>
+                </label>
+            }
+        </div>
+        <p class="hint">A closed class stays on the week, marked closed. It needs no cover and no register, and nobody's hours count it.</p>
+    }
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    private IReadOnlyList<HolidayClosure> _list = [];
+    private readonly HashSet<int> _ticked = [];
+
+    protected override void OnInitialized()
+    {
+        _list = PublicHolidays.For(W.T, W.Today);
+        for (int i = 0; i < _list.Count; i++)
+            if (_list[i].Official && !_list[i].AlreadyClosed) _ticked.Add(i);
+    }
+
+    private void Tick(int at, bool on)
+    {
+        if (on) _ticked.Add(at); else _ticked.Remove(at);
+    }
+
+    private void Add()
+    {
+        var chosen = _ticked.Order().Select(i => _list[i]).ToList();
+        if (chosen.Count == 0) return;
+        if (W.Commit(t =>
+        {
+            var draft = new DraftOf(t);
+            foreach (var h in chosen) draft.Put(Collections.Closures, h.ToClosure(Guid.NewGuid()));
+            return draft.ToBatch(HolidayWords.Done(chosen));
+        })) D.Close();
+    }
+}

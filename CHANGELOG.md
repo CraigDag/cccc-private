@@ -301,6 +301,16 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   every other week, this year's events and absences). Closures are a tick, off by default. **Every
   semester starts in the same week number next year**: the current app moves everything 52 weeks on,
   which after 2026 (a year with a week 53) would start next autumn a week early.
+- **Close the public holidays in one press.** *Public holidays…* in People & places ▸ Semesters (or
+  typing *easter* or *holidays* into Ctrl+K) lists Denmark's public holidays still ahead that fall on a
+  school day in the semesters: Christmas, New Year's Day, Easter, Ascension, Whit Monday, each with its
+  days. Easter is one closure from Maundy Thursday to Easter Monday, unless a class is on that weekend.
+  Every public holiday is ticked to start with; the days many places close beside them (Christmas Eve,
+  New Year's Eve, the Friday after Ascension, Constitution Day) are offered and left for you to tick.
+  OK closes the ticked for the whole building, and one Undo takes them all back. One a closure covers
+  already says so and is not ticked again. **Start next year** now closes next year's own public
+  holidays as well, on their own days, ticked to begin with: a closure carried over by week number puts
+  Easter in the wrong week, because Easter moves.
 - **Look at a timetable without opening it for everybody**: *Look at it* in Administration ▸ Projects
   opens next year's, or a file just brought in, in your own tab, while everybody else stays on the
   timetable open for everybody. A band across every page says which one you are looking at and which

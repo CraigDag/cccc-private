@@ -568,6 +568,35 @@ tick, off by default**: kept,
 each moves with its semester, so week-numbered ones land right and Christmas and Easter do not.
 `NextYear.For` is the plan the form shows and `Make` carries it out, so the two cannot describe
 different years, and a test fails when a collection is added to the timetable without a decision here.
+**Next year's own public holidays are the other tick, on by default**: each official one on next year's
+school days becomes a whole-building closure on its own day (`PublicHolidays.For` on the new year), one a
+kept closure covers already not twice, because a closure kept by week number lands Easter in the wrong week.
+
+## Public holidays (`PublicHolidays`)
+
+The rebuild's own: Denmark's public holidays (helligdage), offered as closures in one press, because
+three of them move with Easter every year and a school entering them by hand gets one wrong.
+
+- **The days** (`PublicHolidays.Denmark`): New Year's Day, Maundy Thursday, Good Friday, Easter Sunday
+  and Monday, Ascension (39 days after Easter), Whit Sunday and Monday (49 and 50), Christmas Day and
+  Boxing Day; Great Prayer Day too until 2023, when it stopped being one. Easter is the Gregorian
+  computus (`EasterSunday`). Beside them, **the days many places close that are not public holidays**:
+  Christmas Eve, New Year's Eve, Constitution Day and the Friday after Ascension, offered and never ticked
+  to start with, nor closed by Start next year.
+- **What is offered** (`PublicHolidays.For`): each one inside a semester, **from today on**, that falls
+  on a school day: Monday to Friday, or a weekend day with a class on it, as Find a time counts them.
+  One that has passed is not offered, since a closure there would say a day that ran was closed. Where
+  two fall on one date (Whit Monday on Constitution Day), the public holiday is the one offered.
+- **Public holidays that only a weekend with nothing on parts are one closure**, named by their season,
+  so Easter is *Easter (Påske)* from Maundy Thursday to Easter Monday, and two closures when a class is on
+  that weekend. The weeks between two semesters always part them, so a closure never spans a break. A day
+  that is not a public holiday is always a closure of its own, so it can be left off.
+- **Each says the whole-building closure that covers every one of its days already** (the first by its
+  start), and is then offered unticked. A closure for some groups closes the building for nobody else, so
+  it never counts, and two closures between them covering every day do.
+- **It closes nothing by itself**: the form adds what is ticked, as whole-building closures in one change
+  named for what it closed, and bounds advise: a closure is a closure like any other, changed or deleted
+  in Semesters.
 
 ## Drawing the week (`WeekLanes`, `the-week-calendar.md`)
 

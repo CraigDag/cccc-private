@@ -149,6 +149,7 @@
             case "go-data": Nav.NavigateTo("data"); break;
             case "go-reports": Nav.NavigateTo("reports"); break;
             case "roll-call": Nav.NavigateTo("roll-call"); break;
+            case "close-holidays": D.Show<Cccc.Web.Features.Data.HolidaysForm>(); break;
             case "add-class":
                 D.Show<SessionForm>(new Dictionary<string, object?> { [nameof(SessionForm.Date)] = V.Day }); break;
             case "add-event":

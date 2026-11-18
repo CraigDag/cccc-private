@@ -26,6 +26,8 @@ namespace Cccc.Domain.Editing;
 /// already booked for September is not lost, and so does asking to be away; offers to cover are for this
 /// year's classes, so none carries over. Closures are a choice, off by default: week-numbered ones
 /// land right, but Christmas and Easter do not, and a wrong closure shuts the building on a day it is open.
+/// Next year's own public holidays (<see cref="PublicHolidays"/>) are the other choice, on by default in the
+/// form: each lands on its day next year, whatever this year's closures were.
 /// </summary>
 public static class NextYear
 {
@@ -50,7 +52,8 @@ public static class NextYear
         int EventsKept,
         int EventsDropped,
         int Closures,
-        int ScratchClasses)
+        int ScratchClasses,
+        IReadOnlyList<HolidayClosure> Holidays)
     {
         /// <summary>Next year's first Monday: the earliest of the semesters, moved.</summary>
         public DateOnly Starts => Semesters.Min(m => m.To.FirstMonday);
@@ -89,17 +92,26 @@ public static class NextYear
         int classes = first is { } f ? t.SessionsInWeek(f).Count() : 0;
         int keptAbsences = t.Absences.Count(a => Carried(t, a, starts));
         int keptEvents = t.Events.Count(e => EventSchedule.LastDay(e) >= starts);
+        // Next year's public holidays on its school days, as they would be with none of this year's closures kept.
+        var holidays = PublicHolidays.For(t with
+        {
+            Semesters = EntitySet<Semester>.Of(moves.Select(m => m.To)),
+            Sessions = EntitySet<Session>.Empty,
+            Closures = EntitySet<Closure>.Empty,
+        }, starts).Where(h => h.Official).ToList();
         return new Plan(moves, first, first is { } w ? w.AddDays(ShiftDays(moves, w)) : null,
             classes, t.Sessions.Count - classes, t.Registers.Count,
             keptAbsences, t.Absences.Count - keptAbsences, keptEvents, t.Events.Count - keptEvents,
-            t.Closures.Count, t.Scratch.Count);
+            t.Closures.Count, t.Scratch.Count, holidays);
     }
 
     /// <summary>
     /// Next year, as a new timetable called <paramref name="name"/>. Refuses a timetable with no semesters,
-    /// which the form says rather than offering the button.
+    /// which the form says rather than offering the button. With <paramref name="closeHolidays"/>, next year's
+    /// public holidays on its school days are closed for the whole building, each that a kept closure does not
+    /// close already.
     /// </summary>
-    public static Timetable Make(Timetable t, string name, bool keepClosures)
+    public static Timetable Make(Timetable t, string name, bool keepClosures, bool closeHolidays = false)
     {
         var plan = For(t) ?? throw new EditRefused("This timetable has no semesters, so it has no year to roll forward. Add one in People & places ▸ Semesters first.");
         var starts = plan.Starts;
@@ -130,6 +142,12 @@ public static class NextYear
             Offers = EntitySet<CoverOffer>.Empty,
             SpaceAsks = EntitySet<SpaceAsk>.Of(t.SpaceAsks.Where(a => a.Answer is null && a.Date >= starts && t.Facilitators[a.FacilitatorId] is { FormerSince: null })),
         };
+        if (closeHolidays)
+            next = next with
+            {
+                Closures = EntitySet<Closure>.Of(next.Closures.Concat(PublicHolidays.For(next, starts)
+                    .Where(h => h.Official && !h.AlreadyClosed).Select(h => h.ToClosure(Guid.NewGuid())))),
+            };
         return t.Classes.Any(c => c.IsFormer()) || t.Rooms.Any(r => r.IsFormer()) || t.Facilitators.Any(f => f.IsFormer())
             ? LeaveFormerBehind(t, next) : next;
     }
