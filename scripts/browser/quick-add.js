@@ -104,7 +104,7 @@ const form = page => page.evaluate(() => {
   await step('a class and a time typed into Ctrl+K come first, saying what would be added and where the rest came from', async () => {
     const found = await find(admin, `aerial ${typed(blankFriday)} 13`, aerial);
     eq(found[0], `${aerial} — BA 1 · Aerial Hall · Dag Øverlie · the rest as on ${said(nextFriday)}`, 'the line');
-    if (!(await admin.textContent('.find-foot')).includes('type a class and a time to add it')) throw new Error('the foot does not say a class can be typed in');
+    if (!(await admin.textContent('.find-foot')).includes('“aerial fri 13” to add a class')) throw new Error('the foot does not say a class can be typed in');
     await admin.screenshot({ path: OUT + 'quick-add-find.png' });
   });
 
@@ -195,7 +195,7 @@ const form = page => page.evaluate(() => {
     await coach.keyboard.type(`aerial ${typed(blankFriday)} 13`);
     await coach.waitForSelector('[data-testid=find] .find-none');
     if ((await hits(coach)).some(h => h.startsWith('Add '))) throw new Error('a coach is offered to add');
-    if ((await coach.textContent('.find-foot')).includes('type a class')) throw new Error('the foot tells a coach to type a class');
+    if ((await coach.textContent('.find-foot')).includes('to add a class')) throw new Error('the foot tells a coach to type a class');
     await coach.context().close();
   });
 

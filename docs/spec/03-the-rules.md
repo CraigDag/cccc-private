@@ -195,6 +195,30 @@ day by it, so the times listed and the picture cannot disagree.
 - The class itself never stands in its own way, and a cancelled or closed class keeps nobody busy.
 - Being busy is information, never a refusal: bounds advise, never refuse.
 
+## Who and what is free (`Free`, the rebuild's own)
+
+`Busy` asked about a time instead of on behalf of a class: what keeps a space, a facilitator, a group or
+a student from any part of a day. A question typed into Find asks it, so the answer cannot disagree with
+Find a time or the plan's shading.
+
+- **A space**: a class in it, and any event in it whoever may read the event; one the reader may not see
+  is only *booked*.
+- **A facilitator**: a class they are in the room for, teaching or covering, for their part of it;
+  recorded away; an event the reader may see that names them.
+- **A group**: a class on for it, lunch included and an open session aside; another class some of its
+  students are on, counted and never named; an event the reader may see that names some of them.
+- **A student**: a class they are on (`Roster`), an open session aside; recorded away, for the times
+  given or the whole day; an event the reader may see that names them.
+- **Free over a time** (`Free.Over`) when nothing overlaps it, and then free since whatever ends before
+  it and until whatever starts after it, which is said. A class ending as the time starts is not in the
+  way, so a moment is the minute starting then (`Free.Moment`).
+- **A day's free stretches** (`Free.Stretches`), in order; none when something takes all of it.
+- **Nothing is said about a day nobody can know** (`Free.Unknowable`, Find a time's own reasons): closed,
+  closed for the group asked about (a student's own group too), or a week with nothing in it yet, where
+  everybody would look free.
+- Being free says nothing about whether a time is allowed, and outside somebody's own hours is said
+  beside them, never left out: bounds advise, never refuse.
+
 ## Finding a time (`Openings`)
 
 WHO is in what SPACE and WHEN, asked the other way round. Given a class as it would be (who teaches it,

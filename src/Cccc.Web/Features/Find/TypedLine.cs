@@ -50,10 +50,11 @@ internal static partial class TypedLine
 
     /// <summary>
     /// What a line can name, current ones only: classes, groups, programmes, spaces and facilitators, and
-    /// students when asked. The order is which kind a name two kinds share goes to: a group before a programme.
-    /// A student and a facilitator share one, so a first name they both have is neither until it is said whole.
+    /// students and what a space has when asked. The order is which kind a name two kinds share goes to: a group
+    /// before a programme. A student and a facilitator share one, so a first name they both have is neither until
+    /// it is said whole.
     /// </summary>
-    internal static List<Named> Names(Timetable t, bool students = false)
+    internal static List<Named> Names(Timetable t, bool students = false, bool equipment = false)
     {
         var list = new List<Named>();
         void Add(string kind, Guid id, string name, int order, bool firstName = false)
@@ -71,15 +72,17 @@ internal static partial class TypedLine
         foreach (var r in t.Rooms.Current()) Add("room", r.Id, r.Name, 3);
         foreach (var f in t.Facilitators.Current()) Add("facilitator", f.Id, f.Name, 4, firstName: true);
         if (students) foreach (var s in t.Students) Add("student", s.Id, s.Name, 4, firstName: true);
+        if (equipment) foreach (var e in t.Equipment) Add("equipment", e.Id, e.Name, 5);
         return list;
     }
 
     /// <summary>
     /// Every name said whole, longest first, before anything else: "BA 1" is a group before "1" can be an hour,
     /// and "aerial hall" a space before "aerial" can be a class. Two kinds of one name go to the nearer kind;
-    /// two of one kind are neither, and said in <paramref name="unclear"/>.
+    /// two of one kind are neither, and said in <paramref name="unclear"/>, each of them in
+    /// <paramref name="ambiguous"/> for a reader that can answer about both.
     /// </summary>
-    internal static List<Named> Whole(List<Word> words, List<Named> names, List<string> unclear)
+    internal static List<Named> Whole(List<Word> words, List<Named> names, List<string> unclear, List<Named>? ambiguous = null)
     {
         var found = new List<Named>();
         for (int i = 0; i < words.Count; i++)
@@ -94,6 +97,7 @@ internal static partial class TypedLine
             if (chosen.Count > 1)
             {
                 unclear.Add(Unclear(words[i].Raw, chosen));
+                ambiguous?.AddRange(chosen);
                 words[i].Used = true;
                 continue;
             }
@@ -106,9 +110,10 @@ internal static partial class TypedLine
 
     /// <summary>
     /// The start of one name and of no other: "acro", "lindq". Three letters at least, as two say too little;
-    /// the start of two names is neither, and said in <paramref name="unclear"/>.
+    /// the start of two names is neither, and said in <paramref name="unclear"/>, each of them in
+    /// <paramref name="ambiguous"/> for a reader that can answer about both.
     /// </summary>
-    internal static List<Named> Starts(List<Word> words, List<Named> names, List<string> unclear)
+    internal static List<Named> Starts(List<Word> words, List<Named> names, List<string> unclear, List<Named>? ambiguous = null)
     {
         var found = new List<Named>();
         var cmp = NameOrder.Culture.CompareInfo;
@@ -118,7 +123,7 @@ internal static partial class TypedLine
             var starts = names.Where(n => n.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(part => cmp.IsPrefix(part, w.Raw, o)))
                 .DistinctBy(n => n.Id).ToList();
             if (starts.Count == 1) { found.Add(starts[0]); w.Used = true; }
-            else if (starts.Count > 1) { unclear.Add(Unclear(w.Raw, starts)); w.Used = true; }
+            else if (starts.Count > 1) { unclear.Add(Unclear(w.Raw, starts)); ambiguous?.AddRange(starts); w.Used = true; }
         }
         return found;
     }
@@ -230,7 +235,8 @@ internal static partial class TypedLine
 
     /// <summary>
     /// A date said at word <paramref name="i"/>, marking the words it took: "4/12", "4.12", "2026-12-04",
-    /// "27 nov", "nov 27th", "today", "tomorrow", "yesterday", "next fri", "fri".
+    /// "27 nov", "nov 27th", "today", "tomorrow", "yesterday", "next fri", "fri", and a day name before its own
+    /// date, "fri 4/12", which says the day twice. A day name before another day's date is two days, as it says.
     /// </summary>
     /// <remarks>
     /// With <paramref name="onOrAfter"/>, a day name is the first such day on or after it: "mon to wed" said on a
@@ -243,9 +249,9 @@ internal static partial class TypedLine
         var next = Next(words, i);
         DateOnly? d = null;
         int taken = 1;
-        if (DateIn(w.Raw, today) is { } a) d = a;
-        else if (next is not null && DayOfMonth(w.Raw) is { } dm && MonthOf(next.Raw) is { } mo && Dated(dm, mo, null, today) is { } b) { d = b; taken = 2; }
-        else if (next is not null && MonthOf(w.Raw) is { } mo2 && DayOfMonth(next.Raw) is { } dm2 && Dated(dm2, mo2, null, today) is { } c) { d = c; taken = 2; }
+        if (Written(words, i, today) is { } written) (d, taken) = written;
+        else if (next is not null && DayOf(w.Raw) is { } named && Written(words, i + 1, today) is { } after && after.Date.DayOfWeek == named)
+        { d = after.Date; taken = 1 + after.Taken; }
         else if (w.Is("today")) d = today;
         else if (w.Is("tomorrow")) d = today.AddDays(1);
         else if (w.Is("yesterday")) d = today.AddDays(-1);
@@ -254,6 +260,17 @@ internal static partial class TypedLine
         if (d is null) return null;
         for (int j = 0; j < taken; j++) words[i + j].Used = true;
         return d;
+    }
+
+    /// <summary>A date written out at word <paramref name="i"/>, and how many words it took: "4/12", "4.12", "27 nov", "nov 27th".</summary>
+    private static (DateOnly Date, int Taken)? Written(List<Word> words, int i, DateOnly today)
+    {
+        var w = words[i];
+        var next = Next(words, i);
+        if (DateIn(w.Raw, today) is { } a) return (a, 1);
+        if (next is not null && DayOfMonth(w.Raw) is { } dm && MonthOf(next.Raw) is { } mo && Dated(dm, mo, null, today) is { } b) return (b, 2);
+        if (next is not null && MonthOf(w.Raw) is { } mo2 && DayOfMonth(next.Raw) is { } dm2 && Dated(dm2, mo2, null, today) is { } c) return (c, 2);
+        return null;
     }
 
     private static DayOfWeek? DayOf(string raw)

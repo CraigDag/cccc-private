@@ -7,7 +7,7 @@ public enum BusyKind
 {
     /// <summary>One of its facilitators in another class's room, teaching it or covering it, for their part of it.</summary>
     Teaching,
-    /// <summary>One of its facilitators recorded away: for the times given, or the whole day.</summary>
+    /// <summary>One of its facilitators recorded away: for the times given, or the whole day. Asked who is free (<see cref="Free"/>), the student asked about too.</summary>
     Away,
     /// <summary>An event the reader may see that names one of its facilitators, or some of its students.</summary>
     Event,

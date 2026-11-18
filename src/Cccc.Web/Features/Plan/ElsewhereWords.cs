@@ -82,7 +82,7 @@ public static class ElsewhereWords
 
     private static string What(Timetable t, BusyStretch b) =>
         b.Class is { } o ? Looks.Title(t, o.Session)
-        : b.Event is { } e ? (e.Title.Trim() is { Length: > 0 } title ? title : "An event")
+        : b.Event is { } e ? EventSchedule.Title(e)
         : b.Kind == BusyKind.Away ? "Away"
         : "Booked";
 

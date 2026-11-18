@@ -176,8 +176,11 @@ public static class Openings
     internal static bool LooksIn(Timetable t, DateOnly day, IReadOnlyList<Guid> named) =>
         !Week.IsScratch(day) && NotLookedIn(t, day, named) is null && !UnusedWeekend(t, day);
 
-    /// <summary>Why a day is not looked in, said for it: a closure, or a week not filled yet.</summary>
-    private static string? NotLookedIn(Timetable t, DateOnly day, IReadOnlyList<Guid> named) =>
+    /// <summary>
+    /// Why a day is not looked in, said for it: a closure, for everybody or for one of <paramref name="named"/>,
+    /// or a week not filled yet. <see cref="Free.Unknowable"/> says the same about a day asked who is free on.
+    /// </summary>
+    internal static string? NotLookedIn(Timetable t, DateOnly day, IReadOnlyList<Guid> named) =>
         Closed(t, day, named) ?? (t.SessionsInWeek(day).Any() ? null : NothingYet);
 
     /// <summary>A weekend is looked in only when the school uses it: when the timetable has a class that day.</summary>
@@ -221,7 +224,7 @@ public static class Openings
                 ? !e.AllDay
                 : (people.Count > 0 && (who.HasFlag(EventAudience.Facilitators) || who.HasFlag(EventAudience.Staff)))
                   || (forStudents && who.HasFlag(EventAudience.Students));
-            if (theirs) against.Add(new(Title(e.Event) + (e.AllDay ? " that day" : $" then, {Week.Hm(e.From)}–{Week.Hm(e.Until)}"), false));
+            if (theirs) against.Add(new(EventSchedule.Title(e.Event) + (e.AllDay ? " that day" : $" then, {Week.Hm(e.From)}–{Week.Hm(e.Until)}"), false));
         }
         var good = new List<OpeningNote>();
         foreach (var id in people)
@@ -290,7 +293,6 @@ public static class Openings
         else notes.Add(new DayNote(day, day, why));
     }
 
-    private static string Title(SchoolEvent e) => e.Title.Trim() is { Length: > 0 } title ? title : "An event";
 
     internal static int Minutes(TimeOnly t) => t.Hour * 60 + t.Minute;
 

@@ -25,11 +25,12 @@ public sealed class Finder
 }
 
 /// <summary>
-/// One answer in Find: a thing to look at, or a thing to do. A class typed in to add carries its draft, and
-/// somebody typed in as away carries the absence.
+/// One answer in Find: a thing to look at, or a thing to do. A class typed in to add carries its draft,
+/// somebody typed in as away carries the absence, and an answer about a day (who is free then) carries the day,
+/// which Enter opens the plan on.
 /// </summary>
 public sealed record FindHit(string Kind, string Label, string? Detail, Guid? Id, string? Colour, Cccc.Domain.Model.Session? Draft = null,
-    Cccc.Domain.Model.Absence? Away = null);
+    Cccc.Domain.Model.Absence? Away = null, DateOnly? On = null);
 
 public static class FindIndex
 {
@@ -40,15 +41,20 @@ public static class FindIndex
     /// <paramref name="today"/> and the day the plan shows say which Friday "fri" is. A line that says somebody
     /// is away (<see cref="QuickAway"/>) comes before it: an administrator (<paramref name="recordsAway"/>)
     /// records anybody, and the facilitator signed in (<paramref name="me"/>) asks for themselves. Such a line
-    /// is never a class with its words for a title ("Off", "Sick"), whoever reads it.
+    /// is never a class with its words for a title ("Off", "Sick"), whoever reads it. Nor is a question about who or
+    /// what is free (<see cref="QuickFree"/>), which anybody may ask: its answer comes next, the time it is
+    /// <paramref name="now"/> being when "now" is, and an event named only to a reader who may see it
+    /// (<paramref name="viewer"/>).
     /// </summary>
     public static IReadOnlyList<FindHit> Search(Cccc.Domain.Model.Timetable t, string query, bool mayEdit, bool admin, int max = 12,
-        DateOnly? today = null, DateOnly? shown = null, bool recordsAway = false, Guid? me = null)
+        DateOnly? today = null, DateOnly? shown = null, bool recordsAway = false, Guid? me = null, TimeOnly? now = null,
+        Cccc.Domain.Rules.EventViewer? viewer = null)
     {
         var q = query.Trim();
         var away = today is { } day && q.Length > 0 ? QuickAway.Read(t, q, day, shown ?? day, me) : null;
-        var quick = mayEdit && today is { } now && q.Length > 0 && QuickAdd.Read(t, q, now, shown ?? now) is { } reading
-                    && (away is null || reading.Draft.ClassId is not null)
+        var asked = away is null && today is { } asOf && now is { } at && q.Length > 0 ? QuickFree.Read(t, q, asOf, shown ?? asOf, at) : null;
+        var quick = mayEdit && today is { } addOn && q.Length > 0 && QuickAdd.Read(t, q, addOn, shown ?? addOn) is { } reading
+                    && (away is null && asked is null || reading.Draft.ClassId is not null)
             ? QuickAdd.Hit(t, reading) : null;
         var said = away is null || today is not { } on ? null
             : recordsAway ? QuickAway.Hit(t, away, records: true, on)
@@ -114,6 +120,7 @@ public static class FindIndex
         }
         var found = hits.OrderBy(h => h.Rank).ThenBy(h => h.Hit.Label, Cccc.Domain.NameOrder.Comparer).Select(h => h.Hit);
         FindHit[] first = [.. new[] { said, quick }.OfType<FindHit>()];
-        return [.. first, .. found.Take(max - first.Length)];
+        var answer = asked is null ? [] : QuickFree.Hits(t, asked, viewer ?? Cccc.Domain.Rules.EventViewer.Nobody, max - first.Length);
+        return [.. first, .. answer, .. found.Take(max - first.Length - answer.Count)];
     }
 }

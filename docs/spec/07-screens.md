@@ -68,6 +68,23 @@ Nothing depends on a web font: the laptop may be offline.
   days are sent, never why. **Nothing typed becomes the reason**: words not understood are said in Find
   and kept nowhere, as a line about being ill can carry what nobody should store. And whoever reads it, a
   line about somebody away is never a class titled with its words (*Off*, *Sick*).
+- **Anybody can ask Find who or what is free** (`QuickFree`), a coach too: *free fri 13-15*, *who's free
+  tomorrow morning*, *rooms free now*, *free rigging thu 14*, *is studio b free thu 14*, *bo fri 10*,
+  *where is alba*. A line is such a question when it says *free* (*available*, *empty*) or *where*, or
+  names somebody or something (a facilitator, a student, a space, a group) with a day, a time or *now*. A
+  time with no day is on the day the plan shows, a day with no time is all of it, and neither is now; a
+  stretch is two times, *morning*, *afternoon*, *evening*, *from 14* or *until 11*. The answer comes
+  first in Find and is `Free`'s. **Naming somebody**, a line each: what they are in then and until when
+  (*Guest workshop in Big Top until 11:30*, *covering Acrobatics*, *away all day*), or how long they are
+  free and what ends it (*free until 13:00, then Open training in Big Top*); over a stretch, what is in its
+  way; over a day, its free stretches. The start of two names answers both. **Naming nobody**, a line
+  saying how many are free (*5 spaces and 5 facilitators*) and then each, with how long; *rooms*, *who*
+  or *groups* says which, and what a space has (*rigging*) only those with it. The school's own
+  facilitators and groups only, a group the day is closed for left out, and somebody outside the hours
+  they gave said so and last. A day nobody can know says why (*Prep study day*, a week not filled yet),
+  and an event is named only to a reader who may see it, otherwise its space is *booked*. **It only
+  looks**: Enter opens the plan on that day, narrowed to what was named, or on spaces, people or groups.
+  A class named makes the line a class to add instead, and a line about somebody away is that.
 - **The absence form says what it takes them off before OK**, as *Can't come* does: each class with what
   recording it would leave it, or for a student *They would miss* and the classes (`Away.WhatItLeaves`).
 - **Find's keys act on what has been typed**, never on the list last drawn: Enter straight after the

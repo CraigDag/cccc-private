@@ -112,7 +112,7 @@ const absence = page => page.evaluate(() => {
     await admin.waitForSelector('[data-testid=now-page]');
     const found = await find(admin, `bo sick ${typed(nextMonday)}`, `${bo} — illness, unplanned · takes them off 2 classes, 1 would need cover`);
     log('     ' + found[0]);
-    if (!(await admin.textContent('.find-foot')).includes('who is away, like')) throw new Error('the foot does not say who is away can be typed in');
+    if (!(await admin.textContent('.find-foot')).includes('“bo sick fri” to record who is away')) throw new Error('the foot does not say who is away can be typed in');
     await admin.screenshot({ path: OUT + 'quick-away-find.png' });
   });
 
@@ -191,7 +191,7 @@ const absence = page => page.evaluate(() => {
     const coach = await signIn(browser, 'coach', { width: 1300, height: 900 });
     const ask = `Ask to be away · ${said(nextMonday)} — takes you off 2 classes, 1 would need cover · only the days are sent, never why`;
     eq((await find(coach, `sick ${typed(nextMonday)}`, ask))[0], ask, 'the line');
-    if (!(await coach.textContent('.find-foot')).includes('say you can’t come')) throw new Error('the foot does not tell a coach she can say she can\'t come');
+    if (!(await coach.textContent('.find-foot')).includes('“sick tomorrow” to say you can’t come')) throw new Error('the foot does not tell a coach she can say she can\'t come');
     await coach.screenshot({ path: OUT + 'quick-away-coach.png' });
     await coach.keyboard.press('Enter');
     await titled(coach, 'Can\'t come');

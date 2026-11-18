@@ -25,6 +25,9 @@ public static class EventSchedule
     public const int MaxOccurrences = 1000;
     public const int HorizonYears = 5;
 
+    /// <summary>An event's title as a line names it, or "An event" when it was given none.</summary>
+    public static string Title(SchoolEvent e) => e.Title.Trim() is { Length: > 0 } title ? title : "An event";
+
     /// <summary>The last day it is on: the last date its repeat gives, plus its span.</summary>
     public static DateOnly LastDay(SchoolEvent e) => RuleDates(e).LastOrDefault(e.Date).AddDays(e.SpanDays - 1);
 

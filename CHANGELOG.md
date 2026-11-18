@@ -102,6 +102,15 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   Anything else you type is shown in Find and never saved, so *flu* never ends up in the reason. A coach
   typing *sick tomorrow* is offered to ask instead, for themselves only, and the can't-come form opens on
   those days.
+- **Ask who or what is free by typing it.** In Find, anybody can ask: *free fri 13-15*, *who's free
+  tomorrow morning*, *rooms free now*, *free rigging thu 14*, *bo fri 10*, *where is alba*. Naming
+  somebody or something says what they are in then and until when (*Guest workshop in Big Top until
+  11:30*, *away all day*), or how long they are free and what comes next (*free until 13:00, then Open
+  training in Big Top*); a whole day says when in it they are free. Naming nobody says how many spaces
+  and facilitators are free and lists them, each with how long (*Big Top: free from 11:30 until 16:00*),
+  or only the rooms, the people or the groups when you say so. Somebody free outside the hours they gave
+  is listed last and says so, a visiting company is left out, and a day nobody can know about says why
+  (a study day, a week not filled in yet). Enter opens the plan on that day; nothing changes.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and
