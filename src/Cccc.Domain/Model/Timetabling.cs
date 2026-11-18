@@ -162,9 +162,15 @@ public sealed record Absence : IEntity
     public bool Covers(DateOnly date, TimeOnly start, TimeOnly end)
     {
         if (!CoversDate(date)) return false;
-        if (StartTime is not { } s || EndTime is not { } e || e <= s) return true;
-        return s < end && start < e;
+        if (Window is not { } w) return true;
+        return w.From < end && start < w.Until;
     }
+
+    /// <summary>The part of a date it covers: its window on each of its days, or the whole of them. Null on a date it does not cover.</summary>
+    public (TimeOnly From, TimeOnly Until)? On(DateOnly date) =>
+        !CoversDate(date) ? null : Window ?? (TimeOnly.MinValue, TimeOnly.MaxValue);
+
+    private (TimeOnly From, TimeOnly Until)? Window => StartTime is { } s && EndTime is { } e && e > s ? (s, e) : null;
 }
 
 public enum EventCategory { Meeting, Performance, Audition, Deadline, Trip, Visitor, HostedGroup, Other }

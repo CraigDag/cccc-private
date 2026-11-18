@@ -133,6 +133,8 @@
         let dragging = false, result = null;
         blk.setPointerCapture(e.pointerId);
         const pct = m => ((m - f.start) / (f.end - f.start) * 100) + '%';
+        const busy = busyOf(root, blk);
+        let tip = null;
         const move = ev => {
             const dx = ev.clientX - e.clientX, dy = ev.clientY - e.clientY;
             if (!dragging && Math.hypot(dx, dy) < 5) return;
@@ -165,12 +167,14 @@
                 result = { row: row0.dataset.row, start: s0, end: ne };
             }
             blk.dataset.when = label(result.start) + '–' + label(result.end);
+            tip = sayInTheWay(blk, tip, inTheWay(root, blk, busy, row, mode, s0, result.start, result.end));
         };
         const up = ev => {
             blk.removeEventListener('pointermove', move);
             blk.removeEventListener('pointerup', up);
             blk.removeEventListener('pointercancel', up);
             root.querySelectorAll('.tl-row.drop').forEach(x => x.classList.remove('drop'));
+            tip = sayInTheWay(blk, tip, []);
             if (dragging) {
                 blk.classList.remove('dragging');
                 blk.style.transform = ''; blk.style.left = left0; blk.style.width = width0;
@@ -184,6 +188,59 @@
         blk.addEventListener('pointermove', move);
         blk.addEventListener('pointerup', up);
         blk.addEventListener('pointercancel', up);
+    }
+
+    // A chosen class carries when what it needs is elsewhere (the shading behind it) and each person's part
+    // of it, so a drag can say what a time would run into. Bounds advise, never refuse: it only says so.
+    function busyOf(root, blk) {
+        if (!blk.classList.contains('chosen') || !root.dataset.busy) return null;
+        try { return { days: JSON.parse(root.dataset.busy), parts: JSON.parse(blk.dataset.parts || '[]') }; }
+        catch { return null; }
+    }
+
+    function inTheWay(root, blk, busy, row, mode, s0, ns, ne) {
+        const words = [];
+        const add = w => { if (!words.includes(w)) words.push(w); };
+        const key = row.dataset.row || '';
+        const day = key.startsWith('day-') ? key.slice(4) : root.dataset.day;
+        for (const [from, until, person, w] of (busy && busy.days[day]) || []) {
+            let a = ns, z = ne;
+            if (person) {
+                // One person's stretch is in the way only of their part: a move carries the part with it, a
+                // stretch leaves a set time where it is and moves only the edges that follow the class.
+                const part = busy.parts.find(p => p[0] === person);
+                if (!part) continue;
+                if (mode === 'move') { a = part[1] + ns - s0; z = part[2] + ns - s0; }
+                else { a = part[3] >= 0 ? part[3] : ns; z = part[4] >= 0 ? part[4] : ne; }
+                a = Math.min(Math.max(a, ns), ne); z = Math.min(Math.max(z, ns), ne);
+                if (z <= a) continue;
+            }
+            if (from < z && a < until) add(w);
+        }
+        // A row that is one space's: another class on it then means the space is in use.
+        if (row.dataset.space)
+            for (const other of row.querySelectorAll('.blk')) {
+                if (other === blk || other.dataset.id === blk.dataset.id || other.classList.contains('cancelled') || other.classList.contains('closed')) continue;
+                if (+other.dataset.start < ne && ns < +other.dataset.end) { add(row.dataset.space + ' in use'); break; }
+            }
+        return words;
+    }
+
+    // Said just above the class being dragged, over the page, so nothing on the timeline can cut it short.
+    function sayInTheWay(blk, tip, words) {
+        blk.classList.toggle('over-busy', words.length > 0);
+        if (!words.length) { if (tip) tip.remove(); return null; }
+        if (!tip) {
+            tip = document.createElement('div');
+            tip.className = 'drag-busy';
+            tip.dataset.testid = 'drag-busy';
+            document.body.appendChild(tip);
+        }
+        tip.textContent = words.join(' · ');
+        const r = blk.getBoundingClientRect();
+        tip.style.left = Math.max(8, Math.min(r.left, window.innerWidth - tip.offsetWidth - 8)) + 'px';
+        tip.style.top = Math.max(8, r.top - tip.offsetHeight - 6) + 'px';
+        return tip;
     }
 
     function dbl(root, e) {

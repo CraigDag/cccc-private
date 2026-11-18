@@ -119,7 +119,17 @@ covering*), who changed it and when, from `Recent`; then today's events and what
 - The side panel for a chosen class: title, when, its verbs straight under the title (Edit, Register,
   Cover, Cancel/Restore, Another time…, Duplicate, Copy to Scratch Week, Delete, so they are on a laptop's
   screen however much is said below), then where, who teaches (and who is away), the group and roster
-  count, where it moved from, state tags, and the clash or cover note.
+  count, where it moved from, state tags, the clash or cover note, and **Elsewhere that day**.
+- **A chosen class shades its day** where what it needs is elsewhere (`Busy`): a hatch down every row
+  at those times, orange where somebody is away, so where it could go is the clear part. On rows that
+  are spaces, a space's own classes already show when it is in use, so only its people and groups are
+  shaded; on groups' and people's rows its space is too. Narrowed to one, each day's row is shaded for
+  it, so a clear stretch on another day is plain. **Elsewhere that day** in the side panel says the same
+  in words, a line for each class or event (*13:00–15:00 Circus disciplines: Ada Brightwater, BA 1, Big
+  Top in use*), a class pressing to choose it. Dragging the chosen class over a shaded stretch says above
+  it what it would run into (*Ada Brightwater busy · BA 1 busy*), somebody in only part of it only for
+  their part, and onto a space's row where another class is, *Big Top in use*; it never stops the drag.
+  An event the reader may not read is only *booked*; students are counted, never named.
 - **Find a time** beside *+ Class*, for editors (below).
 - **Copy** (day, week, clear the weeks after), **Print** (the four documents, narrowed as the screen
   is, and a facilitator's semester for their phone when the plan is narrowed to one) and **Show** (open

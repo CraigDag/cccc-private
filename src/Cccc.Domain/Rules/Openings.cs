@@ -51,7 +51,8 @@ public sealed record OpeningsFound(IReadOnlyList<Opening> Openings, int More, IR
 /// asked the other way round. A time is offered only when every facilitator is in no other class and not
 /// away for their part of it, no group it is for has a class then (an open session excepted, which nobody
 /// is required at), none of its students is on another class, nobody it names is at an event named for
-/// them, and one of its spaces has no class and no event in it. Everything else the clash check would say
+/// them (all of that is <see cref="Busy"/>, which the plan shades a chosen class's day by), and one of its
+/// spaces has no class and no event in it. Everything else the clash check would say
 /// (a limit, a long gap, outside somebody's hours) is a note beside the time, never a reason to leave it
 /// out: bounds advise, never refuse.
 /// </summary>
@@ -82,7 +83,6 @@ public static class Openings
         // A whole-building class needs every group free, and is closed only when the building is.
         var groups = (c.Audience.IsEveryone ? t.Groups.Select(g => g.Id) : c.Audience.Cohorts.Where(t.Groups.Contains)).ToHashSet();
         var named = c.Audience.IsEveryone ? [] : groups.OrderBy(g => t.Groups[g]!.Name, NameOrder.Comparer).ToList();
-        var students = Roster.For(t, c).ToHashSet();
         var people = c.FacilitatorIds.Where(t.Facilitators.Contains).ToList();
         var spaces = ask.Spaces.Distinct().Where(t.Rooms.Contains).ToList();
         bool needsSpace = ask.Spaces.Count > 0;
@@ -107,8 +107,8 @@ public static class Openings
             var occurrences = Occurrences.Between(t, day, day);
             var events = EventSchedule.On(t, day);
             var seen = events.Where(e => viewer.Sees(e.Event)).ToList();
-            var rosters = new Dictionary<Guid, IReadOnlyList<Guid>>();
-            IReadOnlyList<Guid> RosterOf(Session s) => rosters.TryGetValue(s.Id, out var r) ? r : rosters[s.Id] = Roster.For(t, s);
+            // Who the class needs that is elsewhere that day; its own space aside, since it may go in any of its spaces.
+            var busy = Busy.For(t, c, day, viewer, occurrences, events).Where(b => b.Kind != BusyKind.Space).ToList();
 
             // The spaces free for the whole of the class starting at minute m, empty when it needs none;
             // null when its people or groups are not free then, or no space is.
@@ -117,22 +117,12 @@ public static class Openings
                 var start = At(m);
                 var end = At(m + (int)template.Length.TotalMinutes);
                 var placed = Placed(template, day, start, null);
-                foreach (var id in people)
+                foreach (var b in busy)
                 {
-                    var (a, b) = TimeWindows.Assigned(placed, id);
-                    if (b <= a) continue;
-                    if (Occurrences.IsAway(t, id, day, a, b)) return null;
-                    if (Teaching.At(occurrences, a, b, self).ContainsKey(id)) return null;
-                    if (seen.Any(e => e.Event.FacilitatorIds.Contains(id) && e.Overlaps(a, b))) return null;
+                    // One person's stretch keeps the class only from the part of it that person is in.
+                    var (from, until) = b.PersonId is { } id ? TimeWindows.Assigned(placed, id) : (start, end);
+                    if (until > from && b.Overlaps(from, until)) return null;
                 }
-                foreach (var o in occurrences)
-                {
-                    if (o.Session.Id == self || !o.Happens || o.Start >= end || start >= o.End) continue;
-                    if (Hours.WorkloadOf(t, o.Session) == Workload.DropIn) continue;
-                    if (groups.Any(o.Session.Audience.IsFor)) return null;
-                    if (students.Count > 0 && RosterOf(o.Session).Any(students.Contains)) return null;
-                }
-                if (students.Count > 0 && seen.Any(e => e.Event.StudentIds.Any(students.Contains) && e.Overlaps(start, end))) return null;
                 if (!withSpace || !needsSpace) return [];
                 var used = Spaces.InUse(occurrences, start, end, self);
                 var booked = Spaces.Booked(t, events, start, end);

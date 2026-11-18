@@ -37,6 +37,13 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   and *Find a time…* in the add form takes what was typed there along and back. **Another time…** on a
   class looks inside its week and moves it on a press, each person's part with it, marked on the plan as
   moved when ticked; Undo takes it back.
+- **Choose a class and the plan shows where it could go**: the times its teachers, groups, students or
+  space are somewhere else that day are shaded down the whole day (orange where somebody is away), and
+  listed beside it (*13:00–15:00 Circus disciplines: Ada Brightwater, BA 1, Big Top in use*), each class
+  there pressing to choose it. Drag it over a shaded stretch and it says what it would run into before
+  you let go (*Ada Brightwater busy · BA 1 busy*). Narrowed to one person, every day of their week is
+  shaded, so a clear stretch on another day is easy to find. Find a time asks exactly the same question,
+  so the two always agree.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

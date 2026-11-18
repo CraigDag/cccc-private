@@ -26,15 +26,25 @@ public static class Teaching
     {
         var busy = new Dictionary<Guid, Occurrence>();
         if (end <= start) return busy;
+        foreach (var (id, o, a, b) in InRooms(day, except))
+            if (a < end && start < b) busy.TryAdd(id, o);
+        return busy;
+    }
+
+    /// <summary>
+    /// Everybody in a room over one day's occurrences, earliest class first: each person, the class, and the
+    /// stretch of it that is theirs. <see cref="At"/> asks it about a time; <see cref="Busy"/> lays it out.
+    /// </summary>
+    public static IEnumerable<(Guid Id, Occurrence O, TimeOnly From, TimeOnly Until)> InRooms(IReadOnlyList<Occurrence> day, Guid? except = null)
+    {
         foreach (var o in day.OrderBy(o => o.Start))
         {
-            if (o.Session.Id == except || !o.Happens || o.Start >= end || start >= o.End) continue;
+            if (o.Session.Id == except || !o.Happens) continue;
             foreach (var id in o.InTheRoom)
             {
                 var (a, b) = TimeWindows.InRoom(o, id);
-                if (a < end && start < b) busy.TryAdd(id, o);
+                yield return (id, o, a, b);
             }
         }
-        return busy;
     }
 }

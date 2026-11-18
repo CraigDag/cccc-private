@@ -152,19 +152,32 @@ Offer **everybody not away**, ranked rather than filtered: non-guests before gue
 teaching at that time (the week as it runs), lightest week first, then by name. Busy or over a limit
 is advice, never a refusal.
 
+## When what a class needs is elsewhere (`Busy`)
+
+WHO is in what SPACE and WHEN, asked on behalf of one class for one day: the stretches its people,
+groups and space are elsewhere. Find a time leaves a time out by it and the plan shades a chosen class's
+day by it, so the times listed and the picture cannot disagree.
+
+- **Each facilitator**, for their part of the class: in another class's room, teaching it or covering
+  it for their part of it (`Teaching.InRooms`, which `Teaching.At` asks too); recorded away, for the
+  times given or else the whole day; named on an event the reader may see.
+- **Its groups**: any other class on for one of them, lunch included. An open session is not, because
+  nobody is required at it. A whole-building class needs every group.
+- **Its students**: any other class some of them are on, and an event the reader may see that names
+  some of them. Counted, never named.
+- **Its space**: another class in it, and any event in it whoever may read the event; one the reader may
+  not see is only *booked*.
+- The class itself never stands in its own way, and a cancelled or closed class keeps nobody busy.
+- Being busy is information, never a refusal: bounds advise, never refuse.
+
 ## Finding a time (`Openings`)
 
 WHO is in what SPACE and WHEN, asked the other way round. Given a class as it would be (who teaches it,
 each in their part; who it is for; how long) and the spaces it may go in, the times it fits, soonest
-first, from now. A time is offered only when:
-
-- every facilitator is free for their part: not away, in no other class (`Teaching.At`), and named on
-  no event the reader may see;
-- no group it is for has a class then, and none of its students is on another class. An open session
-  is the exception, because nobody is required at it; lunch is not one, so it keeps everybody;
-- no student on it is named on an event then;
-- one of its spaces has no class and **no event** in it (`Spaces.Booked`): any event with a space,
-  whoever may read it, so a space is never offered over a booking the reader cannot see.
+first, from now. A time is offered only when **nothing it needs is busy then** (`Busy`, each facilitator
+for their part; its own space aside, since it may go in another) and one of its spaces has no class and
+**no event** in it (`Spaces.Booked`): any event with a space, whoever may read it, so a space is never
+offered over a booking the reader cannot see.
 
 Everything else the clash check would say about the time (a limit, a long gap, outside somebody's
 hours, a whole-building class over it) is a **note beside it, never a reason to leave it out**: bounds

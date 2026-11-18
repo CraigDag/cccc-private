@@ -94,6 +94,15 @@ public sealed class PlanView
 /// <summary>One row of the plan: a space, a group or a person.</summary>
 public sealed record PlanRow(string Key, Guid? Id, string Name, string? Colour, string Section, string? Note = null);
 
+/// <summary>
+/// A shaded stretch of a row's day behind a chosen class: the stretches its people, groups or space are
+/// elsewhere that run into each other, drawn as one. Start and End are minutes from midnight.
+/// </summary>
+public sealed record BusyBand(int Start, int End, IReadOnlyList<BusyStretch> Stretches)
+{
+    public bool Away => Stretches.Any(s => s.Kind == BusyKind.Away);
+}
+
 /// <summary>A class drawn on a row. Start and End are minutes from midnight; for a person, their part of it.</summary>
 public sealed record PlanBar(Occurrence O, string RowKey, DateOnly Date, int Start, int End, bool Part)
 {
@@ -139,6 +148,44 @@ public sealed class PlanModel
     /// <summary>Whether the rows are drawn under headings: only when they fall in more than one part.</summary>
     public bool Headed => Sections.Headed(Rows.Select(r => r.Section));
     public required int HiddenGuests { get; init; }
+
+    /// <summary>
+    /// With a class chosen on a day, when its people, groups and space are elsewhere (<see cref="Busy"/>), by
+    /// day: its own day, or each day of a week read as rows of days, where it may be dragged onto another one.
+    /// Empty otherwise.
+    /// </summary>
+    public IReadOnlyDictionary<DateOnly, IReadOnlyList<BusyStretch>> Elsewhere { get; init; } = new Dictionary<DateOnly, IReadOnlyList<BusyStretch>>();
+
+    /// <summary>
+    /// The shading for a day behind the chosen class: its stretches run together into bands, cut to the frame.
+    /// Its space's stretches only <paramref name="withSpace"/>: on rows that are spaces, the space's own
+    /// classes are already drawn where it is in use.
+    /// </summary>
+    public IReadOnlyList<BusyBand> Bands(DateOnly day, bool withSpace)
+    {
+        if (!Elsewhere.TryGetValue(day, out var stretches)) return [];
+        var bands = new List<BusyBand>();
+        int start = 0, end = -1;
+        var run = new List<BusyStretch>();
+        foreach (var b in stretches.Where(b => withSpace || b.Kind != BusyKind.Space).OrderBy(b => b.From).ThenBy(b => b.Until))
+        {
+            int a = Math.Max(FrameStart, Minutes(b.From)), z = Math.Min(FrameEnd, Until(b.Until));
+            if (z <= a) continue;
+            if (run.Count > 0 && a > end)
+            {
+                bands.Add(new BusyBand(start, end, run));
+                run = [];
+            }
+            if (run.Count == 0) start = a;
+            end = Math.Max(end, z);
+            run.Add(b);
+        }
+        if (run.Count > 0) bands.Add(new BusyBand(start, end, run));
+        return bands;
+    }
+
+    /// <summary>The end of a stretch in minutes: the end of the day for one that runs to midnight.</summary>
+    public static int Until(TimeOnly t) => t == TimeOnly.MaxValue ? 24 * 60 : Minutes(t);
 
     public Occurrence? Find(Guid id) => Week.FirstOrDefault(o => o.Session.Id == id);
 
@@ -268,6 +315,12 @@ public sealed class PlanModel
             .Concat(events.Where(e => !e.Event.AllDay).Select(e => (Minutes(e.Event.Start), Minutes(e.Event.End)))));
         days = days.Union(Cccc.Domain.Week.Days(monday).Where(d => events.Any(e => e.Covers(d)))).Order().ToList();
         var clashes = Cccc.Domain.Rules.Clashes.ForWeek(t, monday);
+        var elsewhere = new Dictionary<DateOnly, IReadOnlyList<BusyStretch>>();
+        if (v.Scale == Scale.Day && v.Chosen is { } chosenId && week.FirstOrDefault(o => o.Session.Id == chosenId) is { } chosen)
+        {
+            IEnumerable<DateOnly> on = rowsAreDays ? days : chosen.Date == v.Day ? [v.Day] : [];
+            foreach (var d in on) elsewhere[d] = Busy.For(t, chosen.Session, d, access.Events);
+        }
         return new PlanModel
         {
             Rows = rows,
@@ -285,6 +338,7 @@ public sealed class PlanModel
             Events = events,
             Locked = Cccc.Domain.Week.HasEnded(monday, today),
             HiddenGuests = hiddenGuests,
+            Elsewhere = elsewhere,
             T = t,
             Scratch = scratch,
         };

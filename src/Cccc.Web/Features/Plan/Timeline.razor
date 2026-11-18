@@ -10,10 +10,14 @@
     bool isToday = Day == W.Today;
     int allDay = dayEvents.Count(e => e.Event.AllDay);
     int eventLanes = dayEvents.Count - allDay + (allDay > 0 ? 1 : 0);
+    // Behind a chosen class, when what it needs is elsewhere. On rows that are spaces, a space's own classes
+    // already show when it is in use, so only its people and groups are shaded there.
+    bool withSpace = Lens != Lens.Spaces;
+    var dragData = M.Elsewhere.Count > 0 ? ElsewhereWords.DragData(t, M.Elsewhere, withSpace) : null;
 }
 <div class="tl @(Editable ? "editable" : "")" data-testid="timeline" @ref="_root" style="--hours:@(span / 60)" data-day="@Day.ToString("yyyy-MM-dd")"
      data-start="@M.FrameStart" data-end="@M.FrameEnd" data-edit="@(Editable ? "1" : "0")" data-rooms="@(Lens == Lens.Spaces || M.RowsAreDays ? "1" : "0")"
-     data-today="@(isToday || (M.RowsAreDays && M.Days.Contains(W.Today)) ? "1" : "0")">
+     data-today="@(isToday || (M.RowsAreDays && M.Days.Contains(W.Today)) ? "1" : "0")" data-busy="@dragData">
     <div class="tl-head">
         <div class="tl-corner">@(Lens switch { Lens.Spaces => "Space", Lens.Groups => "Group", _ => "Person" })</div>
         <div class="tl-scale">
@@ -72,7 +76,9 @@
         {
             var bars = M.Bars.Where(b => b.RowKey == row.Key && (M.RowsAreDays || b.Date == Day)).ToList();
             var rowDay = PlanModel.FromDayKey(row.Key) ?? Day;
-            <div class="tl-row @(bars.Count == 0 ? "free" : "") @(M.RowsAreDays && rowDay == W.Today ? "today" : "") @(M.RowsAreDays && rowDay == Day ? "picked" : "")" data-row="@row.Key" data-testid="row">
+            // A row that is one space's: what is on it is when that space is in use.
+            var space = Lens != Lens.Spaces ? null : M.RowsAreDays ? row.Section : row.Id is not null ? row.Name : null;
+            <div class="tl-row @(bars.Count == 0 ? "free" : "") @(M.RowsAreDays && rowDay == W.Today ? "today" : "") @(M.RowsAreDays && rowDay == Day ? "picked" : "")" data-row="@row.Key" data-testid="row" data-space="@space">
                 <div class="tl-label" title="@row.Name">
                     <span class="spine" style="--c:@(row.Colour ?? "var(--rule)")"></span>
                     @if (M.RowsAreDays)
@@ -90,6 +96,11 @@
                     }
                 </div>
                 <div class="tl-track" style="--lanes:@M.LanesOf(row.Key, rowDay)">
+                    @foreach (var band in M.Bands(rowDay, withSpace))
+                    {
+                        <div class="tl-busy @(band.Away ? "away" : "")" style="left:@Pct(band.Start - M.FrameStart, span)%; width:@Pct(band.End - band.Start, span)%"
+                             title="@ElsewhereWords.Title(t, band)" data-testid="busy-band" data-from="@band.Start" data-until="@band.End"></div>
+                    }
                     @if (rowDay == W.Today && NowMinutes is { } now && now >= M.FrameStart && now <= M.FrameEnd)
                     {
                         <div class="tl-now" style="left:@Pct(now - M.FrameStart, span)%"></div>
@@ -100,6 +111,7 @@
                         var colour = Looks.ColourOf(t, s);
                         bool movable = Editable && !b.Part;
                         <div class="blk @Classes(b)" data-id="@s.Id" data-start="@b.Start" data-end="@b.End" data-move="@(movable ? "1" : "0")"
+                             data-parts="@(Chosen == s.Id && dragData is not null ? ElsewhereWords.Parts(s) : null)"
                              data-testid="block" data-title="@Looks.Title(t, s)" tabindex="0" role="button"
                              aria-label="@(Looks.Title(t, s) + ", " + Cccc.Domain.Week.Hm(b.O.Start) + " to " + Cccc.Domain.Week.Hm(b.O.End))"
                              style="left:@Pct(b.Start - M.FrameStart, span)%; width:@Pct(Math.Max(15, b.End - b.Start), span)%; top:calc(@b.Lane * var(--lane)); @(colour is null ? "" : $"--c:{colour};")">

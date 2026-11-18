@@ -23,10 +23,21 @@ public static class Spaces
     {
         var busy = new Dictionary<Guid, Occurrence>();
         if (end <= start) return busy;
-        foreach (var o in day.OrderBy(o => o.Start))
-            if (o.Session.Id != except && o.Happens && o.Session.RoomId is { } room && o.Start < end && start < o.End)
+        foreach (var (room, o) in Uses(day, except))
+            if (o.Start < end && start < o.End)
                 busy.TryAdd(room, o);
         return busy;
+    }
+
+    /// <summary>
+    /// Each class in a space over one day's occurrences, earliest first, <paramref name="except"/> aside: what
+    /// <see cref="InUse"/> asks about a time and <see cref="Busy"/> lays out.
+    /// </summary>
+    public static IEnumerable<(Guid Room, Occurrence O)> Uses(IReadOnlyList<Occurrence> day, Guid? except = null)
+    {
+        foreach (var o in day.OrderBy(o => o.Start))
+            if (o.Session.Id != except && o.Happens && o.Session.RoomId is { } room)
+                yield return (room, o);
     }
 
     /// <summary>
@@ -42,9 +53,17 @@ public static class Spaces
     {
         var booked = new Dictionary<Guid, EventOnDay>();
         if (end <= start) return booked;
-        foreach (var e in day.OrderBy(e => e.From))
-            if (e.Event.RoomId is { } room && t.Rooms.Contains(room) && e.Overlaps(start, end))
+        foreach (var (room, e) in Bookings(t, day))
+            if (e.Overlaps(start, end))
                 booked.TryAdd(room, e);
         return booked;
+    }
+
+    /// <summary>Each event in a space over one day's events, earliest first, whoever may read it.</summary>
+    public static IEnumerable<(Guid Room, EventOnDay E)> Bookings(Timetable t, IReadOnlyList<EventOnDay> day)
+    {
+        foreach (var e in day.OrderBy(e => e.From))
+            if (e.Event.RoomId is { } room && t.Rooms.Contains(room))
+                yield return (room, e);
     }
 }

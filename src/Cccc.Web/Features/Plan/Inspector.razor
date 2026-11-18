@@ -115,6 +115,39 @@
         {
             <div class="insp-note warn" data-testid="inspector-clash">@n</div>
         }
+        @if (M.Elsewhere.TryGetValue(s.Date, out var busy))
+        {
+            var lines = ElsewhereWords.Lines(t, busy);
+            @* The same stretches the day behind it is shaded by, in words: what keeps it from another time that day. *@
+            <section class="insp-elsewhere" data-testid="inspector-elsewhere">
+                <h3><span class="busy-swatch" aria-hidden="true"></span>@(s.Date == W.Today ? "Elsewhere today" : "Elsewhere that day")</h3>
+                @if (lines.Count == 0)
+                {
+                    <p class="muted" data-testid="elsewhere-none">Nobody and nothing it needs is anywhere else that day.</p>
+                }
+                <ul>
+                    @foreach (var line in lines.Take(MostLines))
+                    {
+                        <li class="@(line.Away ? "away" : "")" data-testid="elsewhere-line">
+                            <span class="ie-when">@line.When</span>
+                            @if (line.ClassId is { } other && M.Find(other) is not null)
+                            {
+                                <button type="button" class="ie-what link" @onclick="() => OnChosen.InvokeAsync(other)" title="Choose @line.What">@line.What</button>
+                            }
+                            else
+                            {
+                                <span class="ie-what">@line.What</span>
+                            }
+                            <span class="ie-who">@line.Who</span>
+                        </li>
+                    }
+                </ul>
+                @if (lines.Count > MostLines)
+                {
+                    <p class="muted">And @(lines.Count - MostLines) more.</p>
+                }
+            </section>
+        }
     }
 </aside>
 @code {
@@ -125,6 +158,9 @@
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<Guid> OnEdit { get; set; }
     [Parameter] public EventCallback<Guid> OnChosen { get; set; }
+
+    /// <summary>The most lines of Elsewhere listed: the shading says the rest.</summary>
+    private const int MostLines = 12;
 
     private static string Rail(string name) =>
         string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
