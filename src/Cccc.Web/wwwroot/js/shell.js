@@ -51,9 +51,18 @@
     // A menu drawn as a disclosure (the "me" menu, the phone's More) closes on a click anywhere else, or on a choice
     // made in it. A disclosure in a form is the person's to open and close: closing it from here closed Somebody else
     // under the person's own choice in it, and a class's warnings on the first click into another field.
+    // The click that puts a menu away does nothing else, as a tap beside a phone's sheet does: caught on its way
+    // down, it never reaches what the menu was over, which opened the class under the thumb that only meant to close More.
+    document.addEventListener('click', e => {
+        const open = document.querySelectorAll('details[open][data-menu]');
+        if (open.length === 0 || [...open].some(d => d.contains(e.target))) return;
+        open.forEach(d => d.removeAttribute('open'));
+        e.preventDefault();
+        e.stopPropagation();
+    }, true);
     document.addEventListener('click', e => {
         document.querySelectorAll('details[open][data-menu]').forEach(d => {
-            if (!d.contains(e.target) || e.target.closest('a, button[type=submit], .dock-sheet a')) d.removeAttribute('open');
+            if (d.contains(e.target) && e.target.closest('a, button[type=submit], .dock-sheet a')) d.removeAttribute('open');
         });
     });
 

@@ -1065,8 +1065,9 @@ ul.said li + li { margin-top: 4px; }
     .top { gap: 10px; padding: 0 12px; }
     .find-open { margin-left: auto; }
     .status { display: none; }
+    /* Above the side panel (45), so More's sheet opens over a class that is open rather than under it. */
     .dock {
-        display: flex; position: fixed; z-index: 30; left: 0; right: 0; bottom: 0;
+        display: flex; position: fixed; z-index: 46; left: 0; right: 0; bottom: 0;
         padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); background: var(--chrome); border-top: 1px solid var(--divider);
     }
     .dock-item, .dock-more { flex: 1; }
@@ -1141,7 +1142,8 @@ ul.said li + li { margin-top: 4px; }
     .inline input { width: 84px; }
     .desk-only { display: none; }
     .phone-only { display: block; }
-    .inspector { bottom: 76px; }
+    /* Clear of the dock, which is taller by the home indicator's strip on a phone that has one. */
+    .inspector { bottom: calc(76px + env(safe-area-inset-bottom)); }
     .toasts { bottom: 84px; }
     .cover-pick { flex: 1 1 100%; border-radius: 10px; }
     .cp-more { flex: 1 1 100%; }

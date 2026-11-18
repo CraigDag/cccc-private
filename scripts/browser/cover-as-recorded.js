@@ -6,8 +6,9 @@
 // records the absence alone, for the Cover page. Narrowing the days changes what is offered and what OK says, and
 // opens Somebody else when the one chosen moves under it. A class that has started is not offered (run it with
 // DAY=wed AT=10:15: Esme's Wednesday 09:00 has started). A student's absence offers no cover. The phone fits it.
-// The menus still close on a click elsewhere (a form's own disclosure no longer does). With everybody else away
-// then too, nobody is offered. Every other date is in the sample's next week.
+// The menus still close on a click elsewhere (a form's own disclosure no longer does), and that click does nothing
+// else; on a phone, More opens over a class open beside the plan. With everybody else away then too, nobody is
+// offered. Every other date is in the sample's next week.
 const { chromium } = require('playwright');
 const B = process.env.CCCC_PREVIEW || 'http://127.0.0.1:5299';
 const OUT = (process.env.OUT || '/tmp') + '/';
@@ -252,12 +253,26 @@ const covered = (page, n) => page.waitForFunction(n => document.querySelectorAll
     await admin.waitForFunction(() => !document.querySelector('[data-testid=me-menu]').open)
       .catch(() => { throw new Error('the You menu stays open after a click elsewhere'); });
     const phone = await signIn(browser, 'admin', { width: 390, height: 844 });
+    // The tap that puts More away does nothing else: pressed on a space in use, it leaves Now as it is, where the
+    // same tap with nothing open opens that space's class beside the plan.
     await phone.click('.dock-more summary');
     await phone.waitForFunction(() => document.querySelector('.dock-more').open);
-    await phone.mouse.click(8, 300);
+    const row = await phone.locator('[data-testid=space-row].busy').first().boundingBox();
+    await phone.mouse.click(row.x + row.width / 2, row.y + row.height / 2);
     await phone.waitForFunction(() => !document.querySelector('.dock-more').open)
       .catch(() => { throw new Error('the phone\'s More stays open after a click elsewhere'); });
+    // Long enough for a tap that went through to have been answered: nothing is to happen, so nothing can be waited for.
+    await phone.waitForTimeout(800);
+    eq(await phone.evaluate(() => [location.pathname, !!document.querySelector('[data-testid=inspector]')]), ['/', false], 'Now, after the tap that put More away (where, a class open)');
+    await phone.mouse.click(row.x + row.width / 2, row.y + row.height / 2);
+    await phone.waitForSelector('[data-testid=inspector]');
+    // With a class open beside the plan, More opens over it, and every choice in it can be pressed.
     await phone.click('.dock-more summary');
+    await phone.waitForFunction(() => document.querySelector('.dock-more').open);
+    const under = await phone.evaluate(() => [...document.querySelectorAll('.dock-sheet a')]
+      .filter(a => { const r = a.getBoundingClientRect(); return !a.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); })
+      .map(a => a.textContent.trim()));
+    eq(under, [], 'the choices in More that the open class covers');
     await phone.click('.dock-sheet a[href=cover]');
     await phone.waitForSelector('[data-testid=week-head]');
     eq(await phone.evaluate(() => document.querySelector('.dock-more').open), false, 'More once Cover is chosen in it');
