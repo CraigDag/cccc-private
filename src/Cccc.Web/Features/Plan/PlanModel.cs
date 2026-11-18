@@ -34,6 +34,15 @@ public sealed class PlanView
     public bool ShowOpen { get; set; } = true;
     public bool IssuesOpen { get; set; }
 
+    /// <summary>The class Swap with… was pressed on, and the class chosen since to swap it with.</summary>
+    public Guid? SwapFrom { get; set; }
+    public Guid? SwapWith { get; set; }
+
+    /// <summary>Whether a class is being swapped: only while the class it began on is still the chosen one.</summary>
+    public bool Swapping => SwapFrom is { } from && Chosen == from;
+
+    public void StopSwap() => (SwapFrom, SwapWith) = (null, null);
+
     public event Action? Moved;
 
     public DateOnly Monday => Cccc.Domain.Week.MondayOf(Day);
@@ -74,7 +83,8 @@ public sealed class PlanView
     {
         if (day == Day) return;
         if (Cccc.Domain.Week.IsScratch(day) && !InScratch) _realDay = Day;
-        if (Cccc.Domain.Week.MondayOf(day) != Monday) Chosen = null;
+        // Only two classes of one week swap, so another week ends a swap as it ends the choice.
+        if (Cccc.Domain.Week.MondayOf(day) != Monday) { Chosen = null; StopSwap(); }
         Day = day;
         Moved?.Invoke();
     }
@@ -83,6 +93,7 @@ public sealed class PlanView
     {
         Focus = f;
         Chosen = null;
+        StopSwap();
         if (f is not null)
             Lens = f.Kind switch { "room" => Lens.Spaces, "group" or "programme" => Lens.Groups, _ => Lens.People };
         Moved?.Invoke();

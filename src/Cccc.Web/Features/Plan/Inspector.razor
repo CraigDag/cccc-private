@@ -5,7 +5,8 @@
     var t = M.T;
     var o = M.Find(Id);
 }
-<aside class="inspector" data-testid="inspector" aria-label="The chosen class">
+@* While the class to swap with is being chosen, a phone's sheet leaves more of the plan to choose it from. *@
+<aside class="inspector @(Swapping && SwapWith is null ? "swap-choosing" : "")" data-testid="inspector" aria-label="The chosen class">
     @if (o is null)
     {
         <p class="muted">That class is no longer on this week.</p>
@@ -14,6 +15,7 @@
     else
     {
         var s = o.Session;
+        var now = W.Clock.TimeOfDay;
         var roster = Roster.For(t, s);
         var notes = M.Clashes.Where(c => c.SessionIds.Contains(s.Id)).Select(c => c.Description).ToList();
         // Ways out only for what moving it could put right: too few facilitators for its students go with it.
@@ -27,40 +29,101 @@
             }
             <button type="button" class="insp-x" aria-label="Close" @onclick="OnClose" data-testid="inspector-close">×</button>
         </header>
-        @* The verbs straight under the name, so they are on the screen however much is said about the class below. *@
-        <div class="insp-actions">
-            <button type="button" class="btn primary" @onclick="() => OnEdit.InvokeAsync(s.Id)" data-testid="inspector-edit">@(Editable ? "Edit" : "Details")</button>
-            @if (roster.Count > 0 && o.Happens && !M.Scratch)
-            {
-                <button type="button" class="btn" @onclick="() => D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = s.Id })" data-testid="inspector-register">Register</button>
-            }
-            @if (Editable)
-            {
-                @* A plan has nothing that happens: no cover and nothing to cancel. *@
-                @if (!M.Scratch && (o.NeedsCover || o.Covered))
+        @if (Swapping && Editable && !M.Scratch)
+        {
+            @* Swapping, in place of the verbs: under the name, so a phone's sheet shows it with the plan still in reach,
+               and each way of swapping says what it would do before it is taken. *@
+            <section class="insp-swap" data-testid="swap">
+                <h3>Swap with another class</h3>
+                @if (SwapWith is not { } pairId || t.Sessions[pairId] is not { } pair)
                 {
-                    <button type="button" class="btn" @onclick="() => D.Show<CoverForm>(new Dictionary<string, object?> { [nameof(CoverForm.SessionId)] = s.Id })">Cover</button>
+                    <p data-testid="swap-choose">Choose the class on the plan to swap @Looks.Title(t, s) with: any class this week that has not started.</p>
                 }
-                @if (!M.Scratch)
+                else
                 {
-                    <button type="button" class="btn" @onclick="() => D.Show<CancelForm>(new Dictionary<string, object?> { [nameof(CancelForm.SessionId)] = s.Id })" data-testid="inspector-cancel">@(s.Cancelled ? "Restore" : "Cancel")</button>
+                    var found = SwapsFor(t, s.Id, pairId, now);
+                    <p class="swap-with" data-testid="swap-with">With <b>@Looks.Title(t, pair)</b>, @Looks.WhenWithDay(pair)@(Looks.Room(t, pair) is { Length: > 0 } where ? ", " + where : "")</p>
+                    @if (found.Ways.Count > 0)
+                    {
+                        <ul>
+                            @foreach (var w in found.Ways)
+                            {
+                                <li data-testid="swap-option" data-kind="@w.Kind">
+                                    <button type="button" class="btn way" @onclick="() => TakeSwap(w)" data-testid="swap-take">Swap their @Swaps.Name(w.Kind)</button>
+                                    <div class="swap-says" data-testid="swap-says">@Swaps.Says(t, w)</div>
+                                    @* The verdict first; then what it puts right, what it brings, and what it leaves as it was. *@
+                                    <ul class="ft-notes">
+                                        @if (w.Brings.Count == 0)
+                                        {
+                                            <li class="good" data-testid="swap-clear">@(w.After.Count == 0 ? "Nothing against it" : "Nothing new against it")</li>
+                                        }
+                                        @foreach (var c in w.PutRight)
+                                        {
+                                            <li class="good" data-testid="swap-puts-right">Puts right: @c.Description</li>
+                                        }
+                                        @foreach (var c in w.Brings)
+                                        {
+                                            <li class="against" data-testid="swap-brings">@c.Description</li>
+                                        }
+                                        @foreach (var c in w.Still)
+                                        {
+                                            <li class="still" data-testid="swap-still">Still: @c.Description</li>
+                                        }
+                                    </ul>
+                                </li>
+                            }
+                        </ul>
+                        <p class="muted">Undo puts both back.</p>
+                    }
+                    @foreach (var n in found.Notes)
+                    {
+                        <p class="muted" data-testid="swap-note">@n</p>
+                    }
                 }
-                @if (!M.Scratch)
+                <button type="button" class="btn quiet" @onclick="OnSwapStop" data-testid="swap-stop">Stop swapping</button>
+            </section>
+        }
+        else
+        {
+            @* The verbs straight under the name, so they are on the screen however much is said about the class below. *@
+            <div class="insp-actions">
+                <button type="button" class="btn primary" @onclick="() => OnEdit.InvokeAsync(s.Id)" data-testid="inspector-edit">@(Editable ? "Edit" : "Details")</button>
+                @if (roster.Count > 0 && o.Happens && !M.Scratch)
                 {
-                    <button type="button" class="btn" @onclick="() => D.Show<FindTimeForm>(new Dictionary<string, object?> { [nameof(FindTimeForm.SessionId)] = s.Id })" title="When everybody it needs, and a space, are free this week" data-testid="inspector-find-time">Another time…</button>
+                    <button type="button" class="btn" @onclick="() => D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = s.Id })" data-testid="inspector-register">Register</button>
                 }
-                <button type="button" class="btn" @onclick="() => Duplicate(s)" data-testid="inspector-duplicate">Duplicate</button>
-            }
-            @* Copy, never move: the class stays where it is, a week that has ended included. *@
-            @if (!M.Scratch && W.Access.MaySeeScratch && W.Access.MayEdit)
-            {
-                <button type="button" class="btn" @onclick="() => CopyToScratch(s)" data-testid="inspector-to-scratch">Copy to Scratch Week</button>
-            }
-            @if (Editable)
-            {
-                <button type="button" class="btn danger" @onclick="() => Delete(s)" data-testid="inspector-delete">Delete</button>
-            }
-        </div>
+                @if (Editable)
+                {
+                    @* A plan has nothing that happens: no cover and nothing to cancel. *@
+                    @if (!M.Scratch && (o.NeedsCover || o.Covered))
+                    {
+                        <button type="button" class="btn" @onclick="() => D.Show<CoverForm>(new Dictionary<string, object?> { [nameof(CoverForm.SessionId)] = s.Id })">Cover</button>
+                    }
+                    @if (!M.Scratch)
+                    {
+                        <button type="button" class="btn" @onclick="() => D.Show<CancelForm>(new Dictionary<string, object?> { [nameof(CancelForm.SessionId)] = s.Id })" data-testid="inspector-cancel">@(s.Cancelled ? "Restore" : "Cancel")</button>
+                    }
+                    @if (!M.Scratch)
+                    {
+                        <button type="button" class="btn" @onclick="() => D.Show<FindTimeForm>(new Dictionary<string, object?> { [nameof(FindTimeForm.SessionId)] = s.Id })" title="When everybody it needs, and a space, are free this week" data-testid="inspector-find-time">Another time…</button>
+                    }
+                    @if (!M.Scratch && !Swapping && !s.Cancelled && WaysOut.StillAhead(s, W.Today, now))
+                    {
+                        <button type="button" class="btn" @onclick="OnSwapStart" title="Swap its time, its place or its space with another class of this week" data-testid="inspector-swap">Swap with…</button>
+                    }
+                    <button type="button" class="btn" @onclick="() => Duplicate(s)" data-testid="inspector-duplicate">Duplicate</button>
+                }
+                @* Copy, never move: the class stays where it is, a week that has ended included. *@
+                @if (!M.Scratch && W.Access.MaySeeScratch && W.Access.MayEdit)
+                {
+                    <button type="button" class="btn" @onclick="() => CopyToScratch(s)" data-testid="inspector-to-scratch">Copy to Scratch Week</button>
+                }
+                @if (Editable)
+                {
+                    <button type="button" class="btn danger" @onclick="() => Delete(s)" data-testid="inspector-delete">Delete</button>
+                }
+            </div>
+        }
         <dl class="insp-facts">
             <dt>Where</dt><dd>@(Looks.Room(t, s) is { Length: > 0 } r ? r : "No space given")</dd>
             @* What its space has to have, so the reason a space is the wrong one is in sight beside it. *@
@@ -124,7 +187,6 @@
         }
         @if (movable && Editable && !M.Scratch)
         {
-            var now = W.Clock.TimeOfDay;
             var ahead = WaysOut.StillAhead(s, W.Today, now);
             // The other classes in its clashes that could move instead, each with ways out of its own.
             var others = M.CouldMoveInstead(s.Id, W.Today, now);
@@ -223,6 +285,13 @@
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<Guid> OnEdit { get; set; }
     [Parameter] public EventCallback<Guid> OnChosen { get; set; }
+    /// <summary>Whether this class is being swapped (Swap with…), and the class chosen on the plan to swap it with.</summary>
+    [Parameter] public bool Swapping { get; set; }
+    [Parameter] public Guid? SwapWith { get; set; }
+    [Parameter] public EventCallback OnSwapStart { get; set; }
+    [Parameter] public EventCallback OnSwapStop { get; set; }
+    /// <summary>A swap taken, with the day this class went to.</summary>
+    [Parameter] public EventCallback<DateOnly> OnSwapped { get; set; }
 
     /// <summary>The most lines of Elsewhere listed: the shading says the rest.</summary>
     private const int MostLines = 12;
@@ -239,6 +308,27 @@
         _ways = WaysOut.For(t, id, W.Today, now, W.Access.Events);
         (_waysOf, _waysKey) = (t, key);
         return _ways;
+    }
+
+    private SwapsFound _swaps = new([], []);
+    private Timetable? _swapsOf;
+    private (Guid From, Guid With, DateOnly Today, int Minute) _swapsKey;
+
+    /// <summary>The ways of swapping the two, worked out again only when the timetable, either class or the minute has changed.</summary>
+    private SwapsFound SwapsFor(Timetable t, Guid from, Guid with, TimeOnly now)
+    {
+        var key = (from, with, W.Today, now.Hour * 60 + now.Minute);
+        if (ReferenceEquals(_swapsOf, t) && _swapsKey == key) return _swaps;
+        _swaps = Swaps.For(t, from, with, W.Today, now);
+        (_swapsOf, _swapsKey) = (t, key);
+        return _swaps;
+    }
+
+    /// <summary>A swap taken as it was offered: worked out again as the timetable is now, and refused unless it is still that swap.</summary>
+    private async Task TakeSwap(Swap w)
+    {
+        var now = W.Clock.TimeOfDay;
+        if (W.Commit(t => Edits.Swap(t, w, W.Today, now))) await OnSwapped.InvokeAsync(w.A.Date);
     }
 
     /// <summary>A way out taken: worked out again as the timetable is now, and refused if it is no longer one.</summary>

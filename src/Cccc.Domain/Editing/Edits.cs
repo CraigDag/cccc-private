@@ -163,7 +163,12 @@ public static class Edits
     public static Session Moved(Session s, DateOnly date, TimeOnly start, Guid? roomId, bool sayMoved)
     {
         if (sayMoved && Week.MondayOf(date) != s.WeekMonday) throw new EditRefused("A class says it has moved only inside its own week. To move it to another week, copy it there.");
-        var moved = Openings.Placed(s, date, Snap(start), roomId);
+        return SayingMoved(s, Openings.Placed(s, date, Snap(start), roomId), sayMoved);
+    }
+
+    /// <summary>A class where it has been put, remembering where it was first when it says it has moved; back there, it no longer says so.</summary>
+    private static Session SayingMoved(Session s, Session moved, bool sayMoved)
+    {
         var from = sayMoved ? s.MovedFrom ?? new MovedFrom(s.Date, s.Start, s.End) : s.MovedFrom;
         return moved with { MovedFrom = from is { } f && f.Date == moved.Date && f.Start == moved.Start && f.End == moved.End ? null : from };
     }
@@ -199,6 +204,27 @@ public static class Edits
         var moved = Moved(other, date, start, roomId, sayMoved: Week.MondayOf(other.Date) <= today);
         return new Draft(t).Put(Collections.Sessions, moved).Put(Collections.Sessions, placed)
             .ToBatch($"Made room for {placed.DisplayTitle}, {Week.ShortDate(placed.Date)} {Week.Hm(placed.Start)}, by moving {MovedWhere(t, other, way)}");
+    }
+
+    /// <summary>
+    /// A swap of two classes that was offered (<see cref="Rules.Swaps"/>), taken as one change that one Undo takes back.
+    /// It is worked out again from the timetable as it is now and refused unless it is still the swap offered
+    /// (<see cref="Swaps.AsOffered"/>), so a change somebody else made meanwhile, a class moved or a clash where one is
+    /// going, is never walked into. Once their week has begun, a class swapped to another time says it has moved, as a
+    /// way out does.
+    /// </summary>
+    public static Batch Swap(Timetable t, Swap offered, DateOnly today, TimeOnly now)
+    {
+        var found = Swaps.For(t, offered.A.Id, offered.B.Id, today, now);
+        var swap = found.Ways.FirstOrDefault(w => w.Kind == offered.Kind) ?? throw new EditRefused(found.Ways.Count == 0 && found.Notes.Count == 1
+            ? found.Notes[0] : "Those two classes can no longer be swapped that way: something has changed since.");
+        if (!Swaps.AsOffered(swap, offered))
+            throw new EditRefused("Something has changed since that swap was offered, so it has not been made: look at what it would do now.");
+        var a = t.Sessions[offered.A.Id]!;
+        var b = t.Sessions[offered.B.Id]!;
+        bool begun = Week.MondayOf(a.Date) <= today;
+        return new Draft(t).Put(Collections.Sessions, SayingMoved(a, swap.A, begun)).Put(Collections.Sessions, SayingMoved(b, swap.B, begun))
+            .ToBatch($"Swapped the {Swaps.Name(swap.Kind)} of {a.DisplayTitle} and {b.DisplayTitle}");
     }
 
     /// <summary>Where a way out takes a class, in a label: "Juggling to Studio B", or "Juggling to 11:00", with its space when that changes too.</summary>

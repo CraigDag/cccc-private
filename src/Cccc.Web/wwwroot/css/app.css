@@ -662,6 +662,16 @@ button.term-blank.next { border: 1px dashed var(--border); font-style: normal; c
 .insp-elsewhere .ie-who { color: var(--text-muted); overflow-wrap: anywhere; }
 .insp-elsewhere li.away .ie-what { color: var(--warning); }
 .insp-elsewhere p { margin: 4px 0 0; font-size: 13px; }
+/* Swapping two classes: the ways listed like ways out, each with what it says and what it would leave. */
+.insp-swap { border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.insp-swap h3 { margin: 0; font-size: 11px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.insp-swap p { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+.insp-swap > ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.insp-swap .way { width: 100%; justify-content: flex-start; text-align: left; font-weight: 650; }
+.insp-swap .swap-says { margin: 4px 0 0 4px; font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.insp-swap .ft-notes { margin-left: 4px; }
+.insp-swap > .btn.quiet { align-self: flex-start; }
+.blk.paired, .wm-chip.paired { box-shadow: 0 0 0 2px var(--accent); z-index: 4; }
 .insp-ways { border-top: 1px solid var(--divider); padding-top: 12px; }
 .insp-ways h3 { margin: 0 0 8px; font-size: 11px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--text-quiet); }
 .insp-ways > ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -865,6 +875,8 @@ ul.said li + li { margin-top: 4px; }
 .ft-notes li.good { color: var(--text-muted); }
 .ft-notes li.good::before { content: "✓"; }
 .ft-notes li.against::before { content: "!"; color: var(--warning); }
+.ft-notes li.still { color: var(--text-quiet); }
+.ft-notes li.still::before { content: "·"; }
 .ft-gap { margin: 0 0 14px; padding: 8px 12px; border-radius: 8px; background: var(--well); font-size: 13px; color: var(--text-muted); overflow-wrap: anywhere; }
 .ft-gap.looked { background: transparent; border: 1px dashed var(--divider); }
 .ft-gap-days { margin-right: 4px; font-weight: 650; color: var(--text); }
@@ -1055,6 +1067,7 @@ ul.said li + li { margin-top: 4px; }
     .now-needs { position: static; }
     .plan-body.with-side { grid-template-columns: minmax(0, 1fr); }
     .inspector { position: fixed; z-index: 45; left: 12px; right: 12px; bottom: 12px; top: auto; max-height: 62vh; }
+    .inspector.swap-choosing { max-height: 40vh; }
 }
 
 @media (max-width: 760px) {

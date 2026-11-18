@@ -283,16 +283,17 @@
             }
             else if (V.Scale == Scale.Day)
             {
-                <Timeline M="m" W="W" Gestures="_gestures" Day="V.Day" Lens="V.Lens" Chosen="V.Chosen" Editable="editable" OpenEvent="OpenEvent" />
+                <Timeline M="m" W="W" Gestures="_gestures" Day="V.Day" Lens="V.Lens" Chosen="V.Chosen" Paired="V.Swapping ? V.SwapWith : null" Editable="editable" OpenEvent="OpenEvent" />
             }
             else
             {
-                <WeekMatrix M="m" W="W" Lens="V.Lens" Chosen="V.Chosen" Choose="Choose" Open="OpenSession" OpenDay="OpenDay" />
+                <WeekMatrix M="m" W="W" Lens="V.Lens" Chosen="V.Chosen" Paired="V.Swapping ? V.SwapWith : null" Choose="Choose" Open="OpenSession" OpenDay="OpenDay" />
             }
         </div>
         @if (V.Chosen is { } id)
         {
-            <Inspector M="m" W="W" Id="id" Editable="editable" OnClose="() => { V.Chosen = null; }" OnEdit="OpenSession" OnChosen="Choose" />
+            <Inspector M="m" W="W" Id="id" Editable="editable" OnClose="() => { V.Chosen = null; V.StopSwap(); }" OnEdit="OpenSession" OnChosen="Choose"
+                       Swapping="V.Swapping" SwapWith="V.SwapWith" OnSwapStart="() => { V.SwapFrom = id; V.SwapWith = null; }" OnSwapStop="V.StopSwap" OnSwapped="Swapped" />
         }
         else if (V.IssuesOpen)
         {
@@ -351,7 +352,7 @@
         _gestures = new PlanGestures
         {
             OnChoose = id => Do(() => Choose(id)),
-            OnChooseNone = () => Do(() => V.Chosen = null),
+            OnChooseNone = () => Do(() => { V.Chosen = null; V.StopSwap(); }),
             OnOpen = id => Do(() => OpenSession(id)),
             OnMove = (id, row, start, end) => Do(() => Move(id, row, start, end)),
             OnAddAt = (row, minute) => Do(() => AddAt(row, minute, null)),
@@ -381,8 +382,22 @@
 
     private void Choose(Guid id)
     {
+        // While a class is being swapped, the class chosen next is the one to swap it with, and it stays the chosen one.
+        if (V.Swapping)
+        {
+            V.SwapWith = id == V.SwapFrom ? null : id;
+            return;
+        }
+        V.StopSwap();
         V.Chosen = V.Chosen == id ? null : id;
         V.IssuesOpen = false;
+    }
+
+    /// <summary>A swap taken: the swapping is over, and on a day's plan the day is the one the class went to.</summary>
+    private void Swapped(DateOnly day)
+    {
+        V.StopSwap();
+        if (V.Scale == Scale.Day && day != V.Day) V.GoTo(day);
     }
 
     private static TimeOnly Minute(int m) => m >= 1440 ? new TimeOnly(23, 59) : new TimeOnly(m / 60, m % 60);
@@ -567,7 +582,12 @@
             case "delete" when W.Access.MayEdit && V.Chosen is { } id && _m is { Locked: false } m:
                 if (W.Commit(m.Edit(t => Edits.RemoveSessions(t, [id])))) V.Chosen = null;
                 break;
-            case "escape": V.Chosen = null; V.IssuesOpen = false; _moreOpen = false; break;
+            case "escape":
+                // Esc ends a swap first, keeping the class chosen; then the choice itself.
+                if (V.Swapping) V.StopSwap();
+                else { V.Chosen = null; V.IssuesOpen = false; }
+                _moreOpen = false;
+                break;
             case "undo": W.Undo(); break;
             case "redo": W.Redo(); break;
             case "previous": Step(-1); break;

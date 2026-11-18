@@ -421,6 +421,39 @@ three**, the soonest first, as Find a time lists them.
   made meanwhile is never walked into. The other class says it has moved once its week has begun, as
   Find a time does.
 
+## Swapping two classes (`Swaps`, the rebuild's own)
+
+Two classes trading places is a change a timetable often needs, and made as two moves the first always lands
+on the class that has not moved yet. **Swap with…** makes it one change, saying first what it would do.
+
+- **Three ways, each only where it means something.** *Their times*: each to the other's day and start, in
+  its own space. *Their places*: each to the other's day, start and space, offered beside their times when
+  the spaces differ. *Their spaces*: each to the other's space at its own time, offered only while the two
+  are on at once, since otherwise it is two changes of space rather than a swap.
+- **Each keeps its own length and its people**, each person's part of it moving with it (`Openings.Placed`,
+  as a move does): Juggling of an hour and a half swapped with Strength of an hour still runs an hour and a
+  half.
+- **Two classes of one week, both still ahead.** A class that has started or is over stays where it is, a
+  cancelled one is not swapped with anything, and two of different weeks are two moves, which are Find a
+  time's. Their times are not swapped when either would then run past midnight or fall on a day closed for
+  it; their spaces still are, while they are on at once.
+- **Beside each way**, in the clash check's own words, what it would **put right** (in the week now and not
+  after), what it would **bring** (in the week after and not now) and what would be there **still** (against
+  the two now and after, which is no reason against it). The whole week is compared, since only the two
+  move: a facilitator left a long gap between two other classes, or a group's day left with too much hard
+  training, is the swap's too, though it names neither. The same kind between the same classes is the same
+  clash wherever in the day it has moved to, and so is the same kind in the same words, as a group's day of
+  hard training is whichever classes make it. A facilitator's weekly hours are left out: a swap inside the
+  week leaves them as they were. **Never a refusal**: a way that brings a clash is offered and said, and the
+  choice is the person's.
+- **Taking one** (`Edits.Swap`) works it out again from the timetable as it is now and refuses it unless it
+  is still the swap offered (`Swaps.AsOffered`): both classes to the same places at the same lengths, and
+  nothing brought that was not said. So a class moved meanwhile, or a clash put where one is going, is never
+  walked into; something put right meanwhile is no reason to refuse, and a change to who teaches is kept.
+  Both move in one step, which one Undo takes back, and once their week has begun each says it has moved,
+  as Find a time does.
+- **Never** in the Scratch Week, which has *Place onto a week*.
+
 ## Hard training (`HardTraining`, the rebuild's own)
 
 How hard a group's day is on the body. A circus school's injuries come from loading, not from clashes, and

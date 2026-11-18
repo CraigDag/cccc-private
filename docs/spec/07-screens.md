@@ -214,8 +214,8 @@ More has it.
   On a phone it scrolls inside its frame with the names held at the left, opening on the week before
   this one. A class added from the term opens on its day, chosen.
 - The side panel for a chosen class: title, when, its verbs straight under the title (Edit, Register,
-  Cover, Cancel/Restore, Another time…, Duplicate, Copy to Scratch Week, Delete, so they are on a laptop's
-  screen however much is said below), then where, who teaches (and who is away), the group and roster
+  Cover, Cancel/Restore, Another time…, Swap with…, Duplicate, Copy to Scratch Week, Delete, so they are on
+  a laptop's screen however much is said below), then where, who teaches (and who is away), the group and roster
   count, where it moved from, state tags, the clash or cover note, **Ways out** under a clash, and
   **Elsewhere that day**.
 - **Ways out**, for editors, under a chosen class's clash: up to three buttons (*Studio B, same time*;
@@ -225,6 +225,17 @@ More has it.
   it and its own ways out. A class that has started says so and offers none; one with no way out the
   same day says *Another time…* looks across its week. A clash in the Issues list opens the class that
   has not started yet, so the ways out are there. A coach reads the clash and is offered none.
+- **Swap with…**, for editors, on a class that has not started and is not cancelled: the verbs give way to
+  *Choose the class on the plan to swap Juggling with*, and the next class pressed is marked beside it in
+  the accent rather than chosen in its place. Then each way of swapping them (*Swap their times*, *their
+  places*, *their spaces*) says where it takes them (*Juggling to Thu 5 Mar 14:00, Strength to Tue 3 Mar
+  09:00*) and under it, as the clash check writes them, what it puts right, what it brings (!) and what is
+  there still; *Nothing against it*, or *Nothing new against it*, when it brings nothing. A class that
+  cannot be swapped says why (*Strength has started, so it stays where it is*). One press swaps them, a
+  day's plan goes to the day the chosen class went to, and one Undo puts both back. Pressing the chosen
+  class itself asks again; Esc or *Stop swapping* stops, and so does closing the panel, pressing an empty
+  part of the plan or going to another week. On a phone the sheet is shorter while choosing, so the plan
+  above it can be pressed. A coach is offered none of it.
 - **A chosen class shades its day** where what it needs is elsewhere (`Busy`): a hatch down every row
   at those times, orange where somebody is away, so where it could go is the clear part. On rows that
   are spaces, a space's own classes already show when it is in use, so only its people and groups are

@@ -171,6 +171,8 @@
     [Parameter] public DateOnly Day { get; set; }
     [Parameter] public Lens Lens { get; set; }
     [Parameter] public Guid? Chosen { get; set; }
+    /// <summary>The class chosen to swap the chosen one with, marked beside it.</summary>
+    [Parameter] public Guid? Paired { get; set; }
     [Parameter] public bool Editable { get; set; }
     [Parameter] public EventCallback<Guid> OpenEvent { get; set; }
     private ElementReference _root;
@@ -215,6 +217,7 @@
         if (o.Session.Provisional) c.Add("provisional");
         if (o.Session.Audience.IsEveryone && Lens == Lens.Groups) c.Add("everyone");
         if (Chosen == o.Session.Id) c.Add("chosen");
+        if (Paired == o.Session.Id) c.Add("paired");
         if (b.End - b.Start <= 45) c.Add("short");
         return string.Join(' ', c);
     }

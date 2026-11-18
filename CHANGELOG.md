@@ -204,6 +204,16 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   need cover (opening the Cover page on that week), the days the building is closed, and how many classes are
   different from the week before (pressing it lists them). With nothing to put right it says *Ready: 25 classes,
   nothing clashes, nobody needs cover.* A week with no school in it says nothing, and a coach is not told.
+- **Swap two classes in one go.** Choose a class on the plan, press *Swap with…* and then press the class to
+  swap it with. The side panel offers each way that makes sense: *their times* (each to the other's day and
+  time, in its own space), *their places* (time and space too) and, when the two are on at once, *their
+  spaces*; each saying where it takes them (*Juggling to Thu 26 Nov 14:00, Strength to Tue 24 Nov 09:00*)
+  and, in the clash check's words, what it puts right, what it brings and what is there still, including a
+  long gap it would leave somebody between two other classes. Each keeps its own length and its people. One
+  press swaps them, and one Undo puts both back. Two classes in different weeks, or one that has started or
+  is cancelled, are not swapped, and the panel says why; and when somebody else's change since would take
+  either class somewhere else or bring something the swap did not say, it is not made, so you can look at
+  it again.
 - **Two looks**: Paper (light, like a printed programme) and Night (dark), following the device unless
   you choose one in your menu. The printed sheets are in the Paper look too.
 - **Print the building's day**: *Spaces, a page a day* is the plan's Spaces view on paper, every space

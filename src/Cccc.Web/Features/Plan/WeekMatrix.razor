@@ -35,7 +35,7 @@
                                 @foreach (var b in cell)
                                 {
                                     var s = b.O.Session;
-                                    <button type="button" class="wm-chip @(b.O.NeedsCover ? "cover" : "") @(M.Ringed.Contains(s.Id) ? "clash" : "") @(b.O.Happens ? "" : "off") @(Chosen == s.Id ? "chosen" : "")"
+                                    <button type="button" class="wm-chip @(b.O.NeedsCover ? "cover" : "") @(M.Ringed.Contains(s.Id) ? "clash" : "") @(b.O.Happens ? "" : "off") @(Chosen == s.Id ? "chosen" : "") @(Paired == s.Id ? "paired" : "")"
                                             style="--c:@(Looks.ColourOf(t, s) ?? "var(--rule)")" @onclick="() => Choose.InvokeAsync(s.Id)" @ondblclick="() => Open.InvokeAsync(s.Id)" data-testid="block">
                                         <span class="wm-time">@Cccc.Domain.Week.Hm(new TimeOnly(b.Start / 60, b.Start % 60))</span> @Looks.Title(t, s)
                                     </button>
@@ -57,6 +57,8 @@
     [Parameter, EditorRequired] public Workspace W { get; set; } = default!;
     [Parameter] public Lens Lens { get; set; }
     [Parameter] public Guid? Chosen { get; set; }
+    /// <summary>The class chosen to swap the chosen one with, marked beside it.</summary>
+    [Parameter] public Guid? Paired { get; set; }
     [Parameter] public EventCallback<Guid> Choose { get; set; }
     [Parameter] public EventCallback<Guid> Open { get; set; }
     [Parameter] public EventCallback<DateOnly> OpenDay { get; set; }
