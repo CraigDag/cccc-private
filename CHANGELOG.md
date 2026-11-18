@@ -135,6 +135,11 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   class covered whether the person covering has seen it (*Seen*, or *Not seen yet* in amber), so you know
   who still needs a phone call. What somebody has seen is kept beside the timetable, never in it, and goes
   when they are erased.
+- **And the evening before, by email**, once it is switched on (`NewsMail__Mode`, off until then, with a
+  Preview mode like the register reminders'): at 18:00 each coach whose next day changed in a way they
+  have not seen gets one email saying what, in the same words as New for you, so somebody who never
+  opens the app still knows before the morning. An administrator can have the count of who was emailed,
+  for the phone calls. Administration ▸ System shows its state. No student is ever named.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

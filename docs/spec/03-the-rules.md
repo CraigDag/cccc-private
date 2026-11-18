@@ -83,6 +83,10 @@ old app has a class that carries the reasoning, it is named in brackets so the h
 - **Whether somebody has seen it** (`News.Seen`) is the same reading asked the other way: false while
   it is news to them, true once seen, and nothing when nothing changed it lately, so the Cover page and
   their own Now cannot disagree.
+- **The evening before** (`EveningNotes`, sent by `NewsMail` once switched on): each facilitator with an
+  address, never a guest or a former one, is emailed their news about their next day, a class of theirs
+  that is on it now or was on it, so moved off it counts and so does moved onto it. Emailing is not
+  seeing: what they have seen changes only with Got it, so the Cover page still says *Not seen yet*.
 
 ## Registers
 

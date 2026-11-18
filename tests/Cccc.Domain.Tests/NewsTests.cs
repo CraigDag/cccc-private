@@ -177,4 +177,59 @@ public class NewsTests
         var kept = News.GotIt(seen, [Item(fresh, 12), Item(later, 7)], oldest: 5);
         Assert.Equal(new[] { (edge, 5L), (later, 10L), (fresh, 12L) }.OrderBy(x => x.Item1), kept.Select(kv => (kv.Key, kv.Value)).OrderBy(x => x.Item1));
     }
+
+    [Fact]
+    public void TheEveningEmailIsEachFacilitatorsUnseenNewsAboutTheirNextDayAndNobodyWithoutAnAddress()
+    {
+        var b = new Build();
+        var hall = b.Room("Hall");
+        var gym = b.Room("Gym");
+        Facilitator Mailed(string name, bool guest = false, bool former = false)
+        {
+            var f = b.Facilitator(name) with { Email = name.ToLowerInvariant() + "@example.invalid", IsGuest = guest, FormerSince = former ? Monday : null };
+            b.T = b.T with { Facilitators = b.T.Facilitators.Put(f) };
+            return f;
+        }
+        var ada = Mailed("Ada");
+        var esme = Mailed("Esme");
+        var cleo = Mailed("Cleo");                                                                      // nothing new for her
+        var gus = Mailed("Gus", guest: true);
+        var dag = Mailed("Dag", former: true);
+        var bo = b.Facilitator("Bo");                                                                   // no address
+        var thursday = Wednesday.AddDays(1);
+        var moved = b.Session(thursday, "09:00", "10:00", null, hall, null, In(ada));
+        var gone = b.Session(thursday, "11:00", "12:00", null, hall, null, In(ada));                   // moved off tomorrow
+        var movedIn = b.Session(Monday.AddDays(7), "13:00", "14:00", null, hall, null, In(ada));       // moved onto tomorrow
+        var friday = b.Session(thursday.AddDays(1), "09:00", "10:00", null, hall, null, In(ada));
+        var seenOne = b.Session(thursday, "15:00", "16:00", null, hall, null, In(ada));
+        var hers = b.Session(thursday, "16:00", "17:00", null, hall, null, In(ada));
+        var esmes = b.Session(thursday, "17:00", "18:00", null, hall, null, In(esme));                // Esme's, moved to Friday
+        var given = b.Session(Monday.AddDays(7), "15:00", "16:00", null, hall, null, In(ada));         // Ada's, given to Esme on tomorrow
+        b.Session(thursday, "10:00", "11:00", null, gym, null, In(cleo));
+        var others = new[] { b.Session(thursday, "09:00", "10:00", null, gym, null, In(gus)), b.Session(thursday, "11:00", "12:00", null, gym, null, In(dag)),
+                             b.Session(thursday, "13:00", "14:00", null, gym, null, In(bo)) };
+        var log = new Log(b.T);
+        log.Respace(moved, gym);
+        log.Do(t => Edits.Move(t, gone.Id, Monday.AddDays(7), new TimeOnly(11, 0), new TimeOnly(12, 0)));
+        log.Do(t => Edits.Move(t, movedIn.Id, thursday, new TimeOnly(13, 0), new TimeOnly(14, 0)));
+        log.Respace(friday, gym);
+        log.Respace(seenOne, gym);
+        log.Respace(hers, gym, by: "ada");
+        log.Do(t => Edits.Move(t, esmes.Id, thursday.AddDays(1), new TimeOnly(17, 0), new TimeOnly(18, 0)));
+        log.Do(t => Edits.PutSession(t, t.Sessions[given.Id]! with { Date = thursday, Facilitators = [In(esme)] }));
+        foreach (var s in others) log.Respace(s, hall);
+        var seen = News.GotIt(NothingSeen, News.For(log.T, log.Changes, ada.Id, Wednesday, Ten, ["ada"], NothingSeen).Where(x => x.Id == seenOne.Id), oldest: 1);
+
+        var notes = EveningNotes.For(log.T, log.Changes, Wednesday, new TimeOnly(18, 0),
+            id => id == ada.Id ? ["ada"] : [], id => id == ada.Id ? seen : NothingSeen);
+
+        Assert.Equal(["Ada", "Esme"], notes.Select(n => n.Facilitator.Name));
+        Assert.All(notes, n => Assert.Equal(thursday, n.Day));
+        // Not the one given away on another day: it was hers on Monday, and on Thursday it is Esme's.
+        Assert.Equal([moved.Id, movedIn.Id, gone.Id], notes[0].Changes.Select(x => x.Id));
+        Assert.Equal([given.Id, esmes.Id], notes[1].Changes.Select(x => x.Id));
+        // Asked the evening before Friday instead, it is Friday's: Esme's class moved onto it is hers there.
+        Assert.Equal([(ada.Id, friday.Id), (esme.Id, esmes.Id)], EveningNotes.For(log.T, log.Changes, thursday, new TimeOnly(18, 0), _ => [], _ => NothingSeen)
+            .SelectMany(n => n.Changes.Select(x => (n.Facilitator.Id, x.Id))));
+    }
 }

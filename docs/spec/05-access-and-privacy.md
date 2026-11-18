@@ -131,6 +131,9 @@ The live file has held real students since 2026-10-29, so all of this applies to
   timetable. **Whether somebody has seen it is for the people who arrange cover** (`Access.MaySeeWhoHasSeen`:
   editors and administrators), and only for the classes they cover: a coach is never shown whether a
   colleague has read something, which would be watching each other.
+- **The evening email of what changed** (`NewsMail`, `EveningNotes`) goes only to the facilitator's own
+  address (or, in Preview, to the one preview address, saying who it was for), names classes, spaces and
+  whoever changed them and never a student, and is off until switched on; the log records how many went.
 - **Absence reasons** are free text an administrator may fill; the form warns not to write health
   details there. **A line typed into Find never fills it** (`QuickAway`): words it does not understand
   (*ada sick flu*) are said in Find and kept nowhere. **Asking to be away has no box for why**, deliberately: a coach asked why would write

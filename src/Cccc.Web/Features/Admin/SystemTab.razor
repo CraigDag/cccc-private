@@ -1,6 +1,7 @@
 @inject ProjectStore Store
 @inject IWebHostEnvironment Env
 @inject Cccc.Web.Features.Mail.ReminderSettings Reminders
+@inject Cccc.Web.Features.Mail.NewsMailSettings NewsMail
 @inject Cccc.Web.Features.Mail.MailSettings Mail
 @inject FollowStatus Follow
 @{
@@ -8,6 +9,7 @@
     var backup = Store.GetMeta("last_backup");
     var prune = Store.GetMeta("last_prune");
     var last = Store.GetMeta("reminders_last")?.Split('|');
+    var newsLast = Store.GetMeta("newsmail_last")?.Split('|');
 }
 <div class="cards">
     <div class="card"><small>Version</small><b>@AppVersion.Current</b><small>@Env.EnvironmentName</small></div>
@@ -23,6 +25,16 @@
             @if (last is { Length: 3 } && DateTimeOffset.TryParse(last[0], out var ran))
             {
                 @(last[1] == "ok" ? $" Last run {W.Clock.Describe(ran)}: {last[2]} sent." : $" Last run {W.Clock.Describe(ran)} failed ({last[2]}).")
+            }
+        </small>
+    </div>
+    <div class="card @(NewsMail.Settings.Problem is not null || (newsLast is { Length: 3 } && newsLast[1] == "failed") ? "warn" : "")" data-testid="newsmail-card">
+        <small>Tomorrow's changes by email</small>
+        <b>@(NewsMail.Settings.Problem is not null ? "Off: a setting is wrong" : NewsMail.Settings.Mode.ToString())</b>
+        <small>@NewsMail.Describe(Mail)
+            @if (newsLast is { Length: 3 } && DateTimeOffset.TryParse(newsLast[0], out var newsRan))
+            {
+                @(newsLast[1] == "ok" ? $" Last run {W.Clock.Describe(newsRan)}: {newsLast[2]} sent." : $" Last run {W.Clock.Describe(newsRan)} failed ({newsLast[2]}).")
             }
         </small>
     </div>

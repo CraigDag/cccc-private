@@ -29,12 +29,13 @@ public class ReminderMailTests
         Assert.Equal(ReminderMode.Off, ReminderSettings.Read(Config()).Mode);
         var typo = ReminderSettings.Read(Config(("Reminders:Mode", "Onn")));
         Assert.Equal(ReminderMode.Off, typo.Mode);
-        Assert.Contains("Onn", typo.Problem);
+        Assert.Equal("Reminders__Mode is \"Onn\", not Off, Preview or On, so reminders are off.", typo.Problem);
         var noPreviewAddress = ReminderSettings.Read(Config(("Reminders:Mode", "Preview")));
         Assert.Equal(ReminderMode.Off, noPreviewAddress.Mode);
-        Assert.NotNull(noPreviewAddress.Problem);
+        Assert.Equal("Reminders__Mode is Preview and Reminders__PreviewTo is not set, so reminders are off.", noPreviewAddress.Problem);
         var badTime = ReminderSettings.Read(Config(("Reminders:Mode", "On"), ("Reminders:At", "six")));
         Assert.Equal(ReminderMode.Off, badTime.Mode);
+        Assert.Equal("Reminders__At is \"six\", not a time like 18:00, so reminders are off.", badTime.Problem);
         var on = ReminderSettings.Read(Config(("Reminders:Mode", "on"), ("Reminders:At", "17:30")));
         Assert.Equal((ReminderMode.On, new TimeOnly(17, 30), (string?)null), (on.Mode, on.At, on.Problem));
     }
@@ -86,7 +87,7 @@ public sealed class FakeMailer : IMailer
     }
 }
 
-/// <summary>The real host with reminders in Preview, due from midnight, and mail going to a fake.</summary>
+/// <summary>The real host with reminders and tomorrow's changes in Preview, due from midnight, and mail going to a fake.</summary>
 public sealed class ReminderHost : Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>
 {
     public readonly string Folder = Path.Combine(AppContext.BaseDirectory, "stores", Guid.NewGuid().ToString("N"));
@@ -100,6 +101,9 @@ public sealed class ReminderHost : Microsoft.AspNetCore.Mvc.Testing.WebApplicati
         builder.UseSetting("Reminders:Mode", "Preview");
         builder.UseSetting("Reminders:PreviewTo", "office@example.invalid");
         builder.UseSetting("Reminders:At", "00:00");
+        builder.UseSetting("NewsMail:Mode", "Preview");
+        builder.UseSetting("NewsMail:PreviewTo", "office@example.invalid");
+        builder.UseSetting("NewsMail:At", "00:00");
         builder.UseSetting("Smtp:Host", "smtp.example.invalid");
         builder.UseSetting("Smtp:From", "timetable@example.invalid");
         builder.ConfigureServices(s =>

@@ -211,6 +211,13 @@ async function spaceTo(page, name) {
     eq((await coverSeen(coach, nextMonday)).map(r => r.split(': ')[1]), ['-', '-', '-'], 'what the coach reads');
   });
 
+  await step('Administration says whether tomorrow\'s changes go by email, and how to start them', async () => {
+    await admin.goto(B + '/admin/system');
+    const card = (await admin.locator('[data-testid=newsmail-card]').textContent({ timeout: 8000 })).replace(/\s+/g, ' ').trim();
+    // The preview sends no mail, so they are off, and the card names its own switch, not the reminders'.
+    eq(card, "Tomorrow's changes by email Off Nobody is emailed. NewsMail__Mode=Preview or On starts them; the runbook has the steps.", 'the card');
+  });
+
   await browser.close();
   log(failed ? `${failed} failed` : 'all passed');
   process.exit(failed ? 1 : 0);

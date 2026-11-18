@@ -90,6 +90,9 @@ builder.Services.AddSingleton(mailSettings);
 builder.Services.AddSingleton(Cccc.Web.Features.Mail.ReminderSettings.Read(builder.Configuration));
 builder.Services.AddSingleton<Cccc.Web.Features.Mail.IMailer>(new Cccc.Web.Features.Mail.SmtpMailer(mailSettings));
 builder.Services.AddHostedService<Cccc.Web.Features.Mail.RegisterReminderService>();
+// And so is the evening email of what changed in somebody's next day that they have not seen (NewsMail__Mode).
+builder.Services.AddSingleton(Cccc.Web.Features.Mail.NewsMailSettings.Read(builder.Configuration));
+builder.Services.AddHostedService<Cccc.Web.Features.Mail.NewsMailService>();
 builder.Services.AddScoped<Cccc.Web.Features.Shell.Dialogs>();
 builder.Services.AddScoped<Cccc.Web.Features.Shell.Toasts>();
 builder.Services.AddScoped<Cccc.Web.Features.Week.WeekView>();

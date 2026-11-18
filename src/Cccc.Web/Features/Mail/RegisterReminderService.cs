@@ -19,29 +19,39 @@ public enum ReminderMode { Off, Preview, On }
 /// </summary>
 public sealed record ReminderSettings(ReminderMode Mode, TimeOnly At, string? PreviewTo, string? SummaryTo, string? Link, string? Problem)
 {
-    public static ReminderSettings Read(IConfiguration c)
+    public static ReminderSettings Read(IConfiguration c) => Read(c, "Reminders", "reminders");
+
+    /// <summary>
+    /// The settings of one evening email, from the section <paramref name="name"/> (Reminders, NewsMail), with the
+    /// same rules: Off unless told, and a value that does not parse is Off and says so.
+    /// </summary>
+    public static ReminderSettings Read(IConfiguration c, string name, string what)
     {
-        var s = c.GetSection("Reminders");
+        var s = c.GetSection(name);
         string? T(string k) => s[k] is { } v && v.Trim().Length > 0 ? v.Trim() : null;
         var off = new ReminderSettings(ReminderMode.Off, new TimeOnly(18, 0), null, null, T("Link"), null);
         var at = off.At;
         if (T("At") is { } a && !TimeOnly.TryParseExact(a, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out at))
-            return off with { Problem = $"Reminders__At is \"{a}\", not a time like 18:00, so reminders are off." };
+            return off with { Problem = $"{name}__At is \"{a}\", not a time like 18:00, so {what} are off." };
         if (T("Mode") is not { } m) return off with { At = at };
         if (!Enum.TryParse<ReminderMode>(m, true, out var mode) || !Enum.IsDefined(mode))
-            return off with { At = at, Problem = $"Reminders__Mode is \"{m}\", not Off, Preview or On, so reminders are off." };
+            return off with { At = at, Problem = $"{name}__Mode is \"{m}\", not Off, Preview or On, so {what} are off." };
         if (mode == ReminderMode.Preview && T("PreviewTo") is null)
-            return off with { At = at, Problem = "Reminders__Mode is Preview and Reminders__PreviewTo is not set, so reminders are off." };
+            return off with { At = at, Problem = $"{name}__Mode is Preview and {name}__PreviewTo is not set, so {what} are off." };
         return new ReminderSettings(mode, at, T("PreviewTo"), T("SummaryTo"), T("Link"), null);
     }
 
     public string Describe(MailSettings mail) =>
+        Describe(mail, "Reminders", "the reminders", "each facilitator with a register missing from that day is sent one email");
+
+    /// <summary>What System says of one evening email: <paramref name="what"/> as a preview goes, <paramref name="sends"/> when it is on.</summary>
+    public string Describe(MailSettings mail, string name, string what, string sends) =>
         Problem ?? Mode switch
         {
-            ReminderMode.Off => "Nobody is emailed. Reminders__Mode=Preview or On starts them; the runbook has the steps.",
+            ReminderMode.Off => $"Nobody is emailed. {name}__Mode=Preview or On starts them; the runbook has the steps.",
             _ when !mail.Configured => $"Set to {Mode}, but nothing is sent: {mail.Describe()}",
-            ReminderMode.Preview => $"Preview: every evening at {At:HH\\:mm}, the reminders go to one preview address instead of the facilitators.",
-            _ => $"On: every evening at {At:HH\\:mm}, each facilitator with a register missing from that day is sent one email.",
+            ReminderMode.Preview => $"Preview: every evening at {At:HH\\:mm}, {what} go to one preview address instead of the facilitators.",
+            _ => $"On: every evening at {At:HH\\:mm}, {sends}.",
         };
 
     public static IReadOnlyList<OutgoingMail> Compose(ReminderSettings s, IReadOnlyList<Reminder> reminders, DateOnly day)

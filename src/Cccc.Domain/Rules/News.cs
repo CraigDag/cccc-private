@@ -39,13 +39,16 @@ public static class News
         IReadOnlyCollection<string> theirLogins, IReadOnlyDictionary<Guid, long> seen)
     {
         var to = today.AddDays(LooksAhead);
-        bool Theirs(Session? s) => s is not null && (s.FacilitatorIds.Contains(facilitatorId) || s.CoverIds.Contains(facilitatorId))
+        bool Theirs(Session? s) => s is not null && IsTheirs(s, facilitatorId)
                                    && (s.Date > today && s.Date <= to || s.Date == today && s.End > now);
         return Recent.Gather(t, changes, UpTo(changes, theirLogins, seen))
             .Where(x => Theirs(x.Was) || Theirs(x.Now))
             .OrderBy(x => (x.Now ?? x.Was)!.Date).ThenBy(x => (x.Now ?? x.Was)!.Start).ThenBy(x => x.Id)
             .ToList();
     }
+
+    /// <summary>Whether the class is theirs: they teach it or cover it.</summary>
+    public static bool IsTheirs(Session s, Guid facilitatorId) => s.FacilitatorIds.Contains(facilitatorId) || s.CoverIds.Contains(facilitatorId);
 
     /// <summary>
     /// Whether <paramref name="facilitatorId"/> has seen the last change to each class of theirs that changed lately:
@@ -81,5 +84,32 @@ public static class News
             foreach (var op in c.Batch.Ops.Where(o => o.Collection == Collections.Sessions.Name))
                 upTo[op.Id] = upTo.TryGetValue(op.Id, out var was) ? Math.Max(was, c.Sequence) : c.Sequence;
         return upTo;
+    }
+}
+
+/// <summary>One facilitator's news about their next day, <see cref="Day"/>: what the evening email says. No student in it.</summary>
+public sealed record EveningNote(Facilitator Facilitator, DateOnly Day, IReadOnlyList<ClassChange> Changes);
+
+/// <summary>
+/// Who is emailed the evening before, and about what: each facilitator's news (<see cref="News.For"/>) about their
+/// classes on the next day, a class of theirs that is on it now or was on it, that they have not seen. So somebody
+/// who never opens the app still hears, the night before, that their morning is not as they left it. Never a guest
+/// (nobody's account), a former facilitator or somebody with no address.
+/// </summary>
+public static class EveningNotes
+{
+    public static IReadOnlyList<EveningNote> For(Timetable t, IReadOnlyList<Change> changes, DateOnly today, TimeOnly now,
+        Func<Guid, IReadOnlyCollection<string>> loginsOf, Func<Guid, IReadOnlyDictionary<Guid, long>> seenBy)
+    {
+        var tomorrow = today.AddDays(1);
+        var notes = new List<EveningNote>();
+        foreach (var f in t.Facilitators.Current().Where(f => !f.IsGuest && !string.IsNullOrWhiteSpace(f.Email)))
+        {
+            bool OnTomorrow(Session? s) => s is not null && s.Date == tomorrow && News.IsTheirs(s, f.Id);
+            var about = News.For(t, changes, f.Id, today, now, loginsOf(f.Id), seenBy(f.Id))
+                .Where(x => OnTomorrow(x.Was) || OnTomorrow(x.Now)).ToList();
+            if (about.Count > 0) notes.Add(new EveningNote(f, tomorrow, about));
+        }
+        return notes.OrderBy(n => n.Facilitator.Name, NameOrder.Comparer).ToList();
     }
 }

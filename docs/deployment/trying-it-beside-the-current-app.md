@@ -122,8 +122,18 @@ Reminders__PreviewTo=YOUR OWN ADDRESS
 
 `Reminders__Link=` (the app's address, written into the email) is left out while the rebuild is only
 reachable through the tunnel; the email then says "under Registers". `Reminders__At=18:00` and `Reminders__SummaryTo=` (one list of counts to an administrator) are
-optional. A mode that is misspelt counts as Off and System says so, rather than guessing. Then
-recreate the container with the file:
+optional. A mode that is misspelt counts as Off and System says so, rather than guessing.
+
+The evening email of what changed in a coach's next day that they have not seen (New for you, by email)
+has the same switches under its own name, and is off unless it is in the file too:
+
+```
+NewsMail__Mode=Preview
+NewsMail__PreviewTo=YOUR OWN ADDRESS
+```
+
+with `NewsMail__At=18:00`, `NewsMail__SummaryTo=` (the count of who was emailed, to an administrator)
+and `NewsMail__Link=` optional in the same way. Then recreate the container with the file:
 
 ```powershell
 ssh -t cccc-ts "sudo docker rm -f cccc-next; sudo docker run -d --name cccc-next --restart unless-stopped -p 127.0.0.1:8090:8080 -v /srv/cccc-next:/data --env-file /srv/cccc-next/mail.env cccc-next; sleep 10; curl -s http://127.0.0.1:8090/healthz"
