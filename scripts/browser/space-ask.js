@@ -11,7 +11,13 @@ const B = process.env.CCCC_PREVIEW || 'http://127.0.0.1:5299';
 const OUT = (process.env.OUT || '/tmp') + '/';
 let failed = 0;
 const log = (...a) => console.log(...a);
-async function step(what, fn) { try { await fn(); log('OK   ' + what); } catch (e) { failed++; log('FAIL ' + what + ': ' + (e && e.message ? e.message.split('\n')[0] : e)); } }
+// The first line of what went wrong, with the line of Playwright's call log that names what it was waiting for.
+const why = e => {
+  const lines = String((e && e.message) || e).replace(/\x1b\[[0-9;]*m/g, '').split('\n');
+  const wait = lines.slice(1).find(l => /waiting for/.test(l));
+  return lines[0] + (wait ? ' (' + wait.trim().replace(/^- /, '') + ')' : '');
+};
+async function step(what, fn) { try { await fn(); log('OK   ' + what); } catch (e) { failed++; log('FAIL ' + what + ': ' + why(e)); } }
 
 async function signIn(browser, who, viewport) {
   const page = await (await browser.newContext({ viewport, reducedMotion: 'reduce' })).newPage();

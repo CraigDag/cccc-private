@@ -9,12 +9,18 @@ const log = (...a) => console.log(...a);
 const ymd = d => d.toISOString().slice(0, 10);
 const plus = (day, n) => { const d = new Date(day + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return ymd(d); };
 const mondayOf = day => { const d = new Date(day + 'T00:00:00Z'); return plus(day, -((d.getUTCDay() + 6) % 7)); };
+// The first line of what went wrong, with the line of Playwright's call log that names what it was waiting for.
+const why = e => {
+  const lines = String((e && e.message) || e).replace(/\x1b\[[0-9;]*m/g, '').split('\n');
+  const wait = lines.slice(1).find(l => /waiting for/.test(l));
+  return lines[0] + (wait ? ' (' + wait.trim().replace(/^- /, '') + ')' : '');
+};
 (async () => {
   const browser = await chromium.launch();
   const errors = [];
   let failed = 0;
   let page;
-  const step = async (name, fn) => { try { await fn(); log('OK  ', name); } catch (e) { failed++; log('FAIL', name, e.message.split('\n')[0]); await page.screenshot({ path: `${OUT}fail-${name.replace(/\W+/g,'-').slice(0, 80)}.png` }); } };
+  const step = async (name, fn) => { try { await fn(); log('OK  ', name); } catch (e) { failed++; log('FAIL', name, why(e)); await page.screenshot({ path: `${OUT}fail-${name.replace(/\W+/g,'-').slice(0, 80)}.png` }); } };
   const signIn = async (who, viewport) => {
     const p = await (await browser.newContext({ viewport })).newPage();
     p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
