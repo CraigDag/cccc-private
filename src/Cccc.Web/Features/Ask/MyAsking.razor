@@ -5,7 +5,7 @@
 @{
     var t = W.T;
     var today = W.Today;
-    var now = TimeOnly.FromDateTime(W.Clock.Local(W.Clock.Now).DateTime);
+    var now = W.Clock.TimeOfDay;
     var asked = t.Requests.Where(r => r.FacilitatorId == Me && r.To >= today).OrderBy(r => r.From).ThenBy(r => r.AskedAt).ToList();
     var offers = t.Offers.Where(o => o.FacilitatorId == Me && t.Sessions[o.SessionId] is { } s && s.Date >= today)
         .OrderBy(o => t.Sessions[o.SessionId]!.Date).ThenBy(o => t.Sessions[o.SessionId]!.Start).ToList();

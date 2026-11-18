@@ -619,6 +619,12 @@ button.term-blank.next { border: 1px dashed var(--border); font-style: normal; c
 .insp-elsewhere .ie-who { color: var(--text-muted); overflow-wrap: anywhere; }
 .insp-elsewhere li.away .ie-what { color: var(--warning); }
 .insp-elsewhere p { margin: 4px 0 0; font-size: 13px; }
+.insp-ways { border-top: 1px solid var(--divider); padding-top: 12px; }
+.insp-ways h3 { margin: 0 0 8px; font-size: 11px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--text-quiet); }
+.insp-ways > ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.insp-ways .way { width: 100%; justify-content: flex-start; text-align: left; font-weight: 650; font-variant-numeric: tabular-nums; }
+.insp-ways .ft-notes { margin-left: 4px; }
+.insp-ways p { margin: 8px 0 0; font-size: 13px; }
 .insp-actions .btn { min-height: 30px; padding: 0 11px; font-size: 13px; }
 .issue {
     display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 8px 10px; text-align: left;

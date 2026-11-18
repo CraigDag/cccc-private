@@ -121,7 +121,15 @@ covering*), who changed it and when, from `Recent`; then today's events and what
 - The side panel for a chosen class: title, when, its verbs straight under the title (Edit, Register,
   Cover, Cancel/Restore, Another time…, Duplicate, Copy to Scratch Week, Delete, so they are on a laptop's
   screen however much is said below), then where, who teaches (and who is away), the group and roster
-  count, where it moved from, state tags, the clash or cover note, and **Elsewhere that day**.
+  count, where it moved from, state tags, the clash or cover note, **Ways out** under a clash, and
+  **Elsewhere that day**.
+- **Ways out**, for editors, under a chosen class's clash: up to three buttons (*Studio B, same time*;
+  *11:00–12:00, same space*; *09:00–10:00 in Studio B*), each with its notes, ✓ for and ! against, as Find
+  a time writes them. One press moves the class there, the clash and its ring go, and Undo brings both
+  back. Under them, *Or move the other class instead:* and the class it clashes with, pressing to choose
+  it and its own ways out. A class that has started says so and offers none; one with no way out the
+  same day says *Another time…* looks across its week. A clash in the Issues list opens the class that
+  has not started yet, so the ways out are there. A coach reads the clash and is offered none.
 - **A chosen class shades its day** where what it needs is elsewhere (`Busy`): a hatch down every row
   at those times, orange where somebody is away, so where it could go is the clear part. On rows that
   are spaces, a space's own classes already show when it is in use, so only its people and groups are

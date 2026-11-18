@@ -36,6 +36,9 @@ public sealed class SchoolClock
 
     public DateOnly Today => _pinned ?? DateOnly.FromDateTime(Local(Now).DateTime);
 
+    /// <summary>The time of day in Copenhagen now: what has started and what is still ahead.</summary>
+    public TimeOnly TimeOfDay => TimeOnly.FromDateTime(Local(Now).DateTime);
+
     /// <summary>The moment a day begins in Copenhagen: midnight there, whatever the offset that day.</summary>
     public DateTimeOffset StartOf(DateOnly day) =>
         new(TimeZoneInfo.ConvertTimeToUtc(day.ToDateTime(TimeOnly.MinValue), _zone), TimeSpan.Zero);

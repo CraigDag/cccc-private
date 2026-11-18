@@ -145,4 +145,39 @@ public class PlanTests
         Assert.Equal(["go-week", "go-term"], week);
         Assert.Empty(FindIndex.Search(b, "zebra", false, false));
     }
+
+    [Fact]
+    public void AClashInTheListChoosesTheClassNotStartedYetAndOnlyThoseCouldMoveInstead()
+    {
+        var thursday = Monday.AddDays(3);
+        var top = T.Rooms.Single(r => r.Name == "Big Top");
+        var acrobatics = T.Sessions.Single(s => s.Date == thursday && s.RoomId == top.Id && s.Start == new TimeOnly(9, 0));
+        // For a group free then, so its space is all that clashes.
+        var ba1 = T.Groups.Single(g => g.Name == "BA 1");
+        var juggling = new Session { Date = thursday, Start = new(10, 0), End = new(11, 0), Title = "Juggling", RoomId = top.Id, Audience = Audience.ForGroup(ba1.Id) };
+        // And a clash on Friday evening that has nothing to do with it.
+        Session Late(string title) => new() { Date = Monday.AddDays(4), Start = new(19, 0), End = new(20, 0), Title = title, RoomId = top.Id };
+        var t = T with { Sessions = T.Sessions.Put(juggling).Put(Late("Fire")).Put(Late("Stilts")) };
+        var m = PlanModel.Build(t, View(Lens.Spaces, Scale.Week), Admin, Monday);
+        var clash = m.Clashes.Single(c => c.SessionIds.Contains(juggling.Id));
+        Assert.Contains(m.Clashes, c => !c.SessionIds.Contains(juggling.Id) && !c.SessionIds.Contains(acrobatics.Id));
+        // The one that has started is listed first, so choosing the first would choose the one that cannot move.
+        Assert.Equal([acrobatics.Id, juggling.Id], clash.SessionIds);
+
+        var halfNine = new TimeOnly(9, 30);
+        Assert.Equal(juggling.Id, m.ToChoose(clash, thursday, halfNine));
+        Assert.Equal(acrobatics.Id, m.ToChoose(clash, Monday, new TimeOnly(8, 0)));
+        Assert.Equal(acrobatics.Id, m.ToChoose(clash, thursday, new TimeOnly(10, 30)));
+
+        Assert.Equal([juggling.Id], m.CouldMoveInstead(acrobatics.Id, thursday, halfNine).Select(o => o.Session.Id));
+        Assert.Empty(m.CouldMoveInstead(juggling.Id, thursday, halfNine));
+        Assert.Equal([acrobatics.Id], m.CouldMoveInstead(juggling.Id, Monday, new TimeOnly(8, 0)).Select(o => o.Session.Id));
+
+        // For the same group as well, the two clash three times over (the space, the group, its students), and it
+        // is still the one other class.
+        var both = juggling with { Audience = acrobatics.Audience };
+        var twice = PlanModel.Build(T with { Sessions = T.Sessions.Put(both) }, View(Lens.Spaces, Scale.Week), Admin, Monday);
+        Assert.Equal(3, twice.Clashes.Count(c => c.SessionIds.Contains(both.Id) && c.SessionIds.Contains(acrobatics.Id)));
+        Assert.Equal([acrobatics.Id], twice.CouldMoveInstead(both.Id, Monday, new TimeOnly(8, 0)).Select(o => o.Session.Id));
+    }
 }

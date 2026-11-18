@@ -80,9 +80,7 @@ public static class Openings
         if (length <= 0 || to < ask.From) return new([], 0, [], []);
 
         Guid? self = t.Sessions.Contains(c.Id) ? c.Id : null;
-        // A whole-building class needs every group free, and is closed only when the building is.
-        var groups = (c.Audience.IsEveryone ? t.Groups.Select(g => g.Id) : c.Audience.Cohorts.Where(t.Groups.Contains)).ToHashSet();
-        var named = c.Audience.IsEveryone ? [] : groups.OrderBy(g => t.Groups[g]!.Name, NameOrder.Comparer).ToList();
+        var (groups, named) = GroupsOf(t, c);
         var people = c.FacilitatorIds.Where(t.Facilitators.Contains).ToList();
         var spaces = ask.Spaces.Distinct().Where(t.Rooms.Contains).ToList();
         bool needsSpace = ask.Spaces.Count > 0;
@@ -157,6 +155,25 @@ public static class Openings
             if (!any && first + length <= dayEnd) Note(noTime, day, WhyNoTime(t, c, day, people, first, dayEnd, Fits));
         }
         return new(found, more, notSearched, noTime);
+    }
+
+    /// <summary>The notes Find a time puts beside a time, for the class as placed there: what being there would mean.</summary>
+    public static IReadOnlyList<OpeningNote> NotesAt(Timetable t, Session placed, EventViewer viewer)
+    {
+        var (groups, named) = GroupsOf(t, placed);
+        var seen = EventSchedule.On(t, placed.Date).Where(e => viewer.Sees(e.Event)).ToList();
+        return NotesFor(t, placed, t.Sessions.Contains(placed.Id) ? placed.Id : null, placed.FacilitatorIds.Where(t.Facilitators.Contains).ToList(),
+            named, groups.Count > 0, Occurrences.Between(t, placed.Date, placed.Date), seen);
+    }
+
+    /// <summary>
+    /// The groups a class needs, and the ones it names in the order to say them: a whole-building class needs
+    /// every group free, names none, and is closed only when the building is.
+    /// </summary>
+    private static (HashSet<Guid> Groups, List<Guid> Named) GroupsOf(Timetable t, Session c)
+    {
+        var groups = (c.Audience.IsEveryone ? t.Groups.Select(g => g.Id) : c.Audience.Cohorts.Where(t.Groups.Contains)).ToHashSet();
+        return (groups, c.Audience.IsEveryone ? [] : groups.OrderBy(g => t.Groups[g]!.Name, NameOrder.Comparer).ToList());
     }
 
     /// <summary>

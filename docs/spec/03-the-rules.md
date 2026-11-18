@@ -225,6 +225,35 @@ nothing to come straight from.
   can say it has moved (`MovedFrom`, kept from the first move and dropped when it goes back there),
   which stays inside its own week: a move to another week is a copy.
 
+## Ways out of a clash (`WaysOut`, the rebuild's own)
+
+A clash says what is wrong; a way out is the change that ends it. For a class in a clash that rings its
+block (a space, a person, a group or students in two places at once, or somebody outside their hours),
+not started yet and on a real week, **at most three ways out**, each the class moved so that it is in
+**no clash at all**: every one is put to the clash check itself (`Clashes.Find`), so taking one never
+trades this clash for another.
+
+- **First, the same time in another space**, when its space is all that clashes, so nobody's day moves.
+  At most two, so another time is among them whenever there is one: a different space is not always the
+  better answer.
+- **Then another time the same day in its own space**, nearest the time it has. From each stretch Find a
+  time finds, the time in it nearest that one which is in no clash, so each is a different gap in the
+  day: outside somebody's hours, the stretch's first time inside them, not its end.
+- **Only when there is neither**, another time in a space like it, since moving both is the bigger
+  change.
+- **A space is like it** when its class has been in it before (the most used first) or it is of the same
+  kind; a space with no kind is like no other. Never a former space, and never one an event books.
+- **The day looked in** runs from 08:00 to 18:00, or as early or as late as the class already is.
+- **Beside each**: in another space, whether its class has been there before; at another time, Find a
+  time's notes, less what is against it where it is already (a limit it is over wherever it goes, an
+  event all that day, somebody with nothing else that day), which is no reason for one time over another.
+- **Taking one** (`Edits.TakeWayOut`) works them out again from the timetable as it is now and refuses one
+  no longer offered, so a change somebody else made meanwhile is never walked into. Once its week has
+  begun, another time says it has moved, as Find a time does. One Undo step.
+- **None** for a class that only needs cover (that is Cover's), is cancelled, has started, or is in the
+  Scratch Week. Moving the other class is that class's own way out, offered when it is chosen; another
+  day is Find a time's.
+
 ## A week against the one before (`WeekChanges`)
 
 - A week is compared with **the last week before it with anything in it**, at most half a year back: a

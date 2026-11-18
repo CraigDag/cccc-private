@@ -189,6 +189,18 @@ public sealed class PlanModel
 
     public Occurrence? Find(Guid id) => Week.FirstOrDefault(o => o.Session.Id == id);
 
+    /// <summary>
+    /// The class a clash in the list chooses: the first of its classes not started yet, since only that one has ways
+    /// out (<see cref="WaysOut.StillAhead"/>); its first when they have all started.
+    /// </summary>
+    public Guid ToChoose(Clash c, DateOnly today, TimeOnly now) =>
+        c.SessionIds.FirstOrDefault(id => Find(id) is { } o && WaysOut.StillAhead(o.Session, today, now), c.SessionIds[0]);
+
+    /// <summary>The other classes in a class's clashes that have not started: any of them could move instead of it.</summary>
+    public IReadOnlyList<Occurrence> CouldMoveInstead(Guid id, DateOnly today, TimeOnly now) =>
+        Clashes.Where(c => c.SessionIds.Contains(id)).SelectMany(c => c.SessionIds).Where(x => x != id).Distinct()
+            .Select(Find).OfType<Occurrence>().Where(o => WaysOut.StillAhead(o.Session, today, now)).ToList();
+
     public int LanesOf(string row, DateOnly date) => Lanes.TryGetValue((row, date), out var n) ? n : 1;
 
     public int IssueCount(DateOnly? day) =>

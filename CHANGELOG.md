@@ -54,6 +54,14 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   they are free, each with *I can cover it*: a yes makes them the cover, and in the Cover list whoever
   offered says *Offered* and comes first among the free, so pressing them there is the same yes. A coach
   sees where each stands, and can take one back until it is answered.
+- **A clash comes with its ways out.** Choose a class in a clash and, under the clash, up to three
+  buttons say how to end it: *Studio B, same time* when only its space clashes (saying whether the class
+  has been there before), or another time that day nearest the one it has (*11:00–12:00, same space*),
+  each with what is worth knowing (*Bo comes straight from Acrobatics*, a staff meeting then, a long gap
+  it would make). Every one is checked so it clashes with nothing at all, never trading one clash for
+  another. One press moves the class, and Undo puts it back. Under them, the class it clashes with is
+  one press away, with its own ways out. A clash in the Issues list opens the class that has not
+  started yet.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

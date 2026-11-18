@@ -115,6 +115,59 @@
         {
             <div class="insp-note warn" data-testid="inspector-clash">@n</div>
         }
+        @if (notes.Count > 0 && Editable && !M.Scratch)
+        {
+            var now = W.Clock.TimeOfDay;
+            var ahead = WaysOut.StillAhead(s, W.Today, now);
+            // The other classes in its clashes that could move instead, each with ways out of its own.
+            var others = M.CouldMoveInstead(s.Id, W.Today, now);
+            @if (ahead || others.Count > 0)
+            {
+                var ways = ahead ? Ways(t, s.Id, now) : [];
+                <section class="insp-ways" data-testid="ways-out">
+                    <h3>Ways out</h3>
+                    @if (!ahead)
+                    {
+                        <p class="muted" data-testid="ways-started">It has started, so it stays where it is.</p>
+                    }
+                    else if (ways.Count == 0)
+                    {
+                        <p class="muted" data-testid="ways-none">None the same day that clashes with nothing. Another time… looks across its week.</p>
+                    }
+                    else
+                    {
+                        <ul>
+                            @foreach (var way in ways)
+                            {
+                                <li data-testid="way-out">
+                                    <button type="button" class="btn way" @onclick="() => Take(s, way)" aria-label="@($"Move {Looks.Title(t, s)} to {WayOutWords.Where(t, s, way)}")" data-testid="way-take">@WayOutWords.Where(t, s, way)</button>
+                                    @if (way.Notes.Count > 0)
+                                    {
+                                        <ul class="ft-notes">
+                                            @foreach (var n in way.Notes)
+                                            {
+                                                <li class="@(n.Good ? "good" : "against")" data-testid="way-note">@n.Text</li>
+                                            }
+                                        </ul>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                        <p class="muted">Each leaves it in no clash. Undo puts it back.</p>
+                    }
+                    @if (others.Count > 0)
+                    {
+                        <p data-testid="ways-other">@(others.Count == 1 ? "Or move the other class instead: " : "Or move one of the others instead: ")
+                            @for (int i = 0; i < others.Count; i++)
+                            {
+                                var other = others[i];
+                                @(i == 0 ? "" : i == others.Count - 1 ? " or " : ", ")<button type="button" class="link" @onclick="() => OnChosen.InvokeAsync(other.Session.Id)" data-testid="ways-other-class">@Looks.Title(t, other.Session)</button>
+                            }.
+                        </p>
+                    }
+                </section>
+            }
+        }
         @if (M.Elsewhere.TryGetValue(s.Date, out var busy))
         {
             var lines = ElsewhereWords.Lines(t, busy);
@@ -161,6 +214,27 @@
 
     /// <summary>The most lines of Elsewhere listed: the shading says the rest.</summary>
     private const int MostLines = 12;
+
+    private IReadOnlyList<WayOut> _ways = [];
+    private Timetable? _waysOf;
+    private (Guid Id, DateOnly Today, int Minute) _waysKey;
+
+    /// <summary>The ways out, worked out again only when the timetable, the class or the minute has changed.</summary>
+    private IReadOnlyList<WayOut> Ways(Timetable t, Guid id, TimeOnly now)
+    {
+        var key = (id, W.Today, now.Hour * 60 + now.Minute);
+        if (ReferenceEquals(_waysOf, t) && _waysKey == key) return _ways;
+        _ways = WaysOut.For(t, id, W.Today, now, W.Access.Events);
+        (_waysOf, _waysKey) = (t, key);
+        return _ways;
+    }
+
+    /// <summary>A way out taken: worked out again as the timetable is now, and refused if it is no longer one.</summary>
+    private void Take(Session s, WayOut way)
+    {
+        var now = W.Clock.TimeOfDay;
+        W.Commit(t => Edits.TakeWayOut(t, s.Id, way.Moved.Date, way.Moved.Start, way.Moved.RoomId, W.Today, now, W.Access.Events));
+    }
 
     private static string Rail(string name) =>
         string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));

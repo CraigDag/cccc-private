@@ -161,6 +161,22 @@ public static class Edits
         return PutSession(t, moved, $"Moved {s.DisplayTitle} to {Week.ShortDate(date)}, {Week.Hm(moved.Start)}");
     }
 
+    /// <summary>
+    /// One of a class's ways out of a clash (<see cref="WaysOut"/>), taken. The ways are worked out again from the
+    /// timetable as it is now, so one that somebody else's change has closed since it was offered is refused rather
+    /// than taken into a new clash. Once its week has begun it says it has moved, as Find a time does.
+    /// </summary>
+    public static Batch TakeWayOut(Timetable t, Guid sessionId, DateOnly date, TimeOnly start, Guid? roomId, DateOnly today, TimeOnly now, EventViewer viewer)
+    {
+        var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");
+        var way = WaysOut.For(t, sessionId, today, now, viewer).FirstOrDefault(w => w.Moved.Date == date && w.Moved.Start == start && w.Moved.RoomId == roomId)
+            ?? throw new EditRefused("That is no longer a way out: something there has changed since. The ways out it has now are under the class.");
+        string where = t.Rooms.Find(roomId)?.Name ?? "no space";
+        var label = way.SameTime ? $"Moved {s.DisplayTitle} to {where}"
+            : $"Moved {s.DisplayTitle} to {Week.Hm(start)}" + (roomId != s.RoomId ? $" in {where}" : "");
+        return MoveTo(t, sessionId, date, start, roomId, sayMoved: Week.MondayOf(s.Date) <= today) with { Label = label };
+    }
+
     public static Batch SetCancelled(Timetable t, Guid sessionId, bool cancelled, string? note)
     {
         var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");

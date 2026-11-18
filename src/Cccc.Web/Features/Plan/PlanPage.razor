@@ -305,7 +305,7 @@
                 }
                 @foreach (var c in m.Clashes.Where(c => V.Scale != Scale.Day || c.SessionIds.Any(i => m.Find(i)?.Date == V.Day)))
                 {
-                    <button type="button" class="issue" @onclick="() => Choose(c.SessionIds[0])" data-testid="issue"><span class="issue-kind">Clash</span>@c.Description</button>
+                    <button type="button" class="issue" @onclick="() => Choose(m.ToChoose(c, W.Today, W.Clock.TimeOfDay))" data-testid="issue"><span class="issue-kind">Clash</span>@c.Description</button>
                 }
                 @foreach (var o in m.CoverNeeded.Where(o => V.Scale != Scale.Day || o.Date == V.Day))
                 {

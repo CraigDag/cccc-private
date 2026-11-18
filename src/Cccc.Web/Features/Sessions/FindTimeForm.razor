@@ -336,7 +336,7 @@ else
     {
         var (from, to) = Range(c);
         var spaces = SpacesAsked(t, c);
-        var now = TimeOnly.FromDateTime(W.Clock.Local(W.Clock.Now).DateTime);
+        var now = W.Clock.TimeOfDay;
         var key = string.Join("|", System.Text.Json.JsonSerializer.Serialize(c, ModelJson.Options), string.Join(",", spaces), from, to, _dayStart, _dayEnd, W.Today, now.Hour * 60 + now.Minute);
         if (_found is not null && _key == key && ReferenceEquals(_searched, t)) return _found;
         var ask = new OpeningAsk { Class = c, Spaces = spaces, From = from, To = to, DayStart = _dayStart, DayEnd = _dayEnd };
