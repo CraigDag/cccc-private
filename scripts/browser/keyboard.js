@@ -67,9 +67,16 @@ async function check(what, fn) { try { await fn(); ok(what); } catch (e) { bad(w
     await page.keyboard.type('studio');
     await page.waitForFunction(() => document.querySelectorAll('[data-testid=find-hit]').length >= 2 && document.querySelector('[data-testid=find-hit] .find-label')?.textContent.startsWith('Studio'), null, { timeout: 4000 });
     await page.keyboard.press('ArrowDown');
+    // Wait for the second hit to be the one marked: every letter puts the mark back on the first, so only the
+    // render after the arrow draws it there, and its list is the one for everything typed. (Waiting for any
+    // marked hit read the render before the arrow, whose first hit is marked, on a server just started.)
+    await page.waitForFunction(() => {
+      const hits = document.querySelectorAll('[data-testid=find-hit]');
+      return hits[1]?.classList.contains('on') && document.querySelectorAll('[data-testid=find-hit].on').length === 1;
+    }, null, { timeout: 4000 }).catch(async () => {
+      throw new Error('the arrow did not mark the second hit alone; marked: ' + JSON.stringify(await page.locator('[data-testid=find-hit].on .find-label').allTextContents()));
+    });
     const second = await page.locator('[data-testid=find-hit]').nth(1).locator('.find-label').textContent();
-    await page.waitForSelector('[data-testid=find-hit].on >> nth=0');
-    if ((await page.locator('[data-testid=find-hit].on .find-label').textContent()) !== second) throw new Error('the second hit is not the one marked');
     await page.keyboard.press('Enter');
     await page.waitForSelector('[data-testid=find]', { state: 'detached', timeout: 4000 });
     await page.waitForFunction(n => document.querySelector('[data-testid=focus-chip]')?.textContent.includes(n), second, { timeout: 4000 });
