@@ -1,0 +1,81 @@
+@* An administrator's answer to a facilitator who can't come or can cover, from Now. A yes records exactly
+   what the forms would (an absence, or the class's cover); a no changes nothing on the timetable. Either
+   way the facilitator sees the answer on My week. *@
+@using Cccc.Web.Features.Week
+@inject Dialogs D
+@{
+    var t = W.T;
+    var request = RequestId is { } rid ? t.Requests[rid] : null;
+    var offer = OfferId is { } oid ? t.Offers[oid] : null;
+}
+@if (request is not null && Asking.StateOf(request, W.Today) == RequestState.Waiting)
+{
+    var who = t.Facilitators[request.FacilitatorId];
+    var leaves = Asking.WhatAYesLeaves(t, request);
+    <DialogFrame Title="@($"{who?.Name ?? "Somebody"} can't come")" OnOk="() => AnswerRequest(Answer.Yes)" OkLabel="Yes, record it" OkEnabled="@W.Access.MayAnswerAsking">
+        <ChildContent>
+            <p data-testid="answer-days"><b>@AskingWords.Days(request)</b> · asked @W.Clock.Describe(request.AskedAt)</p>
+            <h3 class="form-sub">A yes takes them off</h3>
+            @if (leaves.Count == 0)
+            {
+                <p class="muted" data-testid="answer-none">None of their classes.</p>
+            }
+            else
+            {
+                <ul class="plain-list" data-testid="answer-classes">
+                    @foreach (var (now, after) in leaves)
+                    {
+                        <li data-testid="answer-class"><b>@Looks.Title(t, now.Session)</b> @Looks.WhenWithDay(now.Session) <small class="muted">· @AskingWords.After(t, request.FacilitatorId, now, after)</small></li>
+                    }
+                </ul>
+            }
+            <p class="hint">Yes records them as away, as People &amp; places ▸ Absences does, where a cause can be added. A class left needing cover is then on Cover, and offered to the other facilitators on their My week.</p>
+        </ChildContent>
+        <Extra>
+            <button type="button" class="btn" @onclick="() => AnswerRequest(Answer.No)" disabled="@(!W.Access.MayAnswerAsking)" data-testid="answer-no">Not this time</button>
+        </Extra>
+    </DialogFrame>
+}
+else if (offer is not null && Asking.StateOf(t, offer, W.Today) == OfferState.Waiting && t.Sessions[offer.SessionId] is { } s)
+{
+    var who = t.Facilitators[offer.FacilitatorId];
+    var gap = Occurrences.Resolve(t, s);
+    var them = Cover.Ranked(t, gap).FirstOrDefault(c => c.Person.Id == offer.FacilitatorId);
+    var others = t.Offers.Where(o => o.SessionId == s.Id && o.Id != offer.Id && Asking.StateOf(t, o, W.Today) == OfferState.Waiting)
+        .Select(o => o.FacilitatorId).ToList();
+    <DialogFrame Title="@($"{who?.Name ?? "Somebody"} can cover")" OnOk="() => AnswerOffer(Answer.Yes)" OkLabel="Yes, they cover it" OkEnabled="@W.Access.MayAnswerAsking">
+        <ChildContent>
+            <p data-testid="answer-class"><b>@Looks.Title(t, s)</b>, @Looks.WhenWithDay(s)@(Looks.Room(t, s) is { Length: > 0 } r ? ", " + r : "") · @Looks.Audience(t, s). Away: <b>@(Looks.Names(t, gap.AwayIds) is { Length: > 0 } a ? a : "nobody")</b>.</p>
+            <p data-testid="answer-then">@(who?.Name ?? "Somebody") then: @(them is null ? "away, or no longer on the timetable" : $"{them.StateText} · {DomainWeek.Duration(them.Week.Total)} this week{(them.IsOverLimit ? " · over their limit" : "")}") · offered @W.Clock.Describe(offer.OfferedAt)</p>
+            @if (others.Count > 0)
+            {
+                <p data-testid="answer-others">Also offered: @Looks.Names(t, others).</p>
+            }
+            <p class="hint">Yes makes them its cover, as Cover does. Being busy or over a limit is advice, never a refusal.</p>
+        </ChildContent>
+        <Extra>
+            <button type="button" class="btn" @onclick="() => AnswerOffer(Answer.No)" disabled="@(!W.Access.MayAnswerAsking)" data-testid="answer-no">No thanks</button>
+        </Extra>
+    </DialogFrame>
+}
+else
+{
+    <DialogFrame Title="Answered">
+        <p data-testid="answer-gone">This has been answered or taken back since, or its day has passed.</p>
+    </DialogFrame>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter] public Guid? RequestId { get; set; }
+    [Parameter] public Guid? OfferId { get; set; }
+
+    private void AnswerRequest(Answer answer)
+    {
+        if (W.Commit(t => Edits.AnswerRequest(t, RequestId!.Value, answer, W.Access.Asking, W.Clock.Now))) D.Close();
+    }
+
+    private void AnswerOffer(Answer answer)
+    {
+        if (W.Commit(t => Edits.AnswerOffer(t, OfferId!.Value, answer, W.Access.Asking, W.Today, W.Clock.Now))) D.Close();
+    }
+}

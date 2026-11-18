@@ -196,6 +196,8 @@ public sealed class LiveProject
         "classes" => "a class",
         "events" => "an event",
         "absences" => "an absence",
+        "requests" => "asking to be away",
+        "offers" => "an offer to cover",
         _ => "one change",
     };
 

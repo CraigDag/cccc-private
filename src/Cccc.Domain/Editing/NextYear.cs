@@ -23,7 +23,8 @@ namespace Cccc.Domain.Editing;
 /// blank until somebody fills it; registers and every other week are dropped, being a record of what
 /// happened. Events are dated to the calendar, so none moves: one with a date in the new year is kept
 /// (an audition already booked), the rest stay with this year. Absences follow the same rule, so a leave
-/// already booked for September is not lost. Closures are a choice, off by default: week-numbered ones
+/// already booked for September is not lost, and so does asking to be away; offers to cover are for this
+/// year's classes, so none carries over. Closures are a choice, off by default: week-numbered ones
 /// land right, but Christmas and Easter do not, and a wrong closure shuts the building on a day it is open.
 /// </summary>
 public static class NextYear
@@ -122,6 +123,10 @@ public static class NextYear
             Registers = EntitySet<Register>.Empty,
             Absences = EntitySet<Absence>.Of(t.Absences.Where(a => Carried(t, a, starts))),
             Events = EntitySet<SchoolEvent>.Of(t.Events.Where(e => EventSchedule.LastDay(e) >= starts)),
+            // Asking to be away goes with its days, as an absence does, so one asked for September is not lost;
+            // an offer was for one of this year's classes, and next year's are new ones.
+            Requests = EntitySet<TimeOffRequest>.Of(t.Requests.Where(r => r.To >= starts && t.Facilitators[r.FacilitatorId] is { FormerSince: null })),
+            Offers = EntitySet<CoverOffer>.Empty,
         };
         return t.Classes.Any(c => c.IsFormer()) || t.Rooms.Any(r => r.IsFormer()) || t.Facilitators.Any(f => f.IsFormer())
             ? LeaveFormerBehind(t, next) : next;

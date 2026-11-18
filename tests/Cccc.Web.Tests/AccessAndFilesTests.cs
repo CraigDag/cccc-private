@@ -14,6 +14,9 @@ public class AccessTests
 
     [Theory]
     [InlineData("registers", true, true, true)]
+    [InlineData("requests", true, true, true)]
+    [InlineData("offers", true, true, true)]
+    [InlineData("absences", false, false, true)]
     [InlineData("sessions", false, true, true)]
     [InlineData("events", false, true, true)]
     [InlineData("scratch", false, true, true)]
@@ -29,6 +32,8 @@ public class AccessTests
 
     [Theory]
     [InlineData("registers")]
+    [InlineData("requests")]
+    [InlineData("offers")]
     [InlineData("sessions")]
     [InlineData("scratch")]
     [InlineData("rooms")]
@@ -36,6 +41,30 @@ public class AccessTests
     {
         Assert.False(Access.Nobody.MayChange(collection));
         Assert.False(As(Role.Administrator, suspended: true).MayChange(collection));
+    }
+
+    /// <summary>
+    /// Anybody signed in may ask and offer, the edit narrowing it to the facilitator their account is linked
+    /// to; only an administrator answers, since a yes records an absence. Following, nobody asks anything.
+    /// </summary>
+    [Fact]
+    public void AnybodyLinkedAsksForThemselvesOnlyAndOnlyAnAdministratorAnswers()
+    {
+        var ada = Guid.NewGuid();
+        Access Linked(Role role, bool suspended = false) => new(new Account(Guid.NewGuid(), "x", "X", role, AccountTags.None, ada, suspended, false, "s", DateTimeOffset.UnixEpoch, true));
+        Assert.Equal(new Cccc.Domain.Rules.AskingReader(false, ada), Linked(Role.Viewer).Asking);
+        Assert.Equal(new Cccc.Domain.Rules.AskingReader(false, ada), Linked(Role.Editor).Asking);
+        Assert.Equal(new Cccc.Domain.Rules.AskingReader(true, ada), Linked(Role.Administrator).Asking);
+        Assert.Equal(new Cccc.Domain.Rules.AskingReader(true, null), As(Role.Administrator).Asking);
+        Assert.Equal(new Cccc.Domain.Rules.AskingReader(false, null), As(Role.Viewer).Asking);
+        Assert.Equal(new Cccc.Domain.Rules.AskingReader(false, null), Access.Nobody.Asking);
+        // A suspended account asks for nobody, though its link is still there.
+        Assert.Equal(new Cccc.Domain.Rules.AskingReader(false, null), Linked(Role.Administrator, suspended: true).Asking);
+        Assert.False(As(Role.Editor).MayAnswerAsking);
+        Assert.True(As(Role.Administrator).MayAnswerAsking);
+        var following = Linked(Role.Viewer) with { Following = true };
+        Assert.False(following.MayChange("requests"));
+        Assert.False(following.MayChange("offers"));
     }
 
     /// <summary>
@@ -76,7 +105,7 @@ public class ProjectFileTests
         using var ms = new MemoryStream();
         using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
         {
-            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 4");
+            using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 5");
             using (var w = new StreamWriter(zip.CreateEntry("project.json").Open())) w.Write("{}");
         }
         var e = Assert.Throws<InvalidDataException>(() => ProjectFiles.Read(ms.ToArray()));
@@ -84,32 +113,38 @@ public class ProjectFileTests
     }
 
     [Fact]
-    public void AFileOfTheFirstFormatStillReadsWithAnEmptyScratchWeek()
+    public void AFileOfTheFirstFormatStillReadsWithAnEmptyScratchWeekAndNothingAsked()
     {
         var t = SampleSchool.Create(Day, Day);
+        Assert.NotEmpty(t.Requests);
+        Assert.NotEmpty(t.Offers);
         using var ms = new MemoryStream();
         using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
         {
             using (var w = new StreamWriter(zip.CreateEntry("format.txt").Open())) w.Write("cccc2 1");
             var json = System.Text.Json.Nodes.JsonNode.Parse(ModelJson.Serialise(t))!.AsObject();
-            json.Remove("scratch");
+            foreach (var later in new[] { "scratch", "requests", "offers" }) Assert.True(json.Remove(later), later);
             using (var w = new StreamWriter(zip.CreateEntry("project.json").Open())) w.Write(json.ToJsonString());
         }
         var back = ProjectFiles.Read(ms.ToArray());
         Assert.Equal(t.Sessions.Count, back.Sessions.Count);
         Assert.Empty(back.Scratch);
+        Assert.Empty(back.Requests);
+        Assert.Empty(back.Offers);
         Assert.DoesNotContain(back.Classes, c => c.FormerSince is not null);
         // And what this build writes says the format it is, so an older build refuses it rather than drop
-        // the plan, or offer a former class ahead again.
+        // the plan or what was asked, or offer a former class ahead again.
         var gone = t.Classes.First();
         var planned = t with { Scratch = EntitySet<Session>.Of([new Session { Date = ScratchWeek.Monday }]),
                                Classes = t.Classes.Put(gone with { FormerSince = Day }) };
         var again = ProjectFiles.Read(ProjectFiles.Write(planned));
         Assert.Single(again.Scratch);
         Assert.Equal(Day, again.Classes[gone.Id]!.FormerSince);
+        Assert.Equal(t.Requests.Single(), again.Requests.Single());
+        Assert.Equal(t.Offers.Single(), again.Offers.Single());
         using var written = new System.IO.Compression.ZipArchive(new MemoryStream(ProjectFiles.Write(planned)));
         using var r = new StreamReader(written.GetEntry("format.txt")!.Open());
-        Assert.Equal("cccc2 3", r.ReadToEnd());
+        Assert.Equal("cccc2 4", r.ReadToEnd());
     }
 
     [Fact]

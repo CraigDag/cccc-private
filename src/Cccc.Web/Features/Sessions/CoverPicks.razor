@@ -1,7 +1,7 @@
 @* Who could take a class that needs cover, as buttons: one press assigns them, as one change Undo
    takes back. The order is Cover.Ranked's (free first, then the lightest week, guests last), so these
-   buttons and the Cover form never disagree about who comes first. Busy people are still offered:
-   busy is advice, never a refusal. *@
+   buttons and the Cover form never disagree about who comes first, somebody who offered to cover it
+   first among the free. Busy people are still offered: busy is advice, never a refusal. *@
 @inject Dialogs D
 @if (W.Access.MayEdit && !DomainWeek.HasEnded(Gap.Date, W.Today))
 {
@@ -20,7 +20,7 @@
                 <span class="disc" style="--c:@c.Person.Colour">@c.Person.Initials</span>
                 <span class="cp-who">
                     <span class="cp-name">@c.Person.Name@(c.Person.IsGuest ? " (guest)" : "")</span>
-                    <small>@(c.TeachingThen is { } o ? "Teaching " + Looks.Title(t, o.Session) + " then" : "Free") · @DomainWeek.Duration(c.Week.Total) this week@(c.IsOverLimit ? " · over their limit" : "")</small>
+                    <small>@(c.Offered ? "Offered · " : "")@(c.TeachingThen is { } o ? "Teaching " + Looks.Title(t, o.Session) + " then" : "Free") · @DomainWeek.Duration(c.Week.Total) this week@(c.IsOverLimit ? " · over their limit" : "")</small>
                 </span>
             </button>
         }
@@ -32,7 +32,12 @@
     [Parameter, EditorRequired] public Occurrence Gap { get; set; } = default!;
     [Parameter] public int Count { get; set; } = 3;
 
-    private void Assign(Guid id) => W.Commit(t => Edits.SetCover(t, Gap.Session.Id, [id], null));
+    // Somebody who offered is answered yes as they are made the cover, so they read the yes on My week; an
+    // editor, who does not answer offers, makes the same cover and the offer reads as covered all the same.
+    private void Assign(Guid id) => W.Commit(t =>
+        W.Access.MayAnswerAsking && t.Offers.FirstOrDefault(o => o.SessionId == Gap.Session.Id && o.FacilitatorId == id && o.Answer is null) is { } offer
+            ? Edits.AnswerOffer(t, offer.Id, Answer.Yes, W.Access.Asking, W.Today, W.Clock.Now)
+            : Edits.SetCover(t, Gap.Session.Id, [id], null));
 
     private void More() => D.Show<CoverForm>(new Dictionary<string, object?> { [nameof(CoverForm.SessionId)] = Gap.Session.Id });
 }

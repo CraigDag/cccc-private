@@ -71,7 +71,9 @@ categories or more, here and on the plan, the add form and the printed day), eac
 classes in their colours, a tick at now), what is in it now (class, group, initials, how far through)
 or *Free*, until when, and what is next. A board rather than tiles, so ten spaces or forty read without
 gaps. Choosing a row opens that space's week. Beside them, **Today
-needs**: cover still needed, registers waiting for the reader (more than three are one line opening
+needs**, after **Waiting for your answer** for an administrator (what facilitators have asked: *Can't
+come* with the days and how many of their classes it reaches, amber once its first day has come, and
+*Can cover* with the class, each opening the answer form): cover still needed, registers waiting for the reader (more than three are one line opening
 Registers, so a whole day of them does not push cover and clashes out of sight), clashes today, then **Changed since
 yesterday** (since Friday on a Monday): today's classes that were moved, cancelled, given another space
 or teacher or cover, added or deleted, each saying what is different (*Was 09:00–11:00*, *Dag Øverlie
@@ -160,6 +162,8 @@ slow part. *All 6…* opens the full list with a note. The same buttons sit in t
 class that needs cover, so it is settled where it was noticed. Below: what is covered (*Change…*,
 *Take it off*), and **away this week** as a grid of days, a name a row, a whole day filled and part of
 a day hatched with its times. Busy people are still offered: busy is advice, never a refusal.
+Whoever has offered to cover it says *Offered*, and ranks first among the free; pressing them is the
+administrator's yes to the offer.
 
 Who is teaching at a time is one rule, `Teaching.At`, beside `Spaces.InUse`: cover ranks by it and the
 class form marks *teaching Juggling 10:45–12:00* or *away then* beside a facilitator's name with it, so
@@ -197,6 +201,19 @@ through what their earlier downloads carried (`PhoneCalendarFiles`, the store's 
 published as cancelled at the times it had, as *No longer on your timetable*, since its title is not
 kept. One still theirs in another semester is left alone: that semester's file moves it, and a
 cancellation here would undo that file if this one were opened after it.
+
+**A coach asks on My week, and an administrator answers on Now** (`Ask/`; the rules in
+[`03`](03-the-rules.md#asking-asking-the-rebuilds-own)). *Can't come…* takes the days, all day or between
+two times, and lists what it would take them off before *Send*: each class with what a yes would leave it,
+*needs cover* or *Bo Lindqvist still teaching it*. There is no box for why, and the form says so.
+*Asked* lists what they asked and offered with where each stands (*Waiting for an answer*, *Yes: recorded
+as away*, *Not this time*), each with *Take back* while nobody has answered; *Could you cover?* lists the
+classes in the next two weeks needing cover while they are free, each with *I can cover it*. The
+administrator's answer form says first what a yes does: for being away, the classes it takes them off and
+what each is left as; for an offer, the class, who is away, and the offerer then (*Free*, or teaching),
+with their hours that week and anybody else who offered. *Yes, record it* or *Yes, they cover it* beside
+*Not this time* or *No thanks*. Nothing else on the timetable moves until a yes, and a yes is one change
+that Undo takes back.
 
 **People & places folds what is former under each list** (`Data/FormerList`): *3 former classes*,
 closed unless a search is on, each row saying since when and how many classes it has before then. A

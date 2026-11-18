@@ -149,8 +149,33 @@ All warnings, computed over a week's running occurrences:
 ## Cover (`CoverSubstitutes.Ranked`)
 
 Offer **everybody not away**, ranked rather than filtered: non-guests before guests, free before
-teaching at that time (the week as it runs), lightest week first, then by name. Busy or over a limit
-is advice, never a refusal.
+teaching at that time (the week as it runs), then **whoever has offered to cover it** (below), lightest
+week first, then by name. Busy or over a limit is advice, never a refusal.
+
+## Asking (`Asking`, the rebuild's own)
+
+A facilitator asks for themselves, through the account linked to them, and an administrator answers.
+**Nothing on the timetable changes until a yes**, and a yes records exactly what the forms would.
+
+- **I can't come** (`TimeOffRequest`) — days from today on, all day or between two times. Before sending,
+  the coach is shown what it would take them off (`Asking.WhatAYesLeaves`): each class they are in the
+  room for whose part of it the times reach, and what a yes would leave it, resolved against the
+  timetable with the absence in it — *needs cover*, or *still taught* by whoever else is in for all of it.
+  A yes records an ordinary absence (`AsAbsence`): the same days and times, **planned** when asked before
+  its first day and unplanned on the day, with no reason and no cause, since nothing asked for one. A no
+  records nothing. A request waits until its **last** day has passed; taken back only by whoever asked,
+  while nobody has answered.
+- **I can cover that** (`CoverOffer`) — any class needing cover that is not theirs and has not been.
+  *Could you cover?* on My week lists the ones in the next two weeks that have not started and that the
+  Cover ranking finds them free for (`Asking.CouldCover`); a co-taught class whose gap is somebody else's
+  part is still theirs, so not offered (an administrator can still stretch their part from the Cover
+  form). A yes makes them its cover, as the Cover form would (so pressing an offerer in the Cover form is
+  the same yes); a no records nothing on the timetable. **Whether an offer still waits is worked out from
+  the class** (`Asking.StateOf`): covered by anybody, however, it waits for nobody; a class gone or passed,
+  passed.
+- **Nothing waits for somebody no longer on the timetable** (gone, or kept as former): an answer to them
+  is refused, so asking for one would be a dead end. Removing a facilitator removes everything they asked
+  and offered; a yes's absence stays as absences do.
 
 ## When what a class needs is elsewhere (`Busy`)
 
@@ -293,7 +318,9 @@ carry over; the timetable carries over as **its first timetabled week only**
 Copy week copies, so nothing that happened that week travels, because a week ahead is blank until
 somebody fills it; registers and every other week stay with this year. **Events and absences are dated
 to the calendar and never move**: one with a date in the new year is kept (an audition already booked,
-a leave across the summer), the rest stay with this year. **Closures are a tick, off by default**: kept,
+a leave across the summer), the rest stay with this year, and **asking to be away** follows its days the
+same way; an offer to cover was for one of this year's classes, so none carries over. **Closures are a
+tick, off by default**: kept,
 each moves with its semester, so week-numbered ones land right and Christmas and Easter do not.
 `NextYear.For` is the plan the form shows and `Make` carries it out, so the two cannot describe
 different years, and a test fails when a collection is added to the timetable without a decision here.

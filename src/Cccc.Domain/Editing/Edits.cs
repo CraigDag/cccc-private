@@ -280,6 +280,15 @@ public static class Edits
     {
         var d = new Draft(t);
         bool isNew = !t.Absences.Contains(a.Id);
+        int excused = PutAbsence(d, a);
+        var label = isNew ? "Recorded an absence" : "Changed an absence";
+        return d.ToBatch(excused == 0 ? label : $"{label}, and excused it on {excused} register{(excused == 1 ? "" : "s")} already taken");
+    }
+
+    /// <summary>An absence into a change being built, with whatever it excuses: the one way one is recorded. How many registers it excused.</summary>
+    private static int PutAbsence(Draft d, Absence a)
+    {
+        var t = d.Current;
         d.Put(Collections.Absences, a);
         int excused = 0;
         if (a.Person == AbsentPerson.Student)
@@ -289,8 +298,100 @@ public static class Edits
                     d.Put(Collections.Registers, r with { ExcusedIds = r.ExcusedIds.Add(a.PersonId) });
                     excused++;
                 }
-        var label = isNew ? "Recorded an absence" : "Changed an absence";
-        return d.ToBatch(excused == 0 ? label : $"{label}, and excused it on {excused} register{(excused == 1 ? "" : "s")} already taken");
+        return excused;
+    }
+
+    // ---- What facilitators ask (Asking) -------------------------------------------------------------
+
+    /// <summary>
+    /// A facilitator saying they cannot come, for themselves only and from today on. It changes nothing on
+    /// the timetable: an administrator's yes records the absence (<see cref="AnswerRequest"/>).
+    /// </summary>
+    public static Batch AskToBeAway(Timetable t, DateOnly from, DateOnly to, TimeOnly? start, TimeOnly? end,
+        AskingReader reader, DateOnly today, DateTimeOffset at)
+    {
+        if (reader.FacilitatorId is not { } me || t.Facilitators[me] is not { } f || f.IsFormer())
+            throw new EditRefused("Your account is not linked to a facilitator on this timetable, so there is nobody to be away.");
+        if (from < today) throw new EditRefused("That day has gone. Say from today on.");
+        if (to < from) throw new EditRefused("It has to end on or after the day it starts.");
+        if ((start is null) != (end is null)) throw new EditRefused("Give both times, or neither for whole days.");
+        if (start is { } a && end is { } b && b <= a) throw new EditRefused("The time has to finish after it starts.");
+        var r = new TimeOffRequest { FacilitatorId = me, From = from, To = to, StartTime = start, EndTime = end, AskedOn = today, AskedAt = at };
+        return new Draft(t).Put(Collections.Requests, r).ToBatch($"Asked to be away from {Week.ShortDate(from)}");
+    }
+
+    /// <summary>Whoever asked takes it back, while nobody has answered it.</summary>
+    public static Batch TakeBackRequest(Timetable t, Guid id, AskingReader reader)
+    {
+        var r = t.Requests[id] ?? throw new EditRefused("That has been taken back already.");
+        if (reader.FacilitatorId != r.FacilitatorId) throw new EditRefused("Only whoever asked can take it back.");
+        if (r.Answer is not null) throw new EditRefused("An administrator has answered it already, so ask them to change it.");
+        return new Draft(t).Remove(Collections.Requests, id).ToBatch("Took back asking to be away");
+    }
+
+    /// <summary>
+    /// An administrator's answer. Yes records the absence it asks for, as Absences would (planned when asked
+    /// before its first day), and the classes it takes them off then need cover like any other; no changes
+    /// nothing on the timetable.
+    /// </summary>
+    public static Batch AnswerRequest(Timetable t, Guid id, Answer answer, AskingReader reader, DateTimeOffset at)
+    {
+        if (!reader.Answers) throw new EditRefused("Only an administrator can answer that.");
+        var r = t.Requests[id] ?? throw new EditRefused("That has been taken back.");
+        if (r.Answer is not null) throw new EditRefused("That has been answered already.");
+        if (t.Facilitators[r.FacilitatorId] is not { } f || f.IsFormer()) throw new EditRefused("Whoever asked is no longer on this timetable.");
+        var d = new Draft(t);
+        if (answer == Answer.No)
+            return d.Put(Collections.Requests, r with { Answer = Answer.No, AnsweredAt = at }).ToBatch("Said no to being away");
+        var away = r.AsAbsence(Guid.NewGuid());
+        PutAbsence(d, away);
+        d.Put(Collections.Requests, r with { Answer = Answer.Yes, AnsweredAt = at, AbsenceId = away.Id });
+        return d.ToBatch("Recorded an absence asked for");
+    }
+
+    /// <summary>
+    /// A facilitator offering to cover a class that needs it: not one of theirs, and not one already passed.
+    /// Whether they are free then is for the administrator to weigh: being busy is advice, never a refusal.
+    /// </summary>
+    public static Batch OfferCover(Timetable t, Guid sessionId, AskingReader reader, DateOnly today, DateTimeOffset at)
+    {
+        if (reader.FacilitatorId is not { } me || t.Facilitators[me] is not { } f || f.IsFormer())
+            throw new EditRefused("Your account is not linked to a facilitator on this timetable, so there is nobody to offer.");
+        var s = t.Sessions[sessionId] ?? throw new EditRefused("That class has gone.");
+        if (s.Date < today) throw new EditRefused("That class has been.");
+        if (s.FacilitatorIds.Contains(me) || s.CoverIds.Contains(me)) throw new EditRefused("That class is yours already.");
+        if (!Occurrences.Resolve(t, s).NeedsCover) throw new EditRefused("That class has cover now.");
+        if (t.Offers.Any(o => o.SessionId == sessionId && o.FacilitatorId == me && o.Answer is null))
+            throw new EditRefused("You have offered to cover it already.");
+        var offer = new CoverOffer { SessionId = sessionId, FacilitatorId = me, OfferedAt = at };
+        return new Draft(t).Put(Collections.Offers, offer).ToBatch($"Offered to cover {s.DisplayTitle}");
+    }
+
+    /// <summary>Whoever offered takes it back, while nobody has answered it.</summary>
+    public static Batch TakeBackOffer(Timetable t, Guid id, AskingReader reader)
+    {
+        var o = t.Offers[id] ?? throw new EditRefused("That offer has been taken back already.");
+        if (reader.FacilitatorId != o.FacilitatorId) throw new EditRefused("Only whoever offered can take it back.");
+        if (o.Answer is not null) throw new EditRefused("An administrator has answered it already, so ask them to change it.");
+        return new Draft(t).Remove(Collections.Offers, id).ToBatch("Took back an offer to cover");
+    }
+
+    /// <summary>
+    /// An administrator's answer. Yes makes them the class's cover, as the Cover form would, while it still
+    /// needs cover; no changes nothing on the timetable.
+    /// </summary>
+    public static Batch AnswerOffer(Timetable t, Guid id, Answer answer, AskingReader reader, DateOnly today, DateTimeOffset at)
+    {
+        if (!reader.Answers) throw new EditRefused("Only an administrator can answer that.");
+        var o = t.Offers[id] ?? throw new EditRefused("That offer has been taken back.");
+        if (o.Answer is not null) throw new EditRefused("That has been answered already.");
+        var s = t.Sessions[o.SessionId] ?? throw new EditRefused("That class has gone.");
+        var d = new Draft(t).Put(Collections.Offers, o with { Answer = answer, AnsweredAt = at });
+        if (answer == Answer.No) return d.ToBatch("Said no thanks to an offer to cover");
+        if (Asking.StateOf(t, o, today) != OfferState.Waiting) throw new EditRefused("That class does not need cover now.");
+        if (t.Facilitators[o.FacilitatorId] is not { } f || f.IsFormer()) throw new EditRefused("Whoever offered is no longer on this timetable.");
+        d.Put(Collections.Sessions, s with { CoverIds = [o.FacilitatorId], CoverNote = null });
+        return d.ToBatch($"Said yes to an offer to cover {s.DisplayTitle}");
     }
 
     /// <summary>Copy day APPENDS to the destination day.</summary>
@@ -434,6 +535,9 @@ public static class Edits
             d.Put(Collections.Events, e with { FacilitatorIds = e.FacilitatorIds.Remove(id) });
         foreach (var a in t.Absences.Where(a => a.Is(AbsentPerson.Facilitator, id) && !(keep && a.From < today)))
             d.Remove(Collections.Absences, a.Id);
+        // What they asked and offered is theirs and is nobody's business once they have gone: it goes, all of it.
+        foreach (var r in t.Requests.Where(r => r.FacilitatorId == id)) d.Remove(Collections.Requests, r.Id);
+        foreach (var o in t.Offers.Where(o => o.FacilitatorId == id)) d.Remove(Collections.Offers, o.Id);
         if (keep)
         {
             if (!f.IsFormer()) d.Put(Collections.Facilitators, f with { FormerSince = today });

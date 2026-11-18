@@ -46,14 +46,14 @@ else
     <DialogFrame Title="@("Cover " + Looks.Title(t, gap.Session))" OnOk="Save" Class="wide">
         <ChildContent>
             <p>@Looks.WhenWithDay(gap.Session)@(Looks.Room(t, gap.Session) is { Length: > 0 } r ? ", " + r : ""). Away: <b>@(Looks.Names(t, gap.AwayIds) is { Length: > 0 } a ? a : "nobody")</b>.</p>
-            <p class="hint">Free people first, then the lightest week. Somebody teaching at that time is still offered, last: being busy is advice, never a refusal.</p>
+            <p class="hint">Free people first, whoever offered to cover it before the rest, then the lightest week. Somebody teaching at that time is still offered, last: being busy is advice, never a refusal.</p>
             <div class="checks rows" data-testid="cover-candidates">
                 @foreach (var c in ranked)
                 {
                     <label class="candidate @(c.IsFree ? "" : "busy")">
                         <input type="checkbox" checked="@_chosen.Contains(c.Person.Id)" @onchange="e => Toggle(c.Person.Id, (bool)e.Value!)" />
                         <span class="grow"><b>@c.Person.Name</b>@(c.Person.IsGuest ? " (guest)" : "")</span>
-                        <small>@(c.TeachingThen is { } busy ? "Teaching " + Looks.Title(t, busy.Session) + " then" : "Free") · @DomainWeek.Duration(c.Week.Total) this week</small>
+                        <small>@(c.Offered ? "Offered · " : "")@(c.TeachingThen is { } busy ? "Teaching " + Looks.Title(t, busy.Session) + " then" : "Free") · @DomainWeek.Duration(c.Week.Total) this week</small>
                     </label>
                 }
             </div>

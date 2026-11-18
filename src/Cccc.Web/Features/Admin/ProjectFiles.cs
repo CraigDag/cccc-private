@@ -17,9 +17,10 @@ public static class ProjectFiles
     /// <summary>
     /// The format this build writes. 2 added the Scratch Week; a file of format 1 has none, which reads as an
     /// empty one. 3 added former classes, spaces and facilitators, which a build of format 2 would read as in
-    /// use; a file of format 2 has nothing former.
+    /// use; a file of format 2 has nothing former. 4 added what facilitators ask (asking to be away, offering
+    /// to cover), which a build of format 3 would drop without a word; a file of format 3 has none.
     /// </summary>
-    private const int Format = 3;
+    private const int Format = 4;
     private const string Marker = "cccc2 ";
 
     public static byte[] Write(Timetable t)

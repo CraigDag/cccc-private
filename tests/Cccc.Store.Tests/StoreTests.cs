@@ -98,6 +98,35 @@ public class ProjectStoreTests
     }
 
     [Fact]
+    public void AskingAnsweredSinceIsNotTakenBackByTheAskersUndoAndTheAnswerIsTheAdministrators()
+    {
+        using var s = new Scratch();
+        var store = s.Open();
+        var id = store.Create("Year", SampleSchool.Create(s.Today, s.Today), "ada", s.Now);
+        var live = new LiveProjects(store, () => s.Now, () => s.Today).Get(id);
+        var bo = live.State.Facilitators.Single(f => f.Name == "Bo Lindqvist");
+        var day = s.Today.AddDays(1);
+        live.Commit(t => Edits.AskToBeAway(t, day, day, null, null, Domain.Rules.AskingReader.Facilitator(bo.Id), s.Today, s.Now), "bo");
+        var asked = live.State.Requests.Single(r => r.FacilitatorId == bo.Id);
+        live.Commit(t => Edits.AnswerRequest(t, asked.Id, Answer.Yes, Domain.Rules.AskingReader.Administrator, s.Now), "admin");
+
+        // Bo's Undo cannot take back what has been answered: the absence stays recorded, and he is told why.
+        var undone = live.Undo("bo");
+        Assert.False(undone.Done);
+        Assert.Equal(["asking to be away (changed since by admin)"], undone.Skipped);
+        Assert.Equal(Answer.Yes, live.State.Requests[asked.Id]!.Answer);
+        Assert.Contains(live.State.Absences, a => a.Id == live.State.Requests[asked.Id]!.AbsenceId);
+        // The administrator's takes back the yes, and the absence with it: it waits again, and Bo, whose Undo
+        // that step was, takes it back from My week instead.
+        Assert.True(live.Undo("admin").Done);
+        Assert.Equal(Domain.Rules.RequestState.Waiting, Domain.Rules.Asking.StateOf(live.State.Requests[asked.Id]!, s.Today));
+        Assert.DoesNotContain(live.State.Absences, a => a.PersonId == bo.Id && a.From == day);
+        Assert.False(live.CanUndo("bo"));
+        live.Commit(t => Edits.TakeBackRequest(t, asked.Id, Domain.Rules.AskingReader.Facilitator(bo.Id)), "bo");
+        Assert.False(live.State.Requests.Contains(asked.Id));
+    }
+
+    [Fact]
     public void UndoIsPerPersonAndSkipsWhatSomebodyElseChangedSince()
     {
         using var s = new Scratch();
@@ -334,6 +363,27 @@ public class ProjectStoreTests
         Assert.Equal(ProjectStore.FormatVersion.ToString(), Format());   // and it is this format from now on
         SetFormat((ProjectStore.FormatVersion + 1).ToString());
         Assert.Contains("newer version", Assert.Throws<StoreRefused>(() => ProjectStore.Open(s.Folder)).Message);
+    }
+
+    /// <summary>
+    /// What each store format brought, and the store's format the newest of them: a collection added without
+    /// moving it would be replayed by an older build as one it has never heard of. A collection added to the
+    /// timetable has to be decided about here, or this goes red.
+    /// </summary>
+    [Fact]
+    public void EveryCollectionIsGivenTheFormatThatBroughtItAndTheStoreIsTheNewestOfThem()
+    {
+        (string What, int Format)[] brought =
+        [
+            ("scratch", 2),
+            ("formerSince", 3),          // a field on classes, spaces and facilitators, not a collection
+            ("requests", 4), ("offers", 4),
+        ];
+        string[] first = ["settings", "semesters", "closures", "rooms", "programmes", "groups", "branches", "disciplines",
+                          "students", "facilitators", "areas", "classes", "timeRules", "sessions", "registers", "absences", "events"];
+        Assert.Equal(first.Concat(brought.Where(b => b.What != "formerSince").Select(b => b.What)).Order(StringComparer.Ordinal),
+            Collections.All.Select(c => c.Name).Order(StringComparer.Ordinal));
+        Assert.Equal(ProjectStore.FormatVersion, brought.Max(b => b.Format));
     }
 
     [Fact]

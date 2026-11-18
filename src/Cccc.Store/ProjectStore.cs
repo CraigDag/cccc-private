@@ -28,9 +28,10 @@ public sealed class ProjectStore
     /// its changes as a collection it has never heard of, or drop the plan at its next snapshot, so it
     /// refuses a store of format 2 instead. 3 added former classes, spaces and facilitators
     /// (<c>FormerSince</c>): a build of format 2 would read every former one as in use and offer it ahead
-    /// again. An older store has neither and opens as it is.
+    /// again. 4 added what facilitators ask (asking to be away, offering to cover): a build of format 3 would
+    /// replay one as a collection it has never heard of. An older store has none of these and opens as it is.
     /// </summary>
-    public const int FormatVersion = 3;
+    public const int FormatVersion = 4;
     public const int SnapshotEvery = 200;
     public static readonly TimeSpan Retention = TimeSpan.FromDays(30);
 

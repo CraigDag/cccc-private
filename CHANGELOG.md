@@ -44,6 +44,16 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   you let go (*Ada Brightwater busy · BA 1 busy*). Narrowed to one person, every day of their week is
   shaded, so a clear stretch on another day is easy to find. Find a time asks exactly the same question,
   so the two always agree.
+- **A coach can say "I can't come" or "I can cover that" on My week**, and an administrator answers on
+  Now, under *Waiting for your answer*. *Can't come…* takes the days, all day or between two times, and
+  shows first which of their classes it would take them off and what each would be left as (*needs
+  cover*, or *Bo Lindqvist still teaching it*). Nothing on the timetable changes until an administrator
+  says yes, which records an ordinary absence (planned, when asked ahead), so those classes then need
+  cover like any other; *Not this time* records nothing. There is no box for why, so nobody is asked
+  about their health. *Could you cover?* lists the classes needing cover in the next two weeks while
+  they are free, each with *I can cover it*: a yes makes them the cover, and in the Cover list whoever
+  offered says *Offered* and comes first among the free, so pressing them there is the same yes. A coach
+  sees where each stands, and can take one back until it is answered.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

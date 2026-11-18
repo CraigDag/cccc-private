@@ -200,7 +200,26 @@ public static class SampleSchool
             var present = roster.Where((id, i) => !excused.Contains(id) && (i + k) % 7 != 0);
             registers.Add(Rules.Registers.File(t, s, present, excused, ada.Email, s.Date.ToDateTime(s.End, DateTimeKind.Utc)));
         }
-        return t with { Registers = EntitySet<Register>.Of(registers) };
+        // Asked yesterday, both waiting for an answer: Cleo can't come next Tuesday, and Dag can cover Ada's
+        // Thursday class. Their ids come last, so nothing above moves.
+        var yesterday = today.AddDays(-1);
+        var adasThursday = t.Sessions.First(s => s.Date == anchor.AddDays(3) && s.ClassId == acro.Id);
+        var requests = new[]
+        {
+            new TimeOffRequest { Id = g.Next(), FacilitatorId = cleo.Id, From = anchor.AddDays(8), To = anchor.AddDays(8),
+                                 AskedOn = yesterday, AskedAt = yesterday.ToDateTime(new TimeOnly(16, 40), DateTimeKind.Utc) },
+        };
+        var offers = new[]
+        {
+            new CoverOffer { Id = g.Next(), SessionId = adasThursday.Id, FacilitatorId = dag.Id,
+                             OfferedAt = yesterday.ToDateTime(new TimeOnly(17, 5), DateTimeKind.Utc) },
+        };
+        return t with
+        {
+            Registers = EntitySet<Register>.Of(registers),
+            Requests = EntitySet<TimeOffRequest>.Of(requests),
+            Offers = EntitySet<CoverOffer>.Of(offers),
+        };
     }
 
     private static string Slug(string name) =>

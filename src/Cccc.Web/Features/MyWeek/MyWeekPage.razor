@@ -2,6 +2,7 @@
 @using Cccc.Web.Features.Week
 @using Cccc.Web.Features.Sessions
 @using Cccc.Web.Features.Print
+@using Cccc.Web.Features.Ask
 @inject Dialogs D
 @inject PrintRequests Prints
 
@@ -24,6 +25,10 @@ else
     <WeekNav Monday="_view.Monday" Today="W.Today" Title="@("My week, " + Me.Name)" Go="d => _view.GoTo(d)">
         <a class="btn" href="@Prints.Link("mine", _view, W, Me.Id)" target="_blank" rel="noopener">Print my week</a>
         <a class="btn" href="@PhoneCalendar.Link(W, Me.Id, _view.Monday)" download title="@PhoneCalendar.Note" data-testid="phone-calendar">Add to phone calendar</a>
+        @if (W.Access.MayEditSomething)
+        {
+            <button type="button" class="btn" @onclick="CantCome" data-testid="cant-come">Can't come…</button>
+        }
     </WeekNav>
     <FollowingNotice OnlyWhenBehind="true" />
     <div class="cards">
@@ -49,6 +54,7 @@ else
             </ul>
         </div>
     }
+    <MyAsking Me="Me.Id" />
     <DayList M="m" W="W" OnOpen="OpenSession" OnOpenEvent="OpenEvent" />
     @* Said on the page as well as on the button: a phone shows no tooltip. *@
     <p class="muted" data-testid="phone-calendar-note"><i>Add to phone calendar</i> downloads this semester as a calendar file to open on your phone. It does not update itself: download it again after the timetable changes, and open it over the last one.</p>
@@ -76,4 +82,6 @@ else
     });
 
     private void Take(Guid id) => D.Show<RegisterForm>(new Dictionary<string, object?> { [nameof(RegisterForm.SessionId)] = id });
+
+    private void CantCome() => D.Show<CantComeForm>();
 }

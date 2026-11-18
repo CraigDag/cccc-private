@@ -1,0 +1,77 @@
+@* My week's part of asking: what this facilitator has asked and offered, with where each stands, and the
+   classes needing cover in the next two weeks while they are free, each with one press to offer. Nothing
+   is offered while the timetable follows the current app, where nothing here could be answered. *@
+@using Cccc.Web.Features.Week
+@{
+    var t = W.T;
+    var today = W.Today;
+    var now = TimeOnly.FromDateTime(W.Clock.Local(W.Clock.Now).DateTime);
+    var asked = t.Requests.Where(r => r.FacilitatorId == Me && r.To >= today).OrderBy(r => r.From).ThenBy(r => r.AskedAt).ToList();
+    var offers = t.Offers.Where(o => o.FacilitatorId == Me && t.Sessions[o.SessionId] is { } s && s.Date >= today)
+        .OrderBy(o => t.Sessions[o.SessionId]!.Date).ThenBy(o => t.Sessions[o.SessionId]!.Start).ToList();
+    // A class offered for once, answered or not, is said beside the offer rather than offered again.
+    var offered = offers.Select(o => o.SessionId).ToHashSet();
+    var could = W.Access.MayEditSomething
+        ? Asking.CouldCover(t, Me, today, now).Where(o => !offered.Contains(o.Session.Id)).ToList()
+        : [];
+}
+@if (asked.Count + offers.Count > 0)
+{
+    <div class="section" data-testid="my-asking">
+        <h2>Asked</h2>
+        <ul class="pick-list">
+            @foreach (var r in asked)
+            {
+                var state = Asking.StateOf(r, today);
+                <li class="asked @(state == RequestState.NotThisTime ? "no" : "")" data-testid="my-request" data-state="@state">
+                    <span class="grow"><b>Can't come</b> @AskingWords.Days(r)</span>
+                    <small data-testid="asked-state">@AskingWords.State(state)</small>
+                    @if (state == RequestState.Waiting && W.Access.MayEditSomething)
+                    {
+                        <button type="button" class="btn quiet" @onclick="() => TakeBackRequest(r.Id)" data-testid="take-back">Take back</button>
+                    }
+                </li>
+            }
+            @foreach (var o in offers)
+            {
+                var s = t.Sessions[o.SessionId]!;
+                var state = Asking.StateOf(t, o, today);
+                <li class="asked @(state == OfferState.NotThisTime ? "no" : "")" data-testid="my-offer" data-state="@state">
+                    <span class="grow"><b>Cover</b> @Looks.Title(t, s), @Looks.WhenWithDay(s)</span>
+                    <small data-testid="asked-state">@AskingWords.State(state)</small>
+                    @if (state == OfferState.Waiting && o.Answer is null && W.Access.MayEditSomething)
+                    {
+                        <button type="button" class="btn quiet" @onclick="() => TakeBackOffer(o.Id)" data-testid="take-back">Take back</button>
+                    }
+                </li>
+            }
+        </ul>
+    </div>
+}
+@if (could.Count > 0)
+{
+    <div class="section" data-testid="could-cover">
+        <h2>Could you cover?</h2>
+        <p class="muted">Classes needing cover in the next two weeks while you are free. Offer, and an administrator says yes or no.</p>
+        <ul class="pick-list">
+            @foreach (var o in could)
+            {
+                <li class="asked" data-testid="could-cover-class" data-id="@o.Session.Id">
+                    <span class="grow"><b>@Looks.Title(t, o.Session)</b> @Looks.WhenWithDay(o.Session)
+                        <small>@string.Join(" · ", new[] { Looks.Room(t, o.Session), Looks.Audience(t, o.Session) }.Where(x => x.Length > 0))</small></span>
+                    <button type="button" class="btn" @onclick="() => Offer(o.Session.Id)" data-testid="offer-cover">I can cover it</button>
+                </li>
+            }
+        </ul>
+    </div>
+}
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    [Parameter, EditorRequired] public Guid Me { get; set; }
+
+    private void TakeBackRequest(Guid id) => W.Commit(t => Edits.TakeBackRequest(t, id, W.Access.Asking));
+
+    private void TakeBackOffer(Guid id) => W.Commit(t => Edits.TakeBackOffer(t, id, W.Access.Asking));
+
+    private void Offer(Guid sessionId) => W.Commit(t => Edits.OfferCover(t, sessionId, W.Access.Asking, W.Today, W.Clock.Now));
+}

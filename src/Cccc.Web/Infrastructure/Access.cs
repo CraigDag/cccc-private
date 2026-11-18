@@ -73,6 +73,15 @@ public sealed record Access(Account? Account)
 
     public RegisterReader Registers => new(MayTakeEveryRegister, SignedIn ? FacilitatorId : null);
 
+    /// <summary>
+    /// What facilitators ask (<see cref="Cccc.Domain.Rules.Asking"/>): an administrator answers; anybody linked
+    /// to a facilitator asks for themselves, and only for themselves.
+    /// </summary>
+    public AskingReader Asking => new(MayAnswerAsking, SignedIn ? FacilitatorId : null);
+
+    /// <summary>Answers a facilitator asking to be away (which records an absence) or offering to cover.</summary>
+    public bool MayAnswerAsking => Role is Role.Administrator;
+
     public EventViewer Events => !SignedIn ? EventViewer.Nobody : new(
         SeesAdministratorsEvents, IsEditor,
         Account!.Tags.HasFlag(AccountTags.Student), FacilitatorId is not null,
@@ -80,15 +89,19 @@ public sealed record Access(Account? Account)
 
     private static readonly HashSet<string> EditorsCollections = ["sessions", "registers", "events", "scratch"];
 
+    /// <summary>What anybody signed in may change, narrowed to their own by the edit itself.</summary>
+    private static readonly HashSet<string> EverybodysCollections = ["registers", "requests", "offers"];
+
     /// <summary>
-    /// The server's own check of who may change which collection, whatever the screen offered: a
-    /// viewer files registers only (and <c>Edits.FileRegister</c> narrows that to their own); an editor
-    /// changes the week and its events; everything else is an administrator's; nobody signed in, nothing.
+    /// The server's own check of who may change which collection, whatever the screen offered: a viewer
+    /// files registers, asks to be away and offers to cover, and the edit narrows each to their own
+    /// (<c>Edits.FileRegister</c>, <c>Edits.AskToBeAway</c>, <c>Edits.OfferCover</c>); an editor changes the
+    /// week and its events; everything else is an administrator's; nobody signed in, nothing.
     /// </summary>
     public bool MayChange(string collection) =>
         !Following && (MayUseAdminTools
         || (MayEdit && EditorsCollections.Contains(collection))
-        || (SignedIn && collection == "registers"));
+        || (SignedIn && EverybodysCollections.Contains(collection)));
 
     /// <summary>Who may print whose week: an administrator anybody's, everybody else their own.</summary>
     public bool MayHaveTheWeekOf(Guid facilitatorId) =>

@@ -58,6 +58,14 @@ Initials for a facilitator are the first letters of the first two words of their
 (both or neither), `Reason?` (free text, administrators only), `Notice?` (Planned, Unplanned),
 `Cause?` (Illness, Personal, ApprovedLeave, Other).
 
+**Asking to be away** (`Requests`, the rebuild's own) — `FacilitatorId`, `From`, `To`, optional
+`StartTime`/`EndTime` (both or neither), `AskedOn` (the school's date), `AskedAt`, and once answered
+`Answer` (Yes, No), `AnsweredAt` and, for a yes, the `AbsenceId` it recorded. A list of its own, never an
+Absence, so nothing that counts absences can read one by accident. **There is no field for why.**
+
+**An offer to cover** (`Offers`, the rebuild's own) — `SessionId`, `FacilitatorId`, `OfferedAt`, and once
+answered `Answer` and `AnsweredAt`. Whether one is still waiting is worked out from the class, never stored.
+
 **The Scratch Week** (`Scratch`, schema 24 in the current app) — a plan: sessions exactly like the
 ones above, in a collection of their own, all dated in one week no semester reaches (the Monday
 2200-01-06, `Week.ScratchMonday`, the current app's own). One per timetable, shared by everybody who

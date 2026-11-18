@@ -3,6 +3,8 @@
 @inject NavigationManager Nav
 @using Cccc.Web.Features.Week
 @using Cccc.Web.Features.Plan
+@using Cccc.Web.Features.Ask
+@inject Dialogs D
 
 <PageTitle>Now · CCCC Scheduler</PageTitle>
 @{
@@ -35,6 +37,9 @@
     // Every space's little day bar shares one frame: the school day, widened to whatever is on today.
     int day0 = Math.Min(8 * 60, happening.Select(o => PlanModel.Minutes(o.Start) / 60 * 60).DefaultIfEmpty(8 * 60).Min());
     int day1 = Math.Max(18 * 60, happening.Select(o => (PlanModel.Minutes(o.End) + 59) / 60 * 60).DefaultIfEmpty(18 * 60).Max());
+    // What facilitators have asked an administrator: can't come, and can cover. Only an administrator answers.
+    var requests = W.Access.MayAnswerAsking ? Asking.RequestsWaiting(t, today) : [];
+    var offers = W.Access.MayAnswerAsking ? Asking.OffersWaiting(t, today) : [];
 }
 
 <div class="now" data-testid="now-page" data-minute="@Cccc.Domain.Week.Hm(new TimeOnly(local.Hour, local.Minute))">
@@ -195,6 +200,26 @@
         </section>
 
         <aside class="now-needs" aria-label="Today needs" data-testid="today-needs">
+            @if (requests.Count + offers.Count > 0)
+            {
+                <h2 class="now-section">Waiting for your answer</h2>
+                <div class="now-asked" data-testid="waiting-answer">
+                    @foreach (var r in requests)
+                    {
+                        int classes = Asking.TakesOff(t, r).Count;
+                        <button type="button" class="need @(r.From <= today ? "warn" : "")" @onclick="() => Answer(r.Id, null)" data-testid="ask" data-kind="request">
+                            <span class="need-kind">Can't come</span><b>@(t.Facilitators[r.FacilitatorId]?.Name)</b>
+                            <small>@AskingWords.Days(r) · @(classes == 0 ? "none of their classes" : Looks.Count(classes, "class", "classes"))</small></button>
+                    }
+                    @foreach (var o in offers)
+                    {
+                        var s = t.Sessions[o.SessionId]!;
+                        <button type="button" class="need" @onclick="() => Answer(null, o.Id)" data-testid="ask" data-kind="offer">
+                            <span class="need-kind">Can cover</span><b>@(t.Facilitators[o.FacilitatorId]?.Name)</b>
+                            <small>@Looks.Title(t, s), @Looks.WhenWithDay(s)</small></button>
+                    }
+                </div>
+            }
             <h2 class="now-section">Today needs</h2>
             @if (needs == 0)
             {
@@ -288,6 +313,12 @@
     private static Focus RoomFocus(Room r) => new("room", r.Id, r.Name);
     private static string Pct(int minutes, int span) => (Math.Clamp(minutes * 100.0 / Math.Max(1, span), 0, 100)).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
     private static Focus PersonFocus(Facilitator f) => new("facilitator", f.Id, f.Name);
+
+    private void Answer(Guid? request, Guid? offer) => D.Show<AnswerForm>(new Dictionary<string, object?>
+    {
+        [nameof(AnswerForm.RequestId)] = request,
+        [nameof(AnswerForm.OfferId)] = offer,
+    });
 
     private void OpenPlan(DateOnly day, Focus? focus, Guid? chosen)
     {

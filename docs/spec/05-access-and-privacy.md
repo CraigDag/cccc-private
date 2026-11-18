@@ -33,6 +33,13 @@ Capabilities are **named**, never `role >= Editor`:
 | `MayTakeEveryRegister` | Administrator |
 | `MaySeeSystem` (backups, the nightly update) | Administrator |
 | `MayManageScreens` (pair, change and unpair the screens in the building) | Administrator |
+| `MayAnswerAsking` (yes or no to a facilitator asking to be away, which records an absence, or offering to cover) | Administrator |
+
+**Asking is for oneself.** Any account linked to a facilitator, a Viewer included, asks to be away and
+offers to cover for that facilitator and nobody else (`Access.Asking`), as a register is filed: the
+server's door lets anybody signed in change those two lists, and the edit narrows each to the asker's
+own. A yes is an administrator's because it records an absence, which is theirs to keep; an editor can
+still give a class its cover from the Cover form, and an offer the class's cover then reads as covering.
 
 **A timetable that follows the current app is changed by nobody here** (`Access.Following`;
 [`04`](04-storage-and-editing.md)). It narrows what anybody may *change* — every collection, registers
@@ -120,6 +127,9 @@ The live file has held real students since 2026-10-29, so all of this applies to
   person wrote is copied out of the timetable, where erasure would have to find it. Erasing a
   facilitator forgets theirs in every timetable.
 - **Absence reasons** are free text an administrator may fill; the form warns not to write health
-  details there.
+  details there. **Asking to be away has no box for why**, deliberately: a coach asked why would write
+  what is nobody's business, the illness. What was asked and offered holds ids, days and times only, and
+  goes with its person when they are removed or erased (`Edits.RemoveFacilitator`), so the erasure has
+  nothing in it to rewrite; the absence a yes recorded stays, as absences do.
 - Security headers on every response: a content security policy (self only), `X-Content-Type-Options`,
   `Referrer-Policy: no-referrer`, `frame-ancestors 'none'`.

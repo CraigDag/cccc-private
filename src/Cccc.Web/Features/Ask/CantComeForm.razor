@@ -1,0 +1,89 @@
+@* A facilitator saying they cannot come, from My week: which days, and the times when it is not all of
+   them. It changes nothing on the timetable until an administrator says yes on Now, so the form says what
+   a yes would do to each of their classes. There is no box for why, so nobody is asked about their health. *@
+@using Cccc.Web.Features.Week
+@inject Dialogs D
+@{
+    var t = W.T;
+    var me = W.Access.FacilitatorId ?? Guid.Empty;
+    var asked = _why is null ? Asked(me) : null;
+    var takes = asked is null ? [] : Asking.WhatAYesLeaves(t, asked);
+}
+<DialogFrame Title="Can't come" OnOk="Send" OkLabel="Send" OkEnabled="@(_why is null)">
+    <ChildContent>
+        <p class="hint">An administrator sees it on Now. Nothing on the timetable changes until they say yes.</p>
+        <div class="field two">
+            <label><span>From</span><input type="date" min="@W.Today.ToString("yyyy-MM-dd")" @bind="_from" @bind:after="Check" data-testid="cant-from" /></label>
+            <label><span>To</span><input type="date" min="@W.Today.ToString("yyyy-MM-dd")" @bind="_to" @bind:after="Check" data-testid="cant-to" /></label>
+        </div>
+        <label class="check"><input type="checkbox" @bind="_allDay" @bind:after="Check" data-testid="cant-all-day" /> All day</label>
+        @if (!_allDay)
+        {
+            <div class="field two">
+                <label><span>From time</span><input type="time" step="900" @bind="_start" @bind:after="Check" data-testid="cant-start" /></label>
+                <label><span>Until</span><input type="time" step="900" @bind="_end" @bind:after="Check" data-testid="cant-end" /></label>
+            </div>
+        }
+        @if (asked is not null)
+        {
+            <h3 class="form-sub">It takes you off</h3>
+            @if (takes.Count == 0)
+            {
+                <p class="muted" data-testid="cant-none">None of your classes.</p>
+            }
+            else
+            {
+                <ul class="plain-list" data-testid="cant-takes">
+                    @foreach (var (now, after) in takes)
+                    {
+                        <li data-testid="cant-class"><b>@Looks.Title(t, now.Session)</b> @Looks.WhenWithDay(now.Session) <small class="muted">· @AskingWords.After(t, me, now, after)</small></li>
+                    }
+                </ul>
+            }
+        }
+        <p class="hint">There is no box for why. If you want to say, tell an administrator yourself.</p>
+        @if (_why is not null)
+        {
+            <p class="form-error" data-testid="cant-why">@_why</p>
+        }
+    </ChildContent>
+</DialogFrame>
+@code {
+    [CascadingParameter] public Workspace W { get; set; } = default!;
+    private DateOnly _from, _to;
+    private bool _allDay = true;
+    private TimeOnly? _start, _end;
+    private string? _why;
+
+    protected override void OnInitialized()
+    {
+        _from = _to = W.Today;
+        Check();
+    }
+
+    private void Check()
+    {
+        if (_to < _from && _from >= W.Today) _to = _from;
+        _why = W.Access.FacilitatorId is null ? "Your account is not linked to a facilitator."
+            : _from < W.Today ? "That day has gone. Say from today on."
+            : _to < _from ? "It has to end on or after the day it starts."
+            : _allDay ? null
+            : _start is null || _end is null ? "Give both times, or tick All day."
+            : _end <= _start ? "The time has to finish after it starts."
+            : null;
+    }
+
+    /// <summary>The request as it would be sent, to say what a yes would do before it is sent.</summary>
+    private TimeOffRequest Asked(Guid me) => new()
+    {
+        FacilitatorId = me, From = _from, To = _to, AskedOn = W.Today,
+        StartTime = _allDay ? null : _start, EndTime = _allDay ? null : _end,
+    };
+
+    private void Send()
+    {
+        Check();
+        if (_why is not null) return;
+        if (W.Commit(t => Edits.AskToBeAway(t, _from, _to, _allDay ? null : _start, _allDay ? null : _end, W.Access.Asking, W.Today, W.Clock.Now))) D.Close();
+    }
+}
