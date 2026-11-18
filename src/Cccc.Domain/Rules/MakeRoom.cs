@@ -140,5 +140,12 @@ public static class MakeRoom
         DateOnly today, TimeOnly now, EventViewer viewer) =>
         WaysOut.For(Put(t, placed), otherId, today, now, viewer).FirstOrDefault(w => w.Moved.Date == date && w.Moved.Start == start && w.Moved.RoomId == roomId);
 
+    /// <summary>
+    /// Whether the other class is in the way of one placed where it is: in a clash with it (<see cref="Clash.IsRing"/>).
+    /// A group's day grown too hard beside it, a limit or a long gap names it too, and none of those is in the way.
+    /// </summary>
+    public static bool InTheWay(Timetable t, Session placed, Guid otherId) =>
+        Clashes.CausedBy(t, placed).Any(c => c.IsRing && c.SessionIds.Contains(otherId));
+
     private static Timetable Put(Timetable t, Session s) => t with { Sessions = t.Sessions.Put(s) };
 }

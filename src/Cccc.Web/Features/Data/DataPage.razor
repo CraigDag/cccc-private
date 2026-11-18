@@ -47,7 +47,7 @@ else
             break;
         case "classes":
             <AddBar Kind="k" OnAdd="() => Show<ClassForm>(null)" />
-            <Rows Items="@Filter(t.Classes.Current().Select(c => Row.Of(c.Id, c.Name, c.Colour, WorkloadWords.For(c.Workload) + (t.Areas.Find(c.AreaId) is { } a ? " · " + a.Name : ""))))" OnOpen="id => Show<ClassForm>(id)" />
+            <Rows Items="@Filter(t.Classes.Current().Select(c => Row.Of(c.Id, c.Name, c.Colour, WorkloadWords.For(c.Workload) + (t.Areas.Find(c.AreaId) is { } a ? " · " + a.Name : "") + (c.Effort != Effort.NotSet ? " · " + EffortWords.For(c.Effort) : ""))))" OnOpen="id => Show<ClassForm>(id)" />
             <FormerList One="class" Many="classes" Searching="@(_search.Trim().Length > 0)" Items="@Filter(t.Classes.Where(c => c.IsFormer()).Select(c => Row.Of(c.Id, c.Name, c.Colour, FormerWords.Detail(t, c, W.Today))))" OnOpen="id => Show<ClassForm>(id)" />
             break;
         case "areas":

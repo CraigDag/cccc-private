@@ -168,6 +168,11 @@
                 </section>
             }
         }
+        @foreach (var h in M.HardWarnings.Where(c => c.SessionIds.Contains(s.Id)))
+        {
+            @* Advice about the group's day, not a clash: nothing to move it out of, so no ways out. *@
+            <div class="insp-note hard" data-testid="inspector-hard">@h.Description</div>
+        }
         @if (M.Elsewhere.TryGetValue(s.Date, out var busy))
         {
             var lines = ElsewhereWords.Lines(t, busy);

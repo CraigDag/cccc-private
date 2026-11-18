@@ -3,7 +3,7 @@
 <div class="toasts" aria-live="polite" data-testid="toasts">
     @foreach (var t in T.Shown)
     {
-        <div class="toast @(t.IsWarning ? "warn" : "")" @key="t.Id" data-testid="toast">
+        <div class="toast @(t.IsWarning ? "warn" : "")" @key="t.Id" data-testid="toast" data-toast="@t.Id">
             <span>@t.Text</span>
             @if (t.Action is not null)
             {

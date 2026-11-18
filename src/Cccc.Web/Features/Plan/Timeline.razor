@@ -94,6 +94,10 @@
                     {
                         <small>@(M.RowsAreDays ? "nothing" : "free")</small>
                     }
+                    else if (M.HardOn(row.Key, rowDay) is { } hardDay)
+                    {
+                        <small class="hard-sum @(hardDay.Over ? "over" : "")" title="@HardWords.Title(t, hardDay)" data-testid="hard-sum" data-over="@(hardDay.Over ? "1" : "0")">@HardWords.Sum(hardDay)</small>
+                    }
                 </div>
                 <div class="tl-track" style="--lanes:@M.LanesOf(row.Key, rowDay)">
                     @foreach (var band in M.Bands(rowDay, withSpace))
@@ -104,6 +108,24 @@
                     @if (rowDay == W.Today && NowMinutes is { } now && now >= M.FrameStart && now <= M.FrameEnd)
                     {
                         <div class="tl-now" style="left:@Pct(now - M.FrameStart, span)%"></div>
+                    }
+                    @if (M.Hard.ContainsKey((row.Key, rowDay)))
+                    {
+                        @* How hard the group's day is, along the foot of its row: hard classes solid, moderate ones thin,
+                           and a stretch past the school's limit in the warning colour, gaps and all. *@
+                        <div class="tl-effort" aria-hidden="true">
+                            @foreach (var b in bars)
+                            {
+                                var e = HardTraining.Of(t, b.O);
+                                if (e is not (Effort.Hard or Effort.Moderate)) continue;
+                                <span class="tl-eff @(e == Effort.Hard ? "hard" : "moderate")" style="left:@Pct(b.Start - M.FrameStart, span)%; width:@Pct(b.End - b.Start, span)%" data-testid="effort-mark" data-effort="@e"></span>
+                            }
+                            @foreach (var x in M.HardOn(row.Key, rowDay)?.TooLong ?? [])
+                            {
+                                int x0 = PlanModel.Minutes(x.Start), x1 = PlanModel.Minutes(x.End);
+                                <span class="tl-eff over" style="left:@Pct(x0 - M.FrameStart, span)%; width:@Pct(x1 - x0, span)%" data-testid="effort-over" data-from="@x0" data-until="@x1"></span>
+                            }
+                        </div>
                     }
                     @foreach (var b in bars)
                     {

@@ -13,13 +13,20 @@ public enum ClashKind
     FacilitatorLongGap,
     StudentDoubleBooked,
     GroupDoubleBooked,
+    /// <summary>A group's hard training runs longer without a rest than the school's limit (<see cref="HardTraining"/>).</summary>
+    GroupHardInARow,
+    /// <summary>A group has more hard training in a day than the school's limit.</summary>
+    GroupHardInADay,
 }
 
 /// <summary>A warning about the week. Never a refusal.</summary>
 public sealed record Clash(ClashKind Kind, string Description, ImmutableList<Guid> SessionIds)
 {
     /// <summary>The clashes drawn as a ring on the block — not cover, which has its own dashed edge.</summary>
-    public bool IsRing => Kind is not (ClashKind.NeedsCover or ClashKind.FacilitatorOverHours or ClashKind.FacilitatorLongGap);
+    public bool IsRing => Kind is not (ClashKind.NeedsCover or ClashKind.FacilitatorOverHours or ClashKind.FacilitatorLongGap) && !IsHardTraining;
+
+    /// <summary>About how hard a group's day is on the body: advice about the day's shape, never a ring on a class.</summary>
+    public bool IsHardTraining => Kind is ClashKind.GroupHardInARow or ClashKind.GroupHardInADay;
 }
 
 public static class Clashes
@@ -154,6 +161,7 @@ public static class Clashes
                 }
             }
         }
+        found.AddRange(HardTraining.Warnings(t, list));
         return found;
     }
 

@@ -1,6 +1,6 @@
 namespace Cccc.Web.Features.Data;
 
-/// <summary>Hours typed by a person: "6", "6.5", "6:30" or "6h 30m". Empty means none.</summary>
+/// <summary>Hours typed by a person: "6", "6.5", "6:30", "6h 30m", or minutes alone ("90m"). Empty means none.</summary>
 public static class HoursText
 {
     public static string Show(TimeSpan? t) => t is { } x ? $"{(int)x.TotalHours}:{x.Minutes:00}" : "";
@@ -10,6 +10,15 @@ public static class HoursText
         value = null;
         s = s?.Trim().ToLowerInvariant() ?? "";
         if (s.Length == 0) return true;
+        // Minutes alone ("30m", "45 min") are minutes: they used to lose the m and be read as that many hours.
+        var bare = s.Replace(" ", "");
+        if (!bare.Contains('h') && !bare.Contains(':') && (bare.EndsWith("min", StringComparison.Ordinal) || bare.EndsWith('m')))
+        {
+            var digits = bare.EndsWith("min", StringComparison.Ordinal) ? bare[..^3] : bare[..^1];
+            if (!int.TryParse(digits, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var minutes) || minutes >= 200 * 60) return false;
+            value = TimeSpan.FromMinutes(minutes);
+            return true;
+        }
         s = s.Replace("h", ":").Replace("m", "").Replace(" ", "");
         if (s.Contains(':'))
         {

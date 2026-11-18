@@ -50,9 +50,9 @@ internal sealed class Build
         return r;
     }
 
-    public Class Class(string name, Workload w = Workload.Counted)
+    public Class Class(string name, Workload w = Workload.Counted, Effort effort = Effort.NotSet)
     {
-        var c = new Class { Name = name, Workload = w };
+        var c = new Class { Name = name, Workload = w, Effort = effort };
         T = T with { Classes = T.Classes.Put(c) };
         return c;
     }

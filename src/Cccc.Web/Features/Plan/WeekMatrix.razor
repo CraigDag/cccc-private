@@ -40,6 +40,10 @@
                                         <span class="wm-time">@Cccc.Domain.Week.Hm(new TimeOnly(b.Start / 60, b.Start % 60))</span> @Looks.Title(t, s)
                                     </button>
                                 }
+                                @if (M.HardOn(row.Key, d) is { } hard)
+                                {
+                                    <div class="wm-hard @(hard.Over ? "over" : "")" title="@HardWords.Title(t, hard)" data-testid="week-hard" data-over="@(hard.Over ? "1" : "0")">@HardWords.Sum(hard)</div>
+                                }
                             </td>
                         }
                     </tr>

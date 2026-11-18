@@ -27,6 +27,12 @@ public sealed record Settings : IEntity
     public string Name { get; init; } = "";
     public string SchoolName { get; init; } = "CCCC";
     public TimeSpan? WeeklyScheduledTarget { get; init; }
+    /// <summary>The longest stretch of hard training a group should have without a rest; none, no limit.</summary>
+    public TimeSpan? MostHardInARow { get; init; }
+    /// <summary>The most hard training a group should have in a day; none, no limit.</summary>
+    public TimeSpan? MostHardInADay { get; init; }
+    /// <summary>The shortest break that ends a stretch of hard training; none, <see cref="Rules.HardTraining.DefaultRest"/>.</summary>
+    public TimeSpan? RestBetweenHard { get; init; }
 }
 
 /// <summary>A semester. The old code calls this a Term; the screen has said Semester since 1.38.2.</summary>
@@ -170,6 +176,18 @@ public enum Workload
     NotCounted,
 }
 
+/// <summary>
+/// How hard a class is on the body. The school says, class by class; a class nobody has said of is no
+/// part of a group's hard training, so a timetable brought in from a file warns of nothing until it is set.
+/// </summary>
+public enum Effort
+{
+    NotSet,
+    Light,
+    Moderate,
+    Hard,
+}
+
 public sealed record Class : IRetirable
 {
     public Guid Id { get; init; } = Guid.NewGuid();
@@ -177,6 +195,7 @@ public sealed record Class : IRetirable
     public string Colour { get; init; } = "#5E35B1";
     public Guid? AreaId { get; init; }
     public Workload Workload { get; init; }
+    public Effort Effort { get; init; }
     public DateOnly? FormerSince { get; init; }
 }
 

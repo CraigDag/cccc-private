@@ -140,6 +140,15 @@ covering*), who changed it and when, from `Recent`; then today's events and what
   it what it would run into (*Ada Brightwater busy · BA 1 busy*), somebody in only part of it only for
   their part, and onto a space's row where another class is, *Big Top in use*; it never stops the drag.
   An event the reader may not read is only *booked*; students are counted, never named.
+- **Hard training**, on the Groups lens (the day, the week, and one group's days): each group's figure
+  beside its name (*4h 45m hard*), in the warning colour when the day goes past the school's limits, and
+  on a hover the longer look (*Hard training 09:00–12:00 (2h 45m), 13:00–15:00 (2h); 4h 45m in all. More
+  than 2h in a row without a 30m rest.*). Along the foot of the row each hard class is marked solid and a
+  moderate one thin, and a stretch past the limit is underlined in the warning colour, its short breaks
+  and all. The week grid says each day's under its chips. The side panel says a warning beside the
+  classes it is about, with no ring and no ways out. On a phone the figure sits under the group's name.
+  People & places ▸ Classes says how hard each class is; ▸ Settings holds the limits and the rest (*2*,
+  *1:30*, *90m*; empty is no limit), and Reports counts the week's warnings beside the hours target.
 - **Find a time** beside *+ Class*, for editors (below).
 - **Copy** (day, week, clear the weeks after), **Print** (the four documents, narrowed as the screen
   is, and a facilitator's semester for their phone when the plan is narrowed to one) and **Show** (open

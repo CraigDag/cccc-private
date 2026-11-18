@@ -381,6 +381,27 @@ public class MakeRoomTests
     }
 
     [Fact]
+    public void TheOtherClassIsInTheWayOnlyByAClashNeverByAHardDayBesideIt()
+    {
+        var b = new Build();
+        var ba = b.Group("BA 1");
+        var acrobatics = b.Class("Acrobatics", effort: Effort.Hard);
+        var studio = Space(b, "Studio A");
+        var other = b.Session(Tuesday, "09:00", "11:00", Audience.ForGroup(ba.Id), studio, acrobatics);
+        var t = b.T with { Settings = b.T.Settings with { MostHardInARow = TimeSpan.FromHours(2) } };
+        var placed = new Session
+        {
+            Title = "Acrobatics", ClassId = acrobatics.Id, Audience = Audience.ForGroup(ba.Id), RoomId = studio.Id,
+            Date = Tuesday, Start = new(10, 0), End = new(11, 0),
+        };
+        Assert.True(MakeRoom.InTheWay(t, placed, other.Id));      // the same group in the same space at once
+        // Straight after it, three hours of hard training in a row names it; it is not in the way of anything.
+        var after = placed with { Start = new(11, 0), End = new(12, 0) };
+        Assert.Contains(Clashes.CausedBy(t, after), c => c.IsHardTraining && c.SessionIds.Contains(other.Id));
+        Assert.False(MakeRoom.InTheWay(t, after, other.Id));
+    }
+
+    [Fact]
     public void AClassTheTimetableHasMovesThereAndSaysWhereItWasOnceItsWeekHasBegun()
     {
         var s = Tuesdays();

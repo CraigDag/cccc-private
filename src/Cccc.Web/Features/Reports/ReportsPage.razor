@@ -103,7 +103,9 @@ else
         default:
             var thisWeek = Occurrences.ForWeek(t, W.Today);
             var allMissing = Registers.MissingBetween(t, DomainWeek.MondayOf(_from), Min(DomainWeek.MondayOf(_to).AddDays(6), W.Today.AddDays(-1)), W.Today);
-            var clashes = Clashes.ForWeek(t, W.Today).Where(c => c.Kind != ClashKind.NeedsCover).ToList();
+            var warnings = Clashes.ForWeek(t, W.Today);
+            var clashes = warnings.Where(c => c.Kind != ClashKind.NeedsCover && !c.IsHardTraining).ToList();
+            var hardDays = warnings.Where(c => c.IsHardTraining).ToList();
             var cover = Cover.StillNeeded(t, W.Today, W.Today);
             <div class="cards">
                 <div class="card"><small>Classes this week</small><b>@thisWeek.Count(o => o.Happens)</b><small>@thisWeek.Count(o => !o.Happens) closed or cancelled</small></div>
@@ -117,6 +119,11 @@ else
                     // Advice, so not amber: a part-time programme can be short of the school's one target every week.
                     var shortNow = t.Students.Count(s => Hours.ForStudent(t, W.Today, thisWeek, s.Id).Short);
                     <div class="card"><small>Short of the @DomainWeek.Duration(goal) target</small><b data-testid="students-short">@shortNow</b><small>@(shortNow == 1 ? "student" : "students") this week · <a href="reports/students">Student hours</a></small></div>
+                }
+                @if (HardTraining.HasLimits(t))
+                {
+                    // Advice about the shape of a group's day, like the target: so not amber either.
+                    <div class="card" title="@string.Join("\n", hardDays.Select(c => c.Description))"><small>Hard training past the limits</small><b data-testid="hard-past-limits">@hardDays.Count</b><small>this week · Plan ▸ Groups shows each group's day</small></div>
                 }
                 <div class="card"><small>People</small><b>@t.Students.Count</b><small>@(t.Students.Count == 1 ? "student" : "students") · @Looks.Count(t.Facilitators.Count(f => !f.IsGuest && !f.IsFormer()), "facilitator") · @Looks.Count(t.Groups.Count, "group")</small></div>
             </div>

@@ -281,6 +281,30 @@ three**, the soonest first, as Find a time lists them.
   made meanwhile is never walked into. The other class says it has moved once its week has begun, as
   Find a time does.
 
+## Hard training (`HardTraining`, the rebuild's own)
+
+How hard a group's day is on the body. A circus school's injuries come from loading, not from clashes, and
+the timetable is where the loading is decided; the current app has no idea which classes are hard.
+
+- **A class says how hard it is** (`Class.Effort`: not said, light, moderate, hard), once, in Classes. Only
+  **hard** counts towards the figure; moderate is drawn beside it on the plan and counts for nothing.
+- **A group's hard training** is the classes that are hard, on for that group (a whole-building class is
+  on for every group), **counted** (an open session or a break is nobody's required training) and that
+  **happen** (cancelled and closed are not; waiting for cover still is, because the students are still
+  timetabled to be there, as with a student's hours).
+- **A stretch** is hard classes with less than the school's **rest** between them (`RestBetweenHard`, half
+  an hour when it has not said): back to back and overlapping run together whatever the rest. Its figure
+  is the **time in those classes**, not the span: the short breaks are not training, but they are not a
+  rest either. A group double-booked counts the overlap once.
+- **The limits are the school's** (`MostHardInARow` for a stretch, `MostHardInADay` for the day), each
+  optional. Past one is a warning beside the classes it is about (`GroupHardInARow`, `GroupHardInADay`),
+  **never a ring and never a refusal**: there is nothing double-booked to move out of the way, so no ways
+  out, nothing for Make room to count as in the way (`MakeRoom.InTheWay`), and none in the term's issues
+  or Now's clashes. Exactly the limit is not past it. **No limits, no warnings**, and the figures are
+  still there to look at.
+- **The add form and Find a time say it** like any other warning, because they ask the clash check what a
+  class would add: the figure growing past a limit is new, so it is said.
+
 ## A week against the one before (`WeekChanges`)
 
 - A week is compared with **the last week before it with anything in it**, at most half a year back: a

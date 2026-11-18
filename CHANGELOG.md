@@ -69,6 +69,14 @@ The whole app rebuilt. Everything the school uses today is here, with these diff
   tick off to add the class alone. From *Another time…*, one press moves both. Either way, one Undo puts
   both back. It never moves round somebody who is away or an event, never moves a class that has
   started, and never moves more than one class.
+- **How hard a group's day is on the body.** Say once, in People & places ▸ Classes, which classes are
+  hard on the body (and which moderate or light). On the plan's Groups view each group then says its hard
+  training beside its name (*4h 45m hard*), with each hard class marked along the foot of its row, and the
+  week says every day's. Hard classes with less than a rest between them count as one stretch. Set the
+  school's own limits in Settings (*2 hours in a row*, *4 in a day*, a rest of *30m*) and a day past them
+  is shown in orange, the stretch underlined, and the classes say why in their side panel; adding a class
+  that would push a group past them says so before you save, and so does Find a time. It is advice about
+  the shape of a day, never a clash and never a refusal, and with no limits set it only shows the figures.
 - **The whole semester at a glance**: Plan ▸ Term (or *term* in Ctrl+K) lays every week of the
   semester side by side. For each week: how many classes, how many are **different from the week
   before** (new, gone, moved or with somebody else; *Same* for a week copied as it was), its issues and

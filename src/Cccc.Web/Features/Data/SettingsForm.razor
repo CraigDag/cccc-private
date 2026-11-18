@@ -2,22 +2,47 @@
     <p class="hint">The timetable's own name is changed in Administration ▸ Projects.</p>
     <label class="field"><span>School name</span><input @bind="_school" /></label>
     <label class="field"><span>Scheduled hours a week a student should have (optional)</span><input @bind="_target" placeholder="e.g. 24" /></label>
-    <div class="form-actions"><button type="button" class="btn primary" @onclick="Save" disabled="@(!HoursText.TryRead(_target, out _))">Save the settings</button></div>
+    <h3 class="settings-head">Hard training</h3>
+    <p class="hint">A group's classes marked Hard (in Classes) with less than a rest between them are one stretch of hard
+        training. The plan shows each group's, and warns past these limits; it never stops a class being added. Empty means no limit.</p>
+    <label class="field"><span>Hard training in a row, at most</span><input @bind="_inARow" placeholder="e.g. 2" data-testid="settings-hard-row" /></label>
+    <label class="field"><span>Hard training in a day, at most</span><input @bind="_inADay" placeholder="e.g. 4" data-testid="settings-hard-day" /></label>
+    <label class="field"><span>A break this long is a rest</span><input @bind="_rest" placeholder="30m" data-testid="settings-hard-rest" /></label>
+    @if (Problem is { } problem)
+    {
+        <p class="notice" data-testid="settings-problem">@problem</p>
+    }
+    <div class="form-actions"><button type="button" class="btn primary" @onclick="Save" disabled="@(Problem is not null)" data-testid="settings-save">Save the settings</button></div>
 </div>
 @code {
     [CascadingParameter] public Workspace W { get; set; } = default!;
-    private string _school = "", _target = "";
+    private string _school = "", _target = "", _inARow = "", _inADay = "", _rest = "";
 
     protected override void OnInitialized()
     {
         var s = W.T.Settings;
         _school = s.SchoolName; _target = HoursText.Show(s.WeeklyScheduledTarget);
+        _inARow = HoursText.Show(s.MostHardInARow); _inADay = HoursText.Show(s.MostHardInADay); _rest = HoursText.Show(s.RestBetweenHard);
     }
+
+    private string? Problem =>
+        !HoursText.TryRead(_target, out _) ? "The hours a week is not a number of hours."
+        : !HoursText.TryRead(_inARow, out _) ? "Hard training in a row is not a length of time (2, 1:30 or 90m)."
+        : !HoursText.TryRead(_inADay, out _) ? "Hard training in a day is not a length of time (4, 3:30 or 210m)."
+        : !HoursText.TryRead(_rest, out _) ? "The rest is not a length of time (30m, 0:45 or 1)."
+        : null;
 
     private void Save()
     {
         HoursText.TryRead(_target, out var target);
-        var s = W.T.Settings with { SchoolName = _school.Trim(), WeeklyScheduledTarget = target };
+        HoursText.TryRead(_inARow, out var inARow);
+        HoursText.TryRead(_inADay, out var inADay);
+        HoursText.TryRead(_rest, out var rest);
+        var s = W.T.Settings with
+        {
+            SchoolName = _school.Trim(), WeeklyScheduledTarget = target,
+            MostHardInARow = inARow, MostHardInADay = inADay, RestBetweenHard = rest,
+        };
         W.Commit(t => new DraftOf(t).PutSettings(s).ToBatch("Changed the settings"));
     }
 }

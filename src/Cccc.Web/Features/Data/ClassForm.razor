@@ -20,7 +20,16 @@
                 }
             </select>
         </label>
+        <label class="field"><span>How hard it is on the body</span>
+            <select @bind="_effort" data-testid="class-effort">
+                @foreach (var e in Enum.GetValues<Effort>())
+                {
+                    <option value="@e">@EffortWords.For(e)</option>
+                }
+            </select>
+        </label>
         <p class="hint">Counted: required, part of a student's hours. Open session: optional (open training), can be hidden from the week. Not counted: on the timetable, never a student's hours (lunch).
+            A Hard class is part of a group's hard training: the plan shows each group's, and warns past the school's limits in Settings.
         @if (_old is not null)
         {
             <span>Renaming a class renames the classes on the timetable still carrying its old name, in weeks that have not ended.</span>
@@ -55,17 +64,18 @@
     private Class? _old;
     private string _name = "", _colour = "#5E35B1", _area = "";
     private Workload _workload;
+    private Effort _effort;
 
     protected override void OnInitialized()
     {
         _old = Id is { } id ? W.T.Classes[id] : null;
         if (_old is null) return;
-        _name = _old.Name; _colour = _old.Colour; _area = _old.AreaId?.ToString() ?? ""; _workload = _old.Workload;
+        _name = _old.Name; _colour = _old.Colour; _area = _old.AreaId?.ToString() ?? ""; _workload = _old.Workload; _effort = _old.Effort;
     }
 
     private void Save()
     {
-        var c = (_old ?? new Class()) with { Name = _name.Trim(), Colour = _colour, AreaId = Guid.TryParse(_area, out var a) ? a : null, Workload = _workload };
+        var c = (_old ?? new Class()) with { Name = _name.Trim(), Colour = _colour, AreaId = Guid.TryParse(_area, out var a) ? a : null, Workload = _workload, Effort = _effort };
         if (W.Commit(t => Edits.PutClass(t, c, W.Today))) D.Close();
     }
 

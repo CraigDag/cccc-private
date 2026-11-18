@@ -501,7 +501,7 @@ else
             : p.Audience.Kind == AudienceKind.Programme && p.Audience.ProgrammeId is null ? "Choose the programme it is for."
             : null;
         _roomNeeded = !_scratch && MakingRoom is { } w && T.Sessions[w.Moved.Id] is { } o
-            && Clashes.CausedBy(T, TimeWindows.Normalise(p)).Any(c => c.SessionIds.Contains(o.Id));
+            && MakeRoom.InTheWay(T, TimeWindows.Normalise(p), o.Id);
         _roomStill = _roomNeeded && _why is null && MakingRoom is { Moved: var m }
             && MakeRoom.Still(T, TimeWindows.Normalise(p), m.Id, m.Date, m.Start, m.RoomId, W.Today, W.Clock.TimeOfDay, W.Access.Events) is not null;
         _warnings = _why is null ? Clashes.CausedBy(Seen, TimeWindows.Normalise(p)) : [];

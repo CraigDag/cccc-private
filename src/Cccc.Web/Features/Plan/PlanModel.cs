@@ -157,6 +157,19 @@ public sealed class PlanModel
     public IReadOnlyDictionary<DateOnly, IReadOnlyList<BusyStretch>> Elsewhere { get; init; } = new Dictionary<DateOnly, IReadOnlyList<BusyStretch>>();
 
     /// <summary>
+    /// How hard each group's day is on the body (<see cref="HardTraining"/>), by row and day: on the rows that are
+    /// groups, or the days of the one group narrowed to. Empty for spaces and people.
+    /// </summary>
+    public IReadOnlyDictionary<(string Row, DateOnly Date), HardDay> Hard { get; init; } = new Dictionary<(string, DateOnly), HardDay>();
+
+    /// <summary>The week's warnings about hard training, beside the classes they are about; never a ring.</summary>
+    public IReadOnlyList<Clash> HardWarnings { get; init; } = [];
+
+    /// <summary>The group's hard day on this row, or none: a row that is not a group's, or a day with no hard training.</summary>
+    public HardDay? HardOn(string row, DateOnly day) =>
+        Hard.TryGetValue((row, day), out var d) && d.Stretches.Count > 0 ? d : null;
+
+    /// <summary>
     /// The shading for a day behind the chosen class: its stretches run together into bands, cut to the frame.
     /// Its space's stretches only <paramref name="withSpace"/>: on rows that are spaces, the space's own
     /// classes are already drawn where it is in use.
@@ -327,6 +340,20 @@ public sealed class PlanModel
             .Concat(events.Where(e => !e.Event.AllDay).Select(e => (Minutes(e.Event.Start), Minutes(e.Event.End)))));
         days = days.Union(Cccc.Domain.Week.Days(monday).Where(d => events.Any(e => e.Covers(d)))).Order().ToList();
         var clashes = Cccc.Domain.Rules.Clashes.ForWeek(t, monday);
+        // A group's hard training sits under its own row: each group on its row, or the one group's days.
+        var hard = new Dictionary<(string, DateOnly), HardDay>();
+        if (v.Lens == Lens.Groups && v.Scale != Scale.Term)
+        {
+            if (rowsAreDays && focus is { Kind: "group" } fg)
+                foreach (var row in rows)
+                {
+                    if (FromDayKey(row.Key) is { } d) hard[(row.Key, d)] = HardTraining.For(t, week, fg.Id, d);
+                }
+            else
+                foreach (var row in rows.Where(r => r.Id is not null))
+                    foreach (var d in v.Scale == Scale.Day ? [v.Day] : days)
+                        hard[(row.Key, d)] = HardTraining.For(t, week, row.Id!.Value, d);
+        }
         var elsewhere = new Dictionary<DateOnly, IReadOnlyList<BusyStretch>>();
         if (v.Scale == Scale.Day && v.Chosen is { } chosenId && week.FirstOrDefault(o => o.Session.Id == chosenId) is { } chosen)
         {
@@ -351,6 +378,8 @@ public sealed class PlanModel
             Locked = Cccc.Domain.Week.HasEnded(monday, today),
             HiddenGuests = hiddenGuests,
             Elsewhere = elsewhere,
+            Hard = hard,
+            HardWarnings = clashes.Where(c => c.IsHardTraining).ToList(),
             T = t,
             Scratch = scratch,
         };

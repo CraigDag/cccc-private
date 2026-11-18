@@ -61,17 +61,20 @@ public static class SampleSchool
         var areaCreation = new Area { Id = g.Next(), Name = "Creation", WeeklyTarget = TimeSpan.FromHours(4) };
         var areaBody = new Area { Id = g.Next(), Name = "Body and movement", WeeklyTarget = TimeSpan.FromHours(6) };
 
-        Class C(string name, string colour, Area? area = null, Workload w = Workload.Counted) =>
-            new() { Id = g.Next(), Name = name, Colour = colour, AreaId = area?.Id, Workload = w };
-        var acro = C("Acrobatics", "#E0A040", areaTechnique);
-        var aerialClass = C("Aerial", "#C88FE0", areaTechnique);
-        var juggling = C("Juggling", "#5FB0C8", areaTechnique);
-        var dance = C("Contemporary dance", "#F07090", areaBody);
-        var strength = C("Strength and conditioning", "#E08080", areaBody);
-        var creation = C("Creation lab", "#70C8A0", areaCreation);
-        var disciplineClass = C("Circus disciplines", "#D0B060", areaTechnique);
-        var open = C("Open training", "#7090A0", null, Workload.DropIn);
-        var lunch = C("Lunch", "#909090", null, Workload.NotCounted);
+        // How hard each is on the body: with the limits below, BA 1's Monday morning (Strength, then Acrobatics
+        // a quarter of an hour later) runs past two hours in a row and its day past four, and BA 2's Wednesday
+        // morning past two in a row. The guest workshop is not said, so it is nobody's hard training.
+        Class C(string name, string colour, Area? area = null, Workload w = Workload.Counted, Effort e = Effort.NotSet) =>
+            new() { Id = g.Next(), Name = name, Colour = colour, AreaId = area?.Id, Workload = w, Effort = e };
+        var acro = C("Acrobatics", "#E0A040", areaTechnique, e: Effort.Hard);
+        var aerialClass = C("Aerial", "#C88FE0", areaTechnique, e: Effort.Hard);
+        var juggling = C("Juggling", "#5FB0C8", areaTechnique, e: Effort.Moderate);
+        var dance = C("Contemporary dance", "#F07090", areaBody, e: Effort.Moderate);
+        var strength = C("Strength and conditioning", "#E08080", areaBody, e: Effort.Hard);
+        var creation = C("Creation lab", "#70C8A0", areaCreation, e: Effort.Light);
+        var disciplineClass = C("Circus disciplines", "#D0B060", areaTechnique, e: Effort.Hard);
+        var open = C("Open training", "#7090A0", null, Workload.DropIn, Effort.Moderate);
+        var lunch = C("Lunch", "#909090", null, Workload.NotCounted, Effort.Light);
         var guestWorkshop = C("Guest workshop", "#B07CE8");
 
         var prepRule = new TimeRule { Id = g.Next(), Name = "Prep time", Kind = TimeRuleKind.Preparation, Percent = 50, ClassIds = [creation.Id] };
@@ -156,7 +159,11 @@ public static class SampleSchool
         // Registers for most of what has run, leaving a few missing on purpose.
         var t = new Timetable
         {
-            Settings = new Settings { Name = "Sample school year", SchoolName = "Northlight Circus School", WeeklyScheduledTarget = TimeSpan.FromHours(15) },
+            Settings = new Settings
+            {
+                Name = "Sample school year", SchoolName = "Northlight Circus School", WeeklyScheduledTarget = TimeSpan.FromHours(15),
+                MostHardInARow = TimeSpan.FromHours(2), MostHardInADay = TimeSpan.FromHours(4), RestBetweenHard = TimeSpan.FromMinutes(30),
+            },
             Semesters = EntitySet<Semester>.Of([autumn, spring]),
             Closures = EntitySet<Closure>.Of(
             [

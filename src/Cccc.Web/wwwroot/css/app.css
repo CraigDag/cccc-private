@@ -455,6 +455,17 @@ div.agenda-row { cursor: default; }
 }
 .tl-busy.away { --hatch: color-mix(in srgb, var(--warning) 22%, transparent); }
 .blk.dragging.over-busy { box-shadow: var(--shadow), 0 0 0 2px var(--warning); }
+/* How hard a group's day is, along the foot of its row (HardTraining): hard classes solid, moderate ones thin,
+   and a stretch past the school's limit in the warning colour, its short breaks too. Under the classes'
+   bottom edge, so it crosses no words, and never in the way of a press. */
+.tl-effort { position: absolute; left: 0; right: 0; bottom: 2px; height: 4px; pointer-events: none; z-index: 0; }
+.tl-eff { position: absolute; bottom: 0; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--text) 45%, transparent); }
+.tl-eff.moderate { height: 2px; background: color-mix(in srgb, var(--text) 22%, transparent); }
+.tl-eff.over { z-index: 1; background: var(--warning); }
+.tl-label small.hard-sum { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tl-label small.hard-sum.over { color: var(--warning); font-weight: 700; }
+.wm-hard { margin-top: 2px; font-size: 11px; color: var(--text-quiet); font-variant-numeric: tabular-nums; }
+.wm-hard.over { color: var(--warning); font-weight: 700; }
 .drag-busy {
     position: fixed; z-index: 50; pointer-events: none; max-width: min(420px, calc(100vw - 16px));
     padding: 3px 8px; border-radius: 6px; background: var(--warning); color: var(--panel);
@@ -599,6 +610,8 @@ button.term-blank.next { border: 1px dashed var(--border); font-style: normal; c
 .insp-person.away { opacity: .7; }
 .insp-note { padding: 8px 10px; border-radius: 8px; font-size: 13px; }
 .insp-note.warn { background: var(--warning-soft); color: var(--warning); font-weight: 600; }
+.insp-note.hard { background: var(--warning-soft); color: var(--text); border-left: 3px solid var(--warning); }
+.settings-head { margin: 22px 0 2px; font-size: 15px; }
 .insp-actions { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--divider); }
 .insp-elsewhere { border-top: 1px solid var(--divider); padding-top: 12px; }
 .insp-elsewhere h3 {
@@ -1060,8 +1073,11 @@ ul.said li + li { margin-top: 4px; }
     .tl-name .day-long { display: none; }
     .tl-name .day-short { display: inline; }
     /* "free" beside a row's name cut "Studio B" to "Studi…" on a phone; the empty row and its quieter
-       name already say it. */
-    .tl-label small { display: none; }
+       name already say it. A group's hard training goes under its name instead, lined up with it. */
+    .tl-label small:not(.hard-sum) { display: none; }
+    .tl-label:has(.hard-sum) { flex-wrap: wrap; align-content: center; row-gap: 1px; }
+    .tl-label:has(.hard-sum) .tl-name { flex: 1 1 0; }
+    .tl-label small.hard-sum { flex-basis: 100%; margin-left: 0; padding-left: 12px; font-size: 10.5px; line-height: 1.2; }
     .plan-bar .grow { display: none; }
     .seg button { padding: 4px 10px; }
     /* A register is taken standing in a room with a phone: marks big enough for a thumb. */
